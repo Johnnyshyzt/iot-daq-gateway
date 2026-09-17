@@ -1,0 +1,8 @@
+把授权的 64 位 FANUC FOCAS 库放到与 Gateway.Host.exe 同一目录，文件名必须是：
+
+    Fwlib64.dll
+
+不要把该文件提交进 git，也不要打进 Docker 镜像。缺库时网关进程仍会运行，fanuc.focas 设备为 offline，日志会写明原因。
+
+本发布包是 Windows x64 自包含包：现场不需要安装 .NET SDK 10.0.203，也不需要 git 检出源码。
+Linux Docker 不是生产 FOCAS 路径。
