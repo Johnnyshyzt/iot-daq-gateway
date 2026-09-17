@@ -103,7 +103,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。改 `gateway.yaml` 里的机床 IP / MQTT 后重启服务即可。
 
-1. 从 GitHub Actions 的 `pack-win-x64` 产物（或 `./scripts/pack-win-x64.sh` / `scripts/pack-win-x64.ps1`）取得 `iot-daq-gateway-*-win-x64.zip`
+1. 从 [GitHub Release](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 `iot-daq-gateway-*-win-x64.zip`（不要走 Actions 产物）。当前包：[v0.3.0 win-x64 zip](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/download/v0.3.0/iot-daq-gateway-0.3.0-win-x64.zip)
 2. 解压到例如 `C:\iot-daq-gateway\`
 3. 编辑 `gateway.yaml`；把授权的 `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录（不进 git / 不进镜像）
 4. 管理员运行 `install-service.bat` → 服务 `IotDaqGateway` 开机自启
