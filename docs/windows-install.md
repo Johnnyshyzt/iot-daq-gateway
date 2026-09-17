@@ -27,7 +27,7 @@
 #   powershell -File scripts/pack-win-x64.ps1
 ```
 
-产物：`artifacts/win-x64/iot-daq-gateway-<version>-win-x64.zip`。GitHub Actions 的 `pack-win-x64` 作业会上传同名 artifact。
+产物：`artifacts/win-x64/iot-daq-gateway-<version>-win-x64.zip`。现场请从 [GitHub Release](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载（当前：[v0.3.0 win-x64 zip](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/download/v0.3.0/iot-daq-gateway-0.3.0-win-x64.zip)）。CI 的 `pack-win-x64` 作业仍会上传 artifact 供核对，打 `v*` 标签后 `release` 工作流会把 zip 挂到 Release。
 
 ## 现场安装
 
