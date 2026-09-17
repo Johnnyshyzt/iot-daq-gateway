@@ -79,9 +79,7 @@ if (configuration.Devices.Any(d =>
     }
     else
     {
-        logger.LogWarning(
-            "Fwlib64.dll not loaded: {Reason}. Place the licensed 64-bit DLL next to Gateway.Host.exe. Linux Docker is not a production FOCAS path.",
-            focasError);
+        logger.LogWarning("Fwlib64.dll not loaded: {Reason}", focasError);
     }
 }
 
