@@ -14,3 +14,7 @@ services:
       - mosquitto
     environment:
       GATEWAY_CONFIG: /app/gateway.yaml
+    # Overlay example YAML so CNC IP / devices can change without an image rebuild.
+    # Linux Compose remains a Fake demo — not a production FOCAS path.
+    volumes:
+      - ../configs/examples/gateway.docker.yaml:/app/gateway.yaml:ro

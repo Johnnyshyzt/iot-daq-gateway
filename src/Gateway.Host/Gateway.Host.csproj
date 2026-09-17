@@ -5,6 +5,9 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Gateway.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Gateway.Abstractions\Gateway.Abstractions.csproj" />
     <ProjectReference Include="..\Adapters.Fanuc\Adapters.Fanuc.csproj" />
     <ProjectReference Include="..\Sinks.Mqtt\Sinks.Mqtt.csproj" />

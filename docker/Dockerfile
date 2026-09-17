@@ -9,6 +9,8 @@ RUN dotnet publish src/Gateway.Host/Gateway.Host.csproj -c Release -o /app/publi
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
+# Default Fake demo config; Compose overlays this with a host-mounted YAML.
+# Never COPY Fwlib*.dll / libfwlib32.so — vendor FOCAS binaries stay off image layers.
 COPY configs/examples/gateway.docker.yaml /app/gateway.yaml
 ENV GATEWAY_CONFIG=/app/gateway.yaml
 # Runs as a normal container process — no industrial-PC / privileged assumption.
