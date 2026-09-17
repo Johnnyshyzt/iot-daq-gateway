@@ -1,0 +1,30 @@
+# Local development: Fake Fanuc + MQTT on localhost
+gateway:
+  id: gw-line-01
+  site: plant-a
+
+pipeline:
+  sweepInterval: 00:00:02
+  changeOnly: true
+
+# Reserved. V1 is read-only and defaults to disabled.
+programTransfer:
+  enabled: false
+
+mqtt:
+  host: 127.0.0.1
+  port: 1883
+  clientId: iot-daq-gateway
+  qos: 1
+  tls: false
+  # username: ""
+  # password: ""
+
+devices:
+  - id: cnc-01
+    enabled: true
+    adapter: fanuc.fake
+    options:
+      host: 192.168.1.10
+      port: 8193
+      timeoutMs: 3000

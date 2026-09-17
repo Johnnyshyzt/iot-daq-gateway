@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Adapters.Fanuc</RootNamespace>
+    <Description>Fanuc FOCAS southbound adapters (fake + native stub). No vendor binaries shipped.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Gateway.Abstractions\Gateway.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

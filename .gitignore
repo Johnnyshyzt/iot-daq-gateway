@@ -1,0 +1,48 @@
+## .NET
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+*.swp
+*.DotSettings.user
+
+## Build / test
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage/
+BenchmarkDotNet.Artifacts/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+
+## Secrets / local overrides
+appsettings.*.local.json
+*.pfx
+*.key
+
+## User-supplied FOCAS native libraries (never commit)
+Fwlib*.dll
+fwlib*.dll
+libfwlib32.so
+libfwlib32.so.*
+Fwlib32.dll
+fwlib32.dll
+
+## OS / tooling
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+*.log
