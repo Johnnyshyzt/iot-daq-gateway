@@ -1,6 +1,7 @@
 # 发那科 FOCAS 现场配置（Windows x64）
 # 把本文件与 Gateway.Host.exe 放在同一目录（发布包里已命名为 gateway.yaml）。
-# 改机床 IP / MQTT 后重启服务即可，不必重装 SDK、不必重新编译。
+# 第一路径：浏览器打开 http://采集机IP:8080/ ，用下面 console.token 登录后添加机床。
+# 不必手改 YAML，也不必重新打包 zip。YAML 仍是无界面安装的权威配置。
 #
 # 两台网关不要共用同一个 mqtt.clientId，否则会互相踢掉。
 gateway:
@@ -22,6 +23,12 @@ mqtt:
   tls: false
   # username: ""
   # password: ""
+
+console:
+  enabled: true
+  bind: 0.0.0.0          # 内网浏览器访问；无口令时不会监听
+  port: 8080
+  token: change-me      # 请改掉；也可用环境变量 GATEWAY_CONSOLE_TOKEN
 
 devices:
   - id: cnc-01

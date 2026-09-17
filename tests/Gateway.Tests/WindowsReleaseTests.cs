@@ -12,7 +12,7 @@ public sealed class HostInfoTests
     public void Version_IsNonEmptyAndStartsWithAssemblyVersion()
     {
         Assert.False(string.IsNullOrWhiteSpace(HostInfo.Version));
-        Assert.StartsWith("0.3.0", HostInfo.Version, StringComparison.Ordinal);
+        Assert.StartsWith("0.4.0", HostInfo.Version, StringComparison.Ordinal);
         Assert.Equal("IotDaqGateway", HostInfo.WindowsServiceName);
     }
 }

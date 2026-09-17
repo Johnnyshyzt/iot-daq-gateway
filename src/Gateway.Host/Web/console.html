@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>采集网关配置</title>
+  <style>
+    :root { --bg:#f4f1ea; --card:#fff; --ink:#1f2933; --muted:#52606d; --line:#d9d2c5; --accent:#0f6f5c; --danger:#b42318; --ok:#05603a; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:#12352f; color:#f8f4ea; padding:16px 24px; }
+    header h1 { margin:0; font-size:20px; font-weight:600; }
+    header p { margin:6px 0 0; font-size:13px; opacity:.85; }
+    main { max-width:960px; margin:20px auto 48px; padding:0 16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:16px; }
+    h2 { margin:0 0 12px; font-size:16px; }
+    label { display:block; font-size:13px; color:var(--muted); margin-bottom:4px; }
+    input, select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    th { font-size:12px; color:var(--muted); font-weight:600; }
+    td input, td select { min-width:0; }
+    .row-actions { white-space:nowrap; }
+    button { cursor:pointer; border:0; border-radius:6px; padding:8px 14px; font-size:14px; }
+    .primary { background:var(--accent); color:#fff; }
+    .ghost { background:#eee8dc; color:var(--ink); }
+    .danger { background:transparent; color:var(--danger); }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+    .status { min-height:1.4em; font-size:13px; margin-top:10px; }
+    .status.ok { color:var(--ok); }
+    .status.err { color:var(--danger); }
+    .hint { font-size:12px; color:var(--muted); margin-top:8px; }
+    .login { max-width:360px; margin:12vh auto; }
+    .hidden { display:none; }
+    .chk { width:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>IoT 采集网关</h1>
+    <p>内网配置控制台 · YAML 为权威配置 · 不是 SCADA / 历史库</p>
+  </header>
+  <main>
+    <section id="login" class="card login hidden">
+      <h2>访问口令</h2>
+      <p class="hint">口令来自 <code>gateway.yaml</code> 的 <code>console.token</code>，或环境变量 <code>GATEWAY_CONSOLE_TOKEN</code>。</p>
+      <label for="token">口令</label>
+      <input id="token" type="password" autocomplete="current-password" />
+      <div class="toolbar">
+        <button class="primary" type="button" id="loginBtn">进入</button>
+      </div>
+      <div id="loginStatus" class="status"></div>
+    </section>
+
+    <section id="app" class="hidden">
+      <section class="card">
+        <h2>网关与 MQTT</h2>
+        <p class="hint" id="meta"></p>
+        <div class="grid">
+          <div><label for="site">站点 site</label><input id="site" /></div>
+          <div><label for="gatewayId">网关 id</label><input id="gatewayId" /></div>
+          <div><label for="mqttHost">MQTT 地址</label><input id="mqttHost" /></div>
+          <div><label for="mqttPort">MQTT 端口</label><input id="mqttPort" type="number" min="1" max="65535" /></div>
+          <div><label for="mqttClientId">MQTT 客户端 ID</label><input id="mqttClientId" /></div>
+          <div><label for="sweep">扫描周期（秒）</label><input id="sweep" type="number" min="1" max="3600" /></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>设备（发那科）</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>设备 id</th>
+              <th>适配器</th>
+              <th>机床 IP</th>
+              <th>端口</th>
+              <th>启用</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="devices"></tbody>
+        </table>
+        <div class="toolbar">
+          <button class="ghost" type="button" id="addBtn">添加设备</button>
+          <button class="primary" type="button" id="saveBtn">保存并应用</button>
+        </div>
+        <p class="hint">适配器仅支持 <code>fanuc.fake</code>（演示）与 <code>fanuc.focas</code>（真实 FOCAS）。保存会写回 YAML 并热加载采集，无需重新打包 zip。</p>
+        <div id="saveStatus" class="status"></div>
+      </section>
+    </section>
+  </main>
+  <script>
+    const adapters = [
+      { value: "fanuc.fake", label: "演示 fake" },
+      { value: "fanuc.focas", label: "发那科 FOCAS" }
+    ];
+
+    const loginEl = document.getElementById("login");
+    const appEl = document.getElementById("app");
+    const devicesEl = document.getElementById("devices");
+
+    function rowTemplate(d, i) {
+      const opts = adapters.map(a =>
+        `<option value="${a.value}" ${a.value === d.adapter ? "selected" : ""}>${a.label}</option>`
+      ).join("");
+      return `<tr data-i="${i}">
+        <td><input data-f="id" value="${escapeAttr(d.id || "")}" /></td>
+        <td><select data-f="adapter">${opts}</select></td>
+        <td><input data-f="host" value="${escapeAttr(d.host || "")}" /></td>
+        <td><input data-f="port" type="number" min="1" max="65535" value="${d.port || 8193}" /></td>
+        <td><input class="chk" data-f="enabled" type="checkbox" ${d.enabled ? "checked" : ""} /></td>
+        <td class="row-actions"><button class="danger" type="button" data-del>删除</button></td>
+      </tr>`;
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
+
+    function collectDevices() {
+      return [...devicesEl.querySelectorAll("tr")].map(tr => ({
+        id: tr.querySelector('[data-f="id"]').value.trim(),
+        adapter: tr.querySelector('[data-f="adapter"]').value,
+        host: tr.querySelector('[data-f="host"]').value.trim(),
+        port: Number(tr.querySelector('[data-f="port"]').value),
+        enabled: tr.querySelector('[data-f="enabled"]').checked
+      }));
+    }
+
+    function renderDevices(list) {
+      devicesEl.innerHTML = list.map((d, i) => rowTemplate(d, i)).join("");
+    }
+
+    async function api(url, opts) {
+      const headers = { "Content-Type": "application/json", ...(opts && opts.headers) };
+      return fetch(url, { credentials: "same-origin", ...opts, headers });
+    }
+
+    function setStatus(id, text, ok) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = "status " + (ok ? "ok" : "err");
+    }
+
+    async function loadConfig() {
+      const res = await api("/api/config");
+      if (res.status === 401) {
+        loginEl.classList.remove("hidden");
+        appEl.classList.add("hidden");
+        return;
+      }
+      if (!res.ok) {
+        loginEl.classList.remove("hidden");
+        setStatus("loginStatus", "无法读取配置 (" + res.status + ")", false);
+        return;
+      }
+      const cfg = await res.json();
+      loginEl.classList.add("hidden");
+      appEl.classList.remove("hidden");
+      document.getElementById("site").value = cfg.site;
+      document.getElementById("gatewayId").value = cfg.gatewayId;
+      document.getElementById("mqttHost").value = cfg.mqttHost;
+      document.getElementById("mqttPort").value = cfg.mqttPort;
+      document.getElementById("mqttClientId").value = cfg.mqttClientId;
+      document.getElementById("sweep").value = cfg.sweepIntervalSeconds;
+      document.getElementById("meta").textContent =
+        "版本 " + cfg.version + " · 配置文件 " + cfg.configPath +
+        " · 控制台 " + cfg.consoleBind + ":" + cfg.consolePort;
+      renderDevices(cfg.devices || []);
+    }
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const token = document.getElementById("token").value;
+      const res = await api("/api/login", { method: "POST", body: JSON.stringify({ token }) });
+      if (!res.ok) {
+        setStatus("loginStatus", "口令不正确", false);
+        return;
+      }
+      setStatus("loginStatus", "", true);
+      await loadConfig();
+    };
+
+    document.getElementById("addBtn").onclick = () => {
+      const current = collectDevices();
+      const n = current.length + 1;
+      current.push({
+        id: "cnc-" + String(n).padStart(2, "0"),
+        adapter: "fanuc.focas",
+        host: "192.168.1.10",
+        port: 8193,
+        enabled: true
+      });
+      renderDevices(current);
+    };
+
+    devicesEl.addEventListener("click", (e) => {
+      if (e.target.matches("[data-del]")) {
+        e.target.closest("tr").remove();
+      }
+    });
+
+    document.getElementById("saveBtn").onclick = async () => {
+      const body = {
+        gatewayId: document.getElementById("gatewayId").value.trim(),
+        site: document.getElementById("site").value.trim(),
+        mqttHost: document.getElementById("mqttHost").value.trim(),
+        mqttPort: Number(document.getElementById("mqttPort").value),
+        mqttClientId: document.getElementById("mqttClientId").value.trim(),
+        sweepIntervalSeconds: Number(document.getElementById("sweep").value),
+        devices: collectDevices()
+      };
+      const res = await api("/api/config", { method: "PUT", body: JSON.stringify(body) });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus("saveStatus", payload.error || ("保存失败 " + res.status), false);
+        return;
+      }
+      setStatus("saveStatus", "已写入 YAML，采集已重新加载（不必重新打包）。", true);
+      await loadConfig();
+    };
+
+    document.getElementById("token").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("loginBtn").click();
+    });
+
+    loadConfig();
+  </script>
+</body>
+</html>

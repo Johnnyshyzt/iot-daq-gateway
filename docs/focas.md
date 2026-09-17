@@ -8,7 +8,7 @@
 
 1. 从 FANUC 授权渠道取得 **64 位** `Fwlib64.dll`（及厂商要求的依赖）。
 2. 把 `Fwlib64.dll` 放到网关进程旁边（与 `Gateway.Host.dll` / 发布目录同一文件夹）。不要提交进 git。
-3. 复制 `configs/examples/gateway.focas.yaml`，改机床 `host` / `port`（常见 **8193**）/ `timeoutMs`。YAML 在进程外，改 IP **不必重新编译或重建镜像**。
+3. 启动网关后用浏览器打开 Web 控制台添加机床（id / IP / 端口 / `fanuc.focas`），或复制 `configs/examples/gateway.focas.yaml` 手改。YAML 在进程外，改 IP **不必重新编译或重建 zip**。
 4. 启动网关：现场 zip 用 `install-service.bat` 注册 Windows 服务（开机自启），或 `run-console.bat` 前台验证。适配器会调用 `cnc_allclibhndl3`；之后每轮扫描读状态 / 报警 / 程序号，失败则释放句柄并在后续扫描重连。
 
 发布与开机自启步骤见 [windows-install.md](windows-install.md)。`Fwlib64.dll` 必须与 `Gateway.Host.exe` 放在同一目录；**不要**提交进 git 或打进镜像。

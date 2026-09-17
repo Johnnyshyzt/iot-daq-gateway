@@ -9,26 +9,31 @@ internal static class AdapterFactory
         GatewayConfiguration config,
         IEnumerable<ISouthboundAdapterFactory> factories)
     {
+        EnsureKnownKinds(config, factories);
         var byKind = factories.ToDictionary(f => f.AdapterKind, f => f, StringComparer.OrdinalIgnoreCase);
         var adapters = new List<ISouthboundAdapter>();
 
         foreach (var device in config.Devices.Where(d => d.Enabled))
         {
-            if (!byKind.TryGetValue(device.Adapter, out var factory))
+            adapters.Add(byKind[device.Adapter].Create(device));
+        }
+
+        return adapters;
+    }
+
+    public static void EnsureKnownKinds(
+        GatewayConfiguration config,
+        IEnumerable<ISouthboundAdapterFactory> factories)
+    {
+        var byKind = factories.ToDictionary(f => f.AdapterKind, f => f, StringComparer.OrdinalIgnoreCase);
+        foreach (var device in config.Devices)
+        {
+            if (!byKind.TryGetValue(device.Adapter, out _))
             {
                 var known = string.Join(", ", byKind.Keys.Order(StringComparer.Ordinal));
                 throw new InvalidOperationException(
                     $"Unknown adapter '{device.Adapter}' for device '{device.Id}'. Known: {known}.");
             }
-
-            adapters.Add(factory.Create(device));
         }
-
-        if (adapters.Count == 0)
-        {
-            throw new InvalidOperationException("No enabled devices in configuration.");
-        }
-
-        return adapters;
     }
 }

@@ -21,10 +21,10 @@ AcquisitionWorker
 | 项目 | 职责 |
 | --- | --- |
 | `Gateway.Abstractions` | 模型、适配器/下沉接口、`IProgramService`、主题规则 |
-| `Gateway.Host` | YAML 配置、扫描循环、change_only、组合根 |
+| `Gateway.Host` | YAML 配置、扫描循环、change_only、组合根、内置中文 Web 配置控制台 |
 | `Adapters.Fanuc` | Fake 适配器 + Windows `Fwlib64.dll` FOCAS P/Invoke（库不入库） |
 | `Sinks.Mqtt` | MQTTnet JSON 发布 |
 
 后续机型（注塑等）新增 `ISouthboundAdapter` 实现并注册 factory，无需改北向契约。
 
-生产采集按 **Windows x64 自包含进程 / Windows 服务** 运行；Linux 容器只承担 Fake 演示。不假设工控机特权或专用驱动盘。现场安装见 [windows-install.md](windows-install.md)。
+生产采集按 **Windows x64 自包含进程 / Windows 服务** 运行；Linux 容器只承担 Fake 演示。不假设工控机特权或专用驱动盘。现场安装见 [windows-install.md](windows-install.md)。配置优先走本机 Web 控制台（默认 http://采集机:8080/），YAML 仍是权威文件。

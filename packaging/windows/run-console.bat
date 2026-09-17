@@ -14,7 +14,9 @@ if not exist "%~dp0gateway.yaml" (
   exit /b 1
 )
 
-echo 前台运行网关。日志同时写入 logs\ 。按 Ctrl+C 结束。
+echo 前台运行网关。日志同时写入 logs\ 。
+echo 配置控制台: 本机浏览器打开 http://127.0.0.1:8080/ （口令见 gateway.yaml 的 console.token）
+echo 按 Ctrl+C 结束。
 echo.
 "%~dp0Gateway.Host.exe" --config "%~dp0gateway.yaml"
 echo.

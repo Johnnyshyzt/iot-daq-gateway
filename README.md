@@ -7,7 +7,7 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 ## 特性（V1）
 
 - **.NET 10** / `net10.0`，SDK 通过 `global.json` 固定为 **10.0.203**
-- YAML 配置：网关 id、站点、MQTT、设备列表
+- YAML 配置：网关 id、站点、MQTT、设备列表；**内置中文 Web 控制台**（默认 8080）可添加多台设备并写回 YAML，不必重新打包
 - 采集管道：扫描周期 → 适配器采集 → `Observation` → 可选 `change_only` → MQTT
 - 主题：`daq/{site}/{deviceId}/{point}` 与 `daq/{site}/{deviceId}/$status`
 - `FakeFanucAdapter` 输出示例 `state` / `alarm` / `program`，无需机床
@@ -23,7 +23,7 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 IotDaqGateway.sln
 global.json
 src/Gateway.Abstractions/   契约与模型
-src/Gateway.Host/           宿主、YAML、扫描循环
+src/Gateway.Host/           宿主、YAML、扫描循环、Web 配置控制台
 src/Adapters.Fanuc/         Fake + Windows FOCAS（Fwlib64 P/Invoke）
 src/Sinks.Mqtt/             MQTTnet JSON
 tests/Gateway.Tests/        无硬件回归（缺 DLL / YAML）
@@ -58,6 +58,8 @@ dotnet test IotDaqGateway.sln
 
 ## 运行（Fake + MQTT）
 
+**第一路径：打开 Web 控制台配置，不必手改 YAML。**
+
 1. 启动 broker（任选其一）：
 
 ```bash
@@ -80,6 +82,8 @@ mosquitto_sub -h 127.0.0.1 -t 'daq/#' -v
 dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/examples/gateway.yaml
 ```
 
+4. 浏览器打开 **http://127.0.0.1:8080/** （示例配置绑在本机回环，无口令）。内网部署把 `console.bind` 设为 `0.0.0.0` 并设置 `console.token`（或环境变量 `GATEWAY_CONSOLE_TOKEN`），然后打开 `http://采集机IP:8080/`。在页面添加 `fanuc.fake` / `fanuc.focas` 设备，点「保存并应用」。
+
 `--config` 会从当前目录向上查找，因此即使 `dotnet run` 的工作目录是项目文件夹，仓库根下的示例路径仍然有效。
 
 未启动 broker 时进程仍会运行：采集继续，MQTT 连接失败会打日志并丢弃当次发布。
@@ -97,17 +101,18 @@ dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/ex
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`，改机床 IP / 设备列表不必重建镜像。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。
+镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`（可写），并发布 **8080**。浏览器打开 http://127.0.0.1:8080/ ，口令 `change-me`（或 `GATEWAY_CONSOLE_TOKEN`）。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。
 
 ## 现场安装（Windows x64，无需 SDK）
 
-生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。改 `gateway.yaml` 里的机床 IP / MQTT 后重启服务即可。
+生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。**先打开浏览器配置**（http://采集机IP:8080/），不必手改 YAML；保存会写回安装目录的 `gateway.yaml` 并热加载采集。
 
 1. 从 GitHub Actions 的 `pack-win-x64` 产物（或 `./scripts/pack-win-x64.sh` / `scripts/pack-win-x64.ps1`）取得 `iot-daq-gateway-*-win-x64.zip`
 2. 解压到例如 `C:\iot-daq-gateway\`
-3. 编辑 `gateway.yaml`；把授权的 `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录（不进 git / 不进镜像）
-4. 管理员运行 `install-service.bat` → 服务 `IotDaqGateway` 开机自启
-5. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
+3. 把授权的 `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录（不进 git / 不进镜像）
+4. 运行网关后用浏览器打开 http://127.0.0.1:8080/ 或 http://采集机IP:8080/ ，用 `console.token` 登录，添加机床 / MQTT
+5. 管理员运行 `install-service.bat` → 服务 `IotDaqGateway` 开机自启
+6. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号与控制台地址）
 
 卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。
 
@@ -127,8 +132,9 @@ docker compose -f docker/docker-compose.yml up --build
 | `programTransfer.enabled` | `IProgramService` 开关，默认 `false` |
 | `mqtt.*` | broker、clientId、QoS、可选 TLS/账号 |
 | `devices[].adapter` | `fanuc.fake` 或 `fanuc.focas` |
+| `console.bind` / `port` / `token` | 内置 Web 控制台。默认端口 8080。绑 `0.0.0.0` 时必须有 token（或 `GATEWAY_CONSOLE_TOKEN`） |
 
-配置路径：`--config <file>` 或环境变量 `GATEWAY_CONFIG`。未指定时依次尝试当前目录 `gateway.yaml`、`configs/examples/gateway.yaml`、输出目录内副本。
+配置路径：`--config <file>` 或环境变量 `GATEWAY_CONFIG`。未指定时依次尝试当前目录 `gateway.yaml`、`configs/examples/gateway.yaml`、输出目录内副本。Web 控制台把变更写回该文件。
 
 ## FOCAS 与安全
 
