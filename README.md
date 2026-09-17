@@ -67,8 +67,10 @@ mosquitto_sub -h 127.0.0.1 -t 'daq/#' -v
 3. 启动网关：
 
 ```bash
-dotnet run --project src/Gateway.Host -- --config configs/examples/gateway.yaml
+dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/examples/gateway.yaml
 ```
+
+`--config` 会从当前目录向上查找，因此即使 `dotnet run` 的工作目录是项目文件夹，仓库根下的示例路径仍然有效。
 
 未启动 broker 时进程仍会运行：采集继续，MQTT 连接失败会打日志并丢弃当次发布。
 

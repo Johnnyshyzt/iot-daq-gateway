@@ -4,18 +4,13 @@ internal static class ConfigPath
 {
     public static string Resolve(string[] args)
     {
-        for (var i = 0; i < args.Length - 1; i++)
-        {
-            if (string.Equals(args[i], "--config", StringComparison.OrdinalIgnoreCase))
-            {
-                return Path.GetFullPath(args[i + 1]);
-            }
-        }
+        var specified = GetOption(args, "--config")
+            ?? Environment.GetEnvironmentVariable("GATEWAY_CONFIG");
 
-        var fromEnv = Environment.GetEnvironmentVariable("GATEWAY_CONFIG");
-        if (!string.IsNullOrWhiteSpace(fromEnv))
+        if (!string.IsNullOrWhiteSpace(specified))
         {
-            return Path.GetFullPath(fromEnv);
+            return FindExisting(specified)
+                ?? throw new FileNotFoundException($"Gateway YAML not found: {specified}");
         }
 
         foreach (var candidate in CandidatePaths())
@@ -30,10 +25,57 @@ internal static class ConfigPath
             "Gateway YAML not found. Pass --config <path> or set GATEWAY_CONFIG.");
     }
 
+    private static string? GetOption(string[] args, string name)
+    {
+        for (var i = 0; i < args.Length - 1; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[i + 1];
+            }
+        }
+
+        return null;
+    }
+
+    private static string? FindExisting(string path)
+    {
+        if (File.Exists(path))
+        {
+            return Path.GetFullPath(path);
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            return null;
+        }
+
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null)
+        {
+            var combined = Path.Combine(dir.FullName, path);
+            if (File.Exists(combined))
+            {
+                return Path.GetFullPath(combined);
+            }
+
+            dir = dir.Parent;
+        }
+
+        return null;
+    }
+
     private static IEnumerable<string> CandidatePaths()
     {
         yield return Path.Combine(Directory.GetCurrentDirectory(), "gateway.yaml");
         yield return Path.Combine(Directory.GetCurrentDirectory(), "configs", "examples", "gateway.yaml");
         yield return Path.Combine(AppContext.BaseDirectory, "gateway.yaml");
+
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null)
+        {
+            yield return Path.Combine(dir.FullName, "configs", "examples", "gateway.yaml");
+            dir = dir.Parent;
+        }
     }
 }

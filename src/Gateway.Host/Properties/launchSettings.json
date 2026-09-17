@@ -3,7 +3,7 @@
   "profiles": {
     "Gateway.Host": {
       "commandName": "Project",
-      "commandLineArgs": "--config ../../configs/examples/gateway.yaml",
+      "commandLineArgs": "--config configs/examples/gateway.yaml",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

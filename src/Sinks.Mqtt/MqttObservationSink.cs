@@ -23,6 +23,9 @@ public sealed class MqttObservationSink : INorthboundSink
     private readonly MqttClientOptions _options;
     private readonly MqttQualityOfServiceLevel _qos;
     private readonly SemaphoreSlim _connectLock = new(1, 1);
+    private readonly TimeSpan _reconnectDelay = TimeSpan.FromSeconds(5);
+    private DateTimeOffset _nextConnectAttempt = DateTimeOffset.MinValue;
+    private bool _wasConnected;
 
     public MqttObservationSink(GatewayConfiguration config, ILogger<MqttObservationSink> logger)
     {
@@ -129,6 +132,11 @@ public sealed class MqttObservationSink : INorthboundSink
             return;
         }
 
+        if (DateTimeOffset.UtcNow < _nextConnectAttempt)
+        {
+            return;
+        }
+
         await _connectLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -137,7 +145,14 @@ public sealed class MqttObservationSink : INorthboundSink
                 return;
             }
 
+            if (DateTimeOffset.UtcNow < _nextConnectAttempt)
+            {
+                return;
+            }
+
             await _client.ConnectAsync(_options, cancellationToken).ConfigureAwait(false);
+            _wasConnected = true;
+            _nextConnectAttempt = DateTimeOffset.MinValue;
             _logger.LogInformation(
                 "MQTT connected to {Host}:{Port} as {ClientId}",
                 _config.Mqtt.Host,
@@ -146,11 +161,13 @@ public sealed class MqttObservationSink : INorthboundSink
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            _nextConnectAttempt = DateTimeOffset.UtcNow + _reconnectDelay;
             _logger.LogWarning(
-                ex,
-                "MQTT connect failed ({Host}:{Port})",
+                "MQTT connect failed ({Host}:{Port}): {Message}. Retry in {Delay}s",
                 _config.Mqtt.Host,
-                _config.Mqtt.Port);
+                _config.Mqtt.Port,
+                ex.Message,
+                _reconnectDelay.TotalSeconds);
         }
         finally
         {
@@ -160,7 +177,12 @@ public sealed class MqttObservationSink : INorthboundSink
 
     private Task OnDisconnectedAsync(MqttClientDisconnectedEventArgs args)
     {
-        _logger.LogWarning("MQTT disconnected: {Reason}", args.Reason);
+        if (_wasConnected)
+        {
+            _logger.LogWarning("MQTT disconnected: {Reason}", args.Reason);
+        }
+
+        _wasConnected = false;
         return Task.CompletedTask;
     }
 
