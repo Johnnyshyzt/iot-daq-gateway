@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Gateway.Abstractions</RootNamespace>
+    <Description>Device-agnostic contracts and models for the IoT DAQ gateway.</Description>
+  </PropertyGroup>
+</Project>

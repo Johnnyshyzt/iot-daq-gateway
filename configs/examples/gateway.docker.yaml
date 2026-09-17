@@ -1,0 +1,27 @@
+# Compose overlay: MQTT broker service name is "mosquitto"
+gateway:
+  id: gw-line-01
+  site: plant-a
+
+pipeline:
+  sweepInterval: 00:00:02
+  changeOnly: true
+
+programTransfer:
+  enabled: false
+
+mqtt:
+  host: mosquitto
+  port: 1883
+  clientId: iot-daq-gateway
+  qos: 1
+  tls: false
+
+devices:
+  - id: cnc-01
+    enabled: true
+    adapter: fanuc.fake
+    options:
+      host: 192.168.1.10
+      port: 8193
+      timeoutMs: 3000
