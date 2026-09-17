@@ -1,4 +1,5 @@
-# Example for the real FOCAS adapter stub (offline until vendor libs are wired).
+# Real FOCAS adapter (Windows x64). Copy beside the published process and
+# change host/port without rebuilding. Licensed Fwlib64.dll is not in this repo.
 gateway:
   id: gw-line-01
   site: plant-a

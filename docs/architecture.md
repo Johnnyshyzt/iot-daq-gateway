@@ -22,7 +22,7 @@ AcquisitionWorker
 | --- | --- |
 | `Gateway.Abstractions` | 模型、适配器/下沉接口、`IProgramService`、主题规则 |
 | `Gateway.Host` | YAML 配置、扫描循环、change_only、组合根 |
-| `Adapters.Fanuc` | Fake 适配器 + FOCAS P/Invoke 桩 |
+| `Adapters.Fanuc` | Fake 适配器 + Windows `Fwlib64.dll` FOCAS P/Invoke（库不入库） |
 | `Sinks.Mqtt` | MQTTnet JSON 发布 |
 
 后续机型（注塑等）新增 `ISouthboundAdapter` 实现并注册 factory，无需改北向契约。

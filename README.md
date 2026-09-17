@@ -11,7 +11,8 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 - 采集管道：扫描周期 → 适配器采集 → `Observation` → 可选 `change_only` → MQTT
 - 主题：`daq/{site}/{deviceId}/{point}` 与 `daq/{site}/{deviceId}/$status`
 - `FakeFanucAdapter` 输出示例 `state` / `alarm` / `program`，无需机床
-- `fanuc.focas` 走同一接口，P/Invoke 为 TODO 桩
+- `fanuc.focas` 在 **Windows x64** 上对 `Fwlib64.dll` 做真实 P/Invoke（库需自备，放进程旁）；缺库则 `offline`，进程不崩，后续扫描会重连
+- `dotnet test` + GitHub Actions CI（无硬件 / 无厂商 DLL）
 - `IProgramService` 预留 CNC 程序能力；V1 只读，功能开关默认 `false`
 - 许可证 [Apache-2.0](LICENSE)
 
@@ -22,8 +23,9 @@ IotDaqGateway.sln
 global.json
 src/Gateway.Abstractions/   契约与模型
 src/Gateway.Host/           宿主、YAML、扫描循环
-src/Adapters.Fanuc/         Fake + FOCAS 桩
+src/Adapters.Fanuc/         Fake + Windows FOCAS（Fwlib64 P/Invoke）
 src/Sinks.Mqtt/             MQTTnet JSON
+tests/Gateway.Tests/        无硬件回归（缺 DLL / YAML）
 configs/examples/
 docker/
 docs/
@@ -44,6 +46,7 @@ dotnet --list-sdks   # 需包含 10.0.203
 
 ```bash
 dotnet build IotDaqGateway.sln
+dotnet test IotDaqGateway.sln
 ```
 
 ## 运行（Fake + MQTT）
@@ -87,7 +90,13 @@ dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/ex
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 使用 `configs/examples/gateway.docker.yaml`（broker 主机名为 `mosquitto`）。
+镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`，改机床 IP / 设备列表不必重建镜像。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。
+
+## 真实 Fanuc FOCAS（Windows x64）
+
+生产采集：在内网 Windows 采集机上发布网关，把授权的 `Fwlib64.dll` 放到进程目录，用 `configs/examples/gateway.focas.yaml`（改 IP 后重启进程即可）。缺库或机床断开时设备为 `offline`，之后每轮扫描会重连。详见 [docs/focas.md](docs/focas.md)。
+
+不要把 `Fwlib64.dll` 提交进 git 或打进 Docker 镜像。
 
 ## 配置要点
 
@@ -109,7 +118,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 ## 路线图
 
-- 绑定真实 FOCAS P/Invoke（用户提供库）
+- 绑定真实 FOCAS P/Invoke（用户提供库）—— Windows `Fwlib64.dll` 路径已实现；Linux 官方库不在本期
 - 注塑等其它南向适配器
 - 程序传输写路径（仍受 `IProgramService` 开关约束）
 - 更多北向（当前仅 MQTT JSON）
