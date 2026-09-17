@@ -20,6 +20,13 @@ mqtt:
   # username: ""
   # password: ""
 
+# 本机浏览器打开 http://127.0.0.1:8080/ 。内网请 bind: 0.0.0.0 并设置 token。
+console:
+  enabled: true
+  bind: 127.0.0.1
+  port: 8080
+  token: ""
+
 devices:
   - id: cnc-01
     enabled: true

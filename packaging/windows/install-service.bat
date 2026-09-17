@@ -56,7 +56,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-sc description "%SERVICE_NAME%" "内网 CNC 采集网关。改 gateway.yaml 中的机床 IP / MQTT 后重启本服务即可，现场不需要 .NET SDK。"
+sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://本机:8080/ 配置设备；YAML 仍可手改。"
 sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul
 sc start "%SERVICE_NAME%"
 if errorlevel 1 (
@@ -66,7 +66,8 @@ if errorlevel 1 (
 
 echo.
 echo [完成] 服务 %SERVICE_NAME% 已启动，开机将自动运行。
-echo 改配置: 编辑 gateway.yaml 后执行  sc stop %SERVICE_NAME% ^& sc start %SERVICE_NAME%
+echo 配置: 浏览器打开 http://本机IP:8080/ （口令见 gateway.yaml 的 console.token）
+echo 改配置: Web 控制台「保存并应用」，或编辑 gateway.yaml 后 sc stop %SERVICE_NAME% ^& sc start %SERVICE_NAME%
 echo 日志:   %~dp0logs\
 echo 状态:   sc query %SERVICE_NAME%
 echo 卸载:   以管理员运行 uninstall-service.bat

@@ -10,6 +10,8 @@ public sealed class GatewayConfiguration
 
     public MqttOptions Mqtt { get; set; } = new();
 
+    public ConsoleOptions Console { get; set; } = new();
+
     public List<DeviceBinding> Devices { get; set; } = [];
 }
 
@@ -59,4 +61,20 @@ public sealed class DeviceBinding
     public string Adapter { get; set; } = "fanuc.fake";
 
     public Dictionary<string, object?> Options { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// Built-in Chinese web console (not a separate SaaS). YAML remains the source of truth.
+/// </summary>
+public sealed class ConsoleOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Listen address. Loopback is the safe default; use 0.0.0.0 only with a token.</summary>
+    public string Bind { get; set; } = "127.0.0.1";
+
+    public int Port { get; set; } = 8080;
+
+    /// <summary>Shared access token. Override with GATEWAY_CONSOLE_TOKEN. Required when not loopback.</summary>
+    public string? Token { get; set; }
 }

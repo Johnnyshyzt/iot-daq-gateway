@@ -14,6 +14,7 @@ FOCAS 面板以太网通常是明文工业协议，**不能**直接暴露到工�
 
 - 以普通用户运行服务或容器，不要默认 `--privileged`。
 - MQTT 生产环境启用账号与 TLS（配置项 `mqtt.tls`）。
+- 内置 Web 控制台默认不要对办公网暴露。`console.bind: 0.0.0.0` 时必须设置 `console.token` 或 `GATEWAY_CONSOLE_TOKEN`；进程拒绝无口令的通配绑定。口令只给采集网运维人员。
 - 不要在仓库或镜像里写入 FOCAS 库、机床口令、broker 密码。用环境变量或密钥注入。
 - 限制出站：仅允许 MQTT broker 与已登记的机床地址。
 

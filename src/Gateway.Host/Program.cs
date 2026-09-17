@@ -7,10 +7,10 @@ using Gateway.Host.Acquisition;
 using Gateway.Host.Configuration;
 using Gateway.Host.Logging;
 using Gateway.Host.Programs;
+using Gateway.Host.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sinks.Mqtt;
 
 var configPath = ConfigPath.Resolve(args);
 var configuration = GatewayYamlLoader.Load(configPath);
@@ -39,11 +39,15 @@ builder.Logging.AddGatewayRollingFile();
 
 builder.Services.AddSingleton(configuration);
 builder.Services.AddFanucAdapters();
-builder.Services.AddMqttSink();
 builder.Services.AddSingleton<IProgramService, FeatureGatedProgramService>();
-builder.Services.AddSingleton<IReadOnlyList<ISouthboundAdapter>>(sp =>
-    AdapterFactory.Create(configuration, sp.GetServices<ISouthboundAdapterFactory>()));
+builder.Services.AddSingleton(sp => new PipelineManager(
+    configPath,
+    configuration,
+    sp.GetServices<ISouthboundAdapterFactory>(),
+    sp.GetRequiredService<ILoggerFactory>(),
+    sp.GetRequiredService<ILogger<PipelineManager>>()));
 builder.Services.AddHostedService<AcquisitionWorker>();
+builder.Services.AddHostedService<WebConsoleHostedService>();
 
 var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Gateway.Host");
@@ -68,6 +72,21 @@ logger.LogInformation(
 logger.LogInformation(
     "Program transfer feature flag: {Enabled}",
     host.Services.GetRequiredService<IProgramService>().IsEnabled);
+
+var console = ConsoleListenPolicy.Resolve(configuration.Console);
+if (console.Listen)
+{
+    logger.LogInformation(
+        "Web console http://{Bind}:{Port}/ authRequired={Auth} (token via YAML console.token or {Env})",
+        console.Bind,
+        console.Port,
+        console.AuthRequired,
+        ConsoleListenPolicy.TokenEnvironmentVariable);
+}
+else
+{
+    logger.LogWarning("Web console not listening: {Reason}", console.SkipReason);
+}
 
 if (configuration.Devices.Any(d =>
         d.Enabled && string.Equals(d.Adapter, FocasFanucAdapter.Kind, StringComparison.OrdinalIgnoreCase)))

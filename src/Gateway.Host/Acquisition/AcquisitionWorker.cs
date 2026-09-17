@@ -8,38 +8,61 @@ namespace Gateway.Host.Acquisition;
 
 internal sealed class AcquisitionWorker : BackgroundService
 {
-    private readonly GatewayConfiguration _config;
-    private readonly INorthboundSink _sink;
-    private readonly IReadOnlyList<ISouthboundAdapter> _adapters;
-    private readonly ChangeOnlyFilter _changeFilter;
+    private readonly PipelineManager _pipeline;
     private readonly ILogger<AcquisitionWorker> _logger;
 
-    public AcquisitionWorker(
-        GatewayConfiguration config,
-        INorthboundSink sink,
-        IReadOnlyList<ISouthboundAdapter> adapters,
-        ILogger<AcquisitionWorker> logger)
+    public AcquisitionWorker(PipelineManager pipeline, ILogger<AcquisitionWorker> logger)
     {
-        _config = config;
-        _sink = sink;
-        _adapters = adapters;
-        _changeFilter = new ChangeOnlyFilter(config.Pipeline.ChangeOnly);
+        _pipeline = pipeline;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var generation = _pipeline.Generation;
+            var config = _pipeline.Current;
+            using var generationCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+            _pipeline.AttachGeneration(generationCts);
+            if (_pipeline.Generation != generation)
+            {
+                continue;
+            }
+
+            try
+            {
+                await RunGenerationAsync(config, generationCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Configuration applied; restarting collection");
+            }
+        }
+    }
+
+    private async Task RunGenerationAsync(GatewayConfiguration config, CancellationToken stoppingToken)
+    {
+        var adapters = _pipeline.CreateAdapters(config);
+        await using var sink = _pipeline.CreateSink(config);
+        var changeFilter = new ChangeOnlyFilter(config.Pipeline.ChangeOnly);
+
         _logger.LogInformation(
             "Gateway {GatewayId} site={Site} adapters={Count} sweep={Sweep} changeOnly={ChangeOnly}",
-            _config.Gateway.Id,
-            _config.Gateway.Site,
-            _adapters.Count,
-            _config.Pipeline.SweepInterval,
-            _config.Pipeline.ChangeOnly);
+            config.Gateway.Id,
+            config.Gateway.Site,
+            adapters.Count,
+            config.Pipeline.SweepInterval,
+            config.Pipeline.ChangeOnly);
 
-        await _sink.StartAsync(stoppingToken).ConfigureAwait(false);
+        if (adapters.Count == 0)
+        {
+            _logger.LogWarning("No enabled devices; collection is idle until the web console adds one.");
+        }
 
-        foreach (var adapter in _adapters)
+        await sink.StartAsync(stoppingToken).ConfigureAwait(false);
+
+        foreach (var adapter in adapters)
         {
             try
             {
@@ -55,14 +78,14 @@ internal sealed class AcquisitionWorker : BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                foreach (var adapter in _adapters)
+                foreach (var adapter in adapters)
                 {
-                    await SweepAsync(adapter, stoppingToken).ConfigureAwait(false);
+                    await SweepAsync(adapter, sink, changeFilter, stoppingToken).ConfigureAwait(false);
                 }
 
                 try
                 {
-                    await Task.Delay(_config.Pipeline.SweepInterval, stoppingToken).ConfigureAwait(false);
+                    await Task.Delay(config.Pipeline.SweepInterval, stoppingToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -72,30 +95,34 @@ internal sealed class AcquisitionWorker : BackgroundService
         }
         finally
         {
-            foreach (var adapter in _adapters)
+            foreach (var adapter in adapters)
             {
                 await adapter.DisposeAsync().ConfigureAwait(false);
             }
         }
     }
 
-    private async Task SweepAsync(ISouthboundAdapter adapter, CancellationToken cancellationToken)
+    private async Task SweepAsync(
+        ISouthboundAdapter adapter,
+        INorthboundSink sink,
+        ChangeOnlyFilter changeFilter,
+        CancellationToken cancellationToken)
     {
         try
         {
             var observations = await adapter.CollectAsync(cancellationToken).ConfigureAwait(false);
             foreach (var observation in observations)
             {
-                if (!_changeFilter.ShouldPublish(observation))
+                if (!changeFilter.ShouldPublish(observation))
                 {
                     continue;
                 }
 
-                await _sink.PublishObservationAsync(observation, cancellationToken).ConfigureAwait(false);
+                await sink.PublishObservationAsync(observation, cancellationToken).ConfigureAwait(false);
             }
 
             var health = await adapter.GetHealthAsync(cancellationToken).ConfigureAwait(false);
-            await _sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
+            await sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -113,7 +140,7 @@ internal sealed class AcquisitionWorker : BackgroundService
             };
             try
             {
-                await _sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
+                await sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception publishEx) when (publishEx is not OperationCanceledException)
             {

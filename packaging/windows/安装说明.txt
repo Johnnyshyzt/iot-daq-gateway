@@ -5,14 +5,18 @@ IoT 采集网关 — Windows x64 现场包
 不要把 Linux Docker 当作生产 FOCAS 采集方式。
 
 1. 解压到例如 C:\iot-daq-gateway\ （不要只拷 Gateway.Host.exe，本目录全部文件都要保留）
-2. 用记事本编辑 gateway.yaml：改机床 IP（devices[].options.host）、MQTT 地址（mqtt.host）和唯一 clientId
-3. 把授权的 Fwlib64.dll 放到本目录（与 Gateway.Host.exe 并列）。仓库/镜像从不附带该库
-4. 先双击 run-console.bat 看 logs\gateway-yyyyMMdd.log 里是否打印版本号，以及 $status
-5. 确认后，右键 install-service.bat → 以管理员身份运行。开机后服务 IotDaqGateway 会自动启动
-6. 卸载：右键 uninstall-service.bat → 以管理员身份运行（不会删除 yaml / 日志 / Fwlib64.dll）
+2. 把授权的 Fwlib64.dll 放到本目录（与 Gateway.Host.exe 并列）。仓库/镜像从不附带该库
+3. 双击 run-console.bat，然后用浏览器打开配置控制台（不必手改 YAML）：
+     本机:   http://127.0.0.1:8080/
+     内网:   http://本机IP:8080/
+   口令见 gateway.yaml 的 console.token（默认 change-me，请改掉）
+   在页面添加机床（fanuc.focas / fanuc.fake）、MQTT、扫描周期，点「保存并应用」
+4. 确认后，右键 install-service.bat → 以管理员身份运行。开机后服务 IotDaqGateway 会自动启动
+5. 卸载：右键 uninstall-service.bat → 以管理员身份运行（不会删除 yaml / 日志 / Fwlib64.dll）
 
-改 IP 不必重新打包：改 yaml → sc stop IotDaqGateway & sc start IotDaqGateway
+改 IP 不必重新打包：Web 控制台保存并应用即可（写回 gateway.yaml 并热加载）。
+无界面时也可手改 yaml 后 sc stop IotDaqGateway & sc start IotDaqGateway
 
-日志：本目录 logs\gateway-yyyyMMdd.log（保留约 14 天）。启动时会打印版本、配置路径、Fwlib64 是否加载。
+日志：本目录 logs\gateway-yyyyMMdd.log（保留约 14 天）。启动时会打印版本、配置路径、控制台端口、Fwlib64 是否加载。
 
 验收：订阅 daq/# ，看设备 $status 变为 online，state 随机床变化（不是 Fake 的 60 秒相位）。
