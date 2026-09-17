@@ -1,5 +1,6 @@
 # Real FOCAS adapter (Windows x64). Copy beside the published process and
 # change host/port without rebuilding. Licensed Fwlib64.dll is not in this repo.
+# 改机床 IP / MQTT 后重启进程即可，不必重新编译。
 gateway:
   id: gw-line-01
   site: plant-a

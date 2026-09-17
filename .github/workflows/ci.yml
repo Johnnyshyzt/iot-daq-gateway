@@ -14,3 +14,20 @@ jobs:
           dotnet-version: 10.0.203
       - name: Test
         run: dotnet test IotDaqGateway.sln -c Release --nologo
+
+  pack-win-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.203
+      - name: Pack self-contained win-x64 zip
+        shell: pwsh
+        run: ./scripts/pack-win-x64.ps1
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: iot-daq-gateway-win-x64
+          path: artifacts/win-x64/*.zip
+          if-no-files-found: error

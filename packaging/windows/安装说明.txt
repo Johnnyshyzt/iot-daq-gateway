@@ -1,0 +1,18 @@
+IoT 采集网关 — Windows x64 现场包
+================================
+
+本目录是自包含发布（win-x64 self-contained）。现场工控机不需要安装 .NET SDK，也不需要 git。
+不要把 Linux Docker 当作生产 FOCAS 采集方式。
+
+1. 解压到例如 C:\iot-daq-gateway\ （不要只拷 Gateway.Host.exe，本目录全部文件都要保留）
+2. 用记事本编辑 gateway.yaml：改机床 IP（devices[].options.host）、MQTT 地址（mqtt.host）和唯一 clientId
+3. 把授权的 Fwlib64.dll 放到本目录（与 Gateway.Host.exe 并列）。仓库/镜像从不附带该库
+4. 先双击 run-console.bat 看 logs\gateway-yyyyMMdd.log 里是否打印版本号，以及 $status
+5. 确认后，右键 install-service.bat → 以管理员身份运行。开机后服务 IotDaqGateway 会自动启动
+6. 卸载：右键 uninstall-service.bat → 以管理员身份运行（不会删除 yaml / 日志 / Fwlib64.dll）
+
+改 IP 不必重新打包：改 yaml → sc stop IotDaqGateway & sc start IotDaqGateway
+
+日志：本目录 logs\gateway-yyyyMMdd.log（保留约 14 天）。启动时会打印版本、配置路径、Fwlib64 是否加载。
+
+验收：订阅 daq/# ，看设备 $status 变为 online，state 随机床变化（不是 Fake 的 60 秒相位）。

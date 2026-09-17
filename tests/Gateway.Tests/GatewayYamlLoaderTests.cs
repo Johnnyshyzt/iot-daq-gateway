@@ -18,6 +18,7 @@ public sealed class GatewayYamlLoaderTests
     [InlineData("gateway.yaml")]
     [InlineData("gateway.focas.yaml")]
     [InlineData("gateway.docker.yaml")]
+    [InlineData("gateway.windows.yaml")]
     public void LoadsExampleConfigs(string fileName)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "examples", fileName);
@@ -42,6 +43,20 @@ public sealed class GatewayYamlLoaderTests
         Assert.Equal("192.168.1.10", OptionReader.GetString(device.Options, "host", ""));
         Assert.Equal(8193, OptionReader.GetInt(device.Options, "port", 0));
         Assert.Equal(3000, OptionReader.GetInt(device.Options, "timeoutMs", 0));
+    }
+
+    [Fact]
+    public void WindowsSiteExample_IsExternalFocasYaml()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "examples", "gateway.windows.yaml");
+        var config = GatewayYamlLoader.Load(path);
+        var device = config.Devices.Single(d => d.Id == "cnc-01");
+
+        Assert.Equal(FocasFanucAdapter.Kind, device.Adapter);
+        Assert.Equal("192.168.1.10", OptionReader.GetString(device.Options, "host", ""));
+        Assert.Equal(8193, OptionReader.GetInt(device.Options, "port", 0));
+        Assert.Equal("gw-line-01", config.Mqtt.ClientId);
+        Assert.Equal(config.Gateway.Id, config.Mqtt.ClientId);
     }
 
     [Fact]

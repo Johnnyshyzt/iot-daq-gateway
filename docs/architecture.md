@@ -27,4 +27,4 @@ AcquisitionWorker
 
 后续机型（注塑等）新增 `ISouthboundAdapter` 实现并注册 factory，无需改北向契约。
 
-进程按普通服务 / 容器运行，不假设工控机、特权或专用驱动盘。
+生产采集按 **Windows x64 自包含进程 / Windows 服务** 运行；Linux 容器只承担 Fake 演示。不假设工控机特权或专用驱动盘。现场安装见 [windows-install.md](windows-install.md)。

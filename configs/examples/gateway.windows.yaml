@@ -1,0 +1,33 @@
+# 发那科 FOCAS 现场配置（Windows x64）
+# 把本文件与 Gateway.Host.exe 放在同一目录（发布包里已命名为 gateway.yaml）。
+# 改机床 IP / MQTT 后重启服务即可，不必重装 SDK、不必重新编译。
+#
+# 两台网关不要共用同一个 mqtt.clientId，否则会互相踢掉。
+gateway:
+  id: gw-line-01
+  site: plant-a
+
+pipeline:
+  sweepInterval: 00:00:02
+  changeOnly: true
+
+programTransfer:
+  enabled: false
+
+mqtt:
+  host: 127.0.0.1          # 改成厂内 MQTT broker 地址
+  port: 1883
+  clientId: gw-line-01     # 每台采集机唯一
+  qos: 1
+  tls: false
+  # username: ""
+  # password: ""
+
+devices:
+  - id: cnc-01
+    enabled: true
+    adapter: fanuc.focas   # 生产采集。演示请改用 fanuc.fake（无需 Fwlib64.dll）
+    options:
+      host: 192.168.1.10   # 机床面板 IP
+      port: 8193            # FOCAS 端口，以机床手册为准
+      timeoutMs: 3000

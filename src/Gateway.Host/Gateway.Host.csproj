@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Adapters.Fanuc\Adapters.Fanuc.csproj" />
     <ProjectReference Include="..\Sinks.Mqtt\Sinks.Mqtt.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   <ItemGroup>
