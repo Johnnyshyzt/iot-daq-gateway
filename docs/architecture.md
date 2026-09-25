@@ -28,3 +28,5 @@ AcquisitionWorker
 后续机型（注塑等）新增 `ISouthboundAdapter` 实现并注册 factory，无需改北向契约。
 
 生产采集按 **Windows x64 自包含进程 / Windows 服务** 运行；Linux 容器只承担 Fake 演示。不假设工控机特权或专用驱动盘。现场安装见 [windows-install.md](windows-install.md)。
+
+商业 Open Core（Studio 独立仓库、YAML 文件契约、Management API）见 [product/open-core.md](product/open-core.md)。M1 仍只北向 MQTT；Fanuc 以外的适配器不在当前契约里。

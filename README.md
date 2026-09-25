@@ -4,6 +4,20 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 
 面向产线的开源工业物联网采集网关骨架：设备无关、先覆盖 CNC，后续可扩展注塑等机型。以普通服务或容器运行，不依赖工控机镜像或 Ladder99 base-driver。
 
+## Commercial / Open Core
+
+本仓库是开源 **Edge Runtime** 和配置契约。可视化 **Config Studio** 在独立商业仓库，M1 与网关同机嵌入，本仓库不实现 Studio UI。配置以 YAML 文件为单一事实源；M1 设备只做 Fanuc（Fake + FOCAS 桩），北向商业 V1 只有 MQTT。
+
+- 边界与架构：[docs/product/open-core.md](docs/product/open-core.md)
+- M1 范围与验收：[docs/product/M1-prd.md](docs/product/M1-prd.md)
+- Studio 页面树：[docs/product/studio-ia.md](docs/product/studio-ia.md)
+- 配置目录与 revision：[docs/config/README.md](docs/config/README.md)
+- JSON Schema：`schemas/`（Gateway、Device、PointSet、MqttSink）
+- 示例包：[configs/examples/v1/](configs/examples/v1/)
+- Management API：[docs/api/management-api.md](docs/api/management-api.md)
+
+下面的 Fake + MQTT 快速开始仍使用单文件 `configs/examples/gateway.yaml`。`configs/examples/v1/` 是 Studio 将写入的多文件契约，当前 Host 不加载该目录。
+
 ## 特性（V1）
 
 - **.NET 10** / `net10.0`，SDK 通过 `global.json` 固定为 **10.0.203**
@@ -27,11 +41,12 @@ src/Gateway.Host/           宿主、YAML、扫描循环
 src/Adapters.Fanuc/         Fake + Windows FOCAS（Fwlib64 P/Invoke）
 src/Sinks.Mqtt/             MQTTnet JSON
 tests/Gateway.Tests/        无硬件回归（缺 DLL / YAML）
-configs/examples/
+configs/examples/         单文件运行示例；v1/ 为 Studio 多文件契约示例
+schemas/                  v1 JSON Schema（Gateway / Device / PointSet / MqttSink）
 packaging/windows/        服务安装脚本与现场说明（打进 zip）
 scripts/pack-win-x64.*   自包含 win-x64 打包
 docker/
-docs/
+docs/                     含 product/、config/、api/management-api.md
 ```
 
 更多见 [docs/architecture.md](docs/architecture.md)。
@@ -137,6 +152,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 ## 路线图
 
+- 商业 Config Studio（独立仓库，M1 同机嵌入）；本仓库提供契约，见上方 Commercial / Open Core
 - Windows 现场包 / 开机自启 —— 已提供；Linux 官方 FOCAS 库不在本期
 - 注塑等其它南向适配器
 - 程序传输写路径（仍受 `IProgramService` 开关约束）
