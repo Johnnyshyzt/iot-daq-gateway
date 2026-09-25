@@ -64,8 +64,11 @@ printf '%s\n' "$INFORMATIONAL" > "$STAGE/VERSION.txt"
 cp -f "$ROOT/packaging/windows/install-service.bat" "$STAGE/"
 cp -f "$ROOT/packaging/windows/uninstall-service.bat" "$STAGE/"
 cp -f "$ROOT/packaging/windows/run-console.bat" "$STAGE/"
+cp -f "$ROOT/packaging/windows/service-env.ps1" "$STAGE/"
+cp -f "$ROOT/packaging/windows/service.env.example" "$STAGE/"
 cp -f "$ROOT/packaging/windows/Fwlib64.dll.PLACE_HERE.txt" "$STAGE/"
 cp -f "$ROOT/packaging/windows/安装说明.txt" "$STAGE/"
+cp -f "$ROOT/packaging/windows/appsettings.Field.json" "$STAGE/appsettings.json"
 
 # cmd.exe on factory PCs expects CRLF.
 python3 - "$STAGE" <<'PY'
@@ -95,6 +98,14 @@ if [[ ! -f "$STAGE/wwwroot/index.html" ]]; then
   echo "Publish did not include wwwroot/index.html. Build src/Web first." >&2
   exit 1
 fi
+if [[ ! -f "$STAGE/data/seed/gateway.yaml" ]]; then
+  echo "Publish did not include data/seed/gateway.yaml." >&2
+  exit 1
+fi
+if [[ ! -f "$STAGE/service.env.example" || ! -f "$STAGE/service-env.ps1" ]]; then
+  echo "Publish stage is missing service.env.example or service-env.ps1." >&2
+  exit 1
+fi
 
 rm -f "$ZIP"
 (
@@ -122,6 +133,11 @@ required = [
     "Fwlib64.dll.PLACE_HERE.txt",
     "安装说明.txt",
     "VERSION.txt",
+    "data/seed/gateway.yaml",
+    "data/seed/sinks/mqtt.yaml",
+    "service.env.example",
+    "service-env.ps1",
+    "appsettings.json",
 ]
 missing = []
 for item in required:
@@ -132,5 +148,13 @@ if missing:
     raise SystemExit("zip missing: " + ", ".join(missing))
 if banned:
     raise SystemExit("zip contains vendor DLL: " + ", ".join(banned))
+settings = [n for n in names if n.replace("\\", "/").endswith("appsettings.json")]
+if len(settings) != 1:
+    raise SystemExit("zip must contain exactly one appsettings.json")
+text = z.read(settings[0]).decode("utf-8")
+if '"AccountMode": "field"' not in text:
+    raise SystemExit("field appsettings.json is missing AccountMode=field")
+if '"Password"' in text:
+    raise SystemExit("field appsettings.json still contains demo passwords")
 print(f"zip entries: {len(names)}")
 PY

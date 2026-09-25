@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,11 +27,13 @@ const formSchema = z.object({
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
+  accountMode?: string
 }
 
 export function UserAuthForm({
   className,
   redirectTo,
+  accountMode,
   ...props
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -41,10 +43,17 @@ export function UserAuthForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: 'admin',
-      password: 'admin',
+      username: '',
+      password: '',
     },
   })
+
+  useEffect(() => {
+    if (accountMode === 'demo') {
+      form.setValue('username', 'admin')
+      form.setValue('password', 'admin')
+    }
+  }, [accountMode, form])
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
@@ -54,6 +63,7 @@ export function UserAuthForm({
         username: string
         role: string
         expiresAt: string
+        mustChangePassword?: boolean
       }>('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -63,9 +73,14 @@ export function UserAuthForm({
         email: login.username,
         role: [login.role],
         exp: Date.parse(login.expiresAt) || Date.now() + 24 * 60 * 60 * 1000,
+        mustChangePassword: login.mustChangePassword,
       })
       auth.setAccessToken(login.token)
       toast.success(`已登录：${login.username}`)
+      if (login.mustChangePassword) {
+        await navigate({ to: '/account/password' })
+        return
+      }
       const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/'
       await navigate({ to: target })
     } catch (error) {

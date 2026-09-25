@@ -3,9 +3,21 @@ namespace Adapters.Fanuc.Focas;
 /// <summary>
 /// Testable FOCAS session operations. Production uses <see cref="NativeFocasLibrary"/>.
 /// </summary>
+internal enum FocasLibraryProblem
+{
+    None = 0,
+    UnsupportedOperatingSystem,
+    WrongProcessArchitecture,
+    WrongLibraryArchitecture,
+    MissingLibrary,
+    LoadFailed
+}
+
 internal interface IFocasLibrary
 {
     bool TryGetAvailability(out string error);
+
+    FocasLibraryProblem AvailabilityProblem { get; }
 
     short AllocateHandle(string ipAddress, ushort port, int timeoutSeconds, out ushort handle);
 

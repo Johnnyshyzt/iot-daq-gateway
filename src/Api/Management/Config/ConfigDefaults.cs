@@ -94,7 +94,9 @@ public static class ConfigDefaults
             {
                 Host = "127.0.0.1",
                 Port = 1883,
-                ClientId = "iot-daq-gateway"
+                ClientId = "iot-daq-gateway",
+                UsernameFromEnv = "MQTT_USER",
+                PasswordFromEnv = "MQTT_PASSWORD"
             },
             TopicTemplate = "daq/{site}/{deviceId}/{point}",
             Qos = 1,

@@ -61,7 +61,7 @@ JSON 预览只在浏览器里用模板和一条样例点拼出载荷，不连 Br
 
 ### 系统 `/settings`
 
-站点显示名和 `siteId` 属于 Gateway 草稿，改完要走发布才影响运行中的主题。许可证文件与用户列表放在配置工作区旁，不进入 revision。M1 可以只提供一个默认 `admin`，不做成完整用户目录。
+站点显示名和 `siteId` 属于 Gateway 草稿，改完要走发布才影响运行中的主题。许可证与本地账号放在配置工作区旁，不进入 revision。角色仍是本机的 admin / engineer / viewer。演示模式可以保留默认口令；现场包首次登录必须在 `/account/password` 修改密码。
 
 ## M1 不出现的页面
 

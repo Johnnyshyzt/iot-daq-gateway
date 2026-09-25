@@ -2,16 +2,23 @@
 setlocal EnableExtensions
 chcp 65001 >nul
 cd /d "%~dp0"
-REM Foreground run for first-time checks. Close this window to stop. Use install-service.bat for autostart.
+REM Foreground run. Loads service.env, then starts Host. Use install-service.bat for autostart.
 
 if not exist "%~dp0Host.exe" (
   echo [错误] 未找到 Host.exe
   exit /b 1
 )
 
-echo 前台运行 Host。页面 http://127.0.0.1:5080  日志写入 logs\ 。按 Ctrl+C 结束。
+where powershell >nul 2>&1
+if errorlevel 1 (
+  echo [错误] 未找到 PowerShell，无法加载 service.env。
+  exit /b 1
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0service-env.ps1" -Mode run
+set "RC=%ERRORLEVEL%"
 echo.
-"%~dp0Host.exe"
-echo.
-echo 进程已退出，退出码 %ERRORLEVEL%。
+echo 进程已退出，退出码 %RC%。
+echo 若是首次启动，一次性密码在 data\auth\bootstrap-password.txt。不要使用 admin/admin。
 pause
+exit /b %RC%

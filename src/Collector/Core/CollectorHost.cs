@@ -1,4 +1,5 @@
 using Adapters.Fanuc;
+using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Contracts;
 using Gateway.Host.Acquisition;
 using Gateway.Host.Configuration;
@@ -23,6 +24,12 @@ public static class CollectorHost
         }
 
         return ConfigPath.Resolve(["--config", specified]);
+    }
+
+    public static IServiceCollection AddFocasConnectProbe(this IServiceCollection services)
+    {
+        services.AddSingleton<IFocasConnectProbe, FocasConnectProbe>();
+        return services;
     }
 
     public static IServiceCollection AddCollector(this IServiceCollection services, string configPath)

@@ -2,12 +2,31 @@ import { create } from 'zustand'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
 const ACCESS_TOKEN = 'thisisjustarandomstring'
+const MUST_CHANGE = 'studio.mustChangePassword'
+
+export function persistMustChange(value: boolean | undefined) {
+  try {
+    if (value) sessionStorage.setItem(MUST_CHANGE, '1')
+    else sessionStorage.removeItem(MUST_CHANGE)
+  } catch {
+    // sessionStorage can be unavailable in private modes
+  }
+}
+
+export function readMustChange() {
+  try {
+    return sessionStorage.getItem(MUST_CHANGE) === '1'
+  } catch {
+    return false
+  }
+}
 
 interface AuthUser {
   accountNo: string
   email: string
   role: string[]
   exp: number
+  mustChangePassword?: boolean
 }
 
 interface AuthState {
@@ -28,7 +47,10 @@ export const useAuthStore = create<AuthState>()((set) => {
     auth: {
       user: null,
       setUser: (user) =>
-        set((state) => ({ ...state, auth: { ...state.auth, user } })),
+        set((state) => {
+          persistMustChange(user?.mustChangePassword)
+          return { ...state, auth: { ...state.auth, user } }
+        }),
       accessToken: initToken,
       setAccessToken: (accessToken) =>
         set((state) => {
@@ -43,6 +65,7 @@ export const useAuthStore = create<AuthState>()((set) => {
       reset: () =>
         set((state) => {
           removeCookie(ACCESS_TOKEN)
+          persistMustChange(false)
           return {
             ...state,
             auth: { ...state.auth, user: null, accessToken: '' },

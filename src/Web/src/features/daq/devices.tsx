@@ -128,7 +128,7 @@ export function DevicesPage() {
   return (
     <PageShell
       title='设备'
-      description='Fanuc 设备只支持 fanuc.fake 与 fanuc.focas。保存写入草稿，发布后网关才会加载。'
+      description='Fanuc 设备只支持 fanuc.fake 与 fanuc.focas。保存写入草稿，发布后网关才会加载。fanuc.focas 的连接测试走真实握手，不会因为 TCP 端口通了就显示成功。'
       actions={
         <Button
           variant='outline'

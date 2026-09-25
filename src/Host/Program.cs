@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using Gateway.Abstractions.Contracts;
 using Gateway.Host;
+using Microsoft.Extensions.Hosting;
 using IotDaq.Host;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
@@ -18,7 +19,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
-builder.Services.AddWindowsService(options =>
+builder.Host.UseWindowsService(options =>
 {
     options.ServiceName = HostInfo.WindowsServiceName;
 });
@@ -40,6 +41,11 @@ if (acquisitionOn)
 }
 
 builder.Services.AddSingleton(new ConfigStore(dataDirectory));
+builder.Services.AddSingleton(sp => new AccountStore(
+    dataDirectory,
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<ILogger<AccountStore>>()));
+builder.Services.AddFocasConnectProbe();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<RuntimeQueries>();
 builder.Services.AddSingleton<GatewayReloadClient>();
@@ -55,6 +61,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized();
+var accounts = app.Services.GetRequiredService<AccountStore>();
+accounts.EnsureInitialized();
 
 app.UseExceptionHandler(handler =>
 {
@@ -138,6 +146,19 @@ else
 if (webRoot is not null)
 {
     logger.LogInformation("Serving Web from {WebRoot}", webRoot);
+}
+
+logger.LogInformation("Account mode {Mode}", accounts.Mode);
+if (accounts.ModeMismatch)
+{
+    logger.LogWarning(
+        "Account file mode does not match {Env} or Studio:AccountMode. Delete data/auth to recreate accounts.",
+        AccountStore.AccountModeEnvironmentVariable);
+}
+
+if (File.Exists(accounts.BootstrapPasswordPath))
+{
+    logger.LogWarning("One-time login passwords are in {Path}", accounts.BootstrapPasswordPath);
 }
 
 if (app.Services.GetService<IProgramService>() is { } programs)

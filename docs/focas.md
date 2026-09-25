@@ -40,7 +40,7 @@
 - P/Invoke：`src/Adapters.Fanuc/Focas/FocasNative.cs`
 - 配置：`adapter: fanuc.focas`，见 `configs/examples/gateway.focas.yaml`
 
-无硬件 / 无 DLL 的回归：`dotnet test`（缺库 → offline、YAML 可加载、进程不崩）。
+设备测试 `POST /api/v1/devices/{id}/test` 与采集使用同一条握手（`cnc_allclibhndl3`），成功后会释放句柄。缺库、进程或 DLL 位数不对、连接失败时返回中文原因，`ok` 为 false。不会因为 TCP 端口开着就报成功。无硬件 / 无 DLL 的回归：`dotnet test`（缺库 → 明确失败、进程不崩）。真机是否采到 `state` / `alarm` / `program` 不在这条回归里。
 
 ## 开发建议
 

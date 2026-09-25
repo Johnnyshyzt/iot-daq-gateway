@@ -159,6 +159,10 @@ export function MqttPage() {
                 }
               />
             </Field>
+            <p className='text-sm text-muted-foreground sm:col-span-2'>
+              这里只保存环境变量名，不保存密码。Windows 服务从安装目录的 service.env 注入
+              MQTT_USER 和 MQTT_PASSWORD。修改变量后要重新运行 install-service.bat 并重启服务。
+            </p>
             <Field label='点位主题模板'>
               <Input
                 value={mqtt.spec.topicTemplate}

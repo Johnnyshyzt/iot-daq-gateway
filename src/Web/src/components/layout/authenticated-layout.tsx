@@ -21,16 +21,20 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 
   useEffect(() => {
     if (!token || user) return
-    void studioApi<{ username: string; role: string }>('/api/v1/auth/me').then(
-      (me) => {
-        useAuthStore.getState().auth.setUser({
-          accountNo: me.username,
-          email: me.username,
-          role: [me.role],
-          exp: Date.now() + 24 * 60 * 60 * 1000,
-        })
+    void studioApi<{ username: string; role: string; mustChangePassword?: boolean }>(
+      '/api/v1/auth/me'
+    ).then((me) => {
+      useAuthStore.getState().auth.setUser({
+        accountNo: me.username,
+        email: me.username,
+        role: [me.role],
+        exp: Date.now() + 24 * 60 * 60 * 1000,
+        mustChangePassword: me.mustChangePassword,
+      })
+      if (me.mustChangePassword && window.location.pathname !== '/account/password') {
+        window.location.assign('/account/password')
       }
-    )
+    })
   }, [token, user])
 
   return (

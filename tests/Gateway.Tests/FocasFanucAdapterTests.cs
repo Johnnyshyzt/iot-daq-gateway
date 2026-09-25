@@ -148,6 +148,8 @@ public sealed class FocasFanucAdapterTests
             return true;
         }
 
+        public FocasLibraryProblem AvailabilityProblem => FocasLibraryProblem.None;
+
         public short AllocateHandle(string ipAddress, ushort port, int timeoutSeconds, out ushort handle)
         {
             handle = 1;

@@ -114,6 +114,27 @@ public sealed class LoginResponse
     public string Role { get; set; } = "";
 
     public DateTimeOffset ExpiresAt { get; set; }
+
+    public bool MustChangePassword { get; set; }
+}
+
+public sealed class ChangePasswordRequest
+{
+    public string? CurrentPassword { get; set; }
+
+    public string? NewPassword { get; set; }
+}
+
+public sealed class ChangePasswordResult
+{
+    public bool Ok { get; set; } = true;
+}
+
+public sealed class AuthPosture
+{
+    public string Mode { get; set; } = "demo";
+
+    public string Message { get; set; } = "";
 }
 
 public sealed class UserInfo
@@ -121,6 +142,8 @@ public sealed class UserInfo
     public string Username { get; set; } = "";
 
     public string Role { get; set; } = "";
+
+    public bool MustChangePassword { get; set; }
 }
 
 public sealed class LicenseStatus
@@ -155,6 +178,10 @@ public sealed class SettingsView
     public UserInfo CurrentUser { get; set; } = new();
 
     public List<UserInfo> Users { get; set; } = [];
+
+    public string AccountMode { get; set; } = "demo";
+
+    public string AccountMessage { get; set; } = "";
 }
 
 public sealed class SettingsUpdate

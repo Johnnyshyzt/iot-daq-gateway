@@ -55,7 +55,7 @@ cd src/Web && npm ci && npm run build
 dotnet run --project src/Host
 ```
 
-然后打开 `http://127.0.0.1:5080`，用 `admin` / `admin` 登录。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。发布和回滚会在进程内重载采集，不需要第二个网关进程。
+然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。发布和回滚会在进程内重载采集，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
 
 开发页面热更新：`cd src/Web && npm run dev`（`http://127.0.0.1:5173`，把 `/api` 代理到 5080）。CI 用 npm，本机也可以用 pnpm。
 
@@ -134,9 +134,10 @@ docker compose -f docker/docker-compose.yml up --build
 
 1. 从 GitHub Actions 的 `pack-win-x64` 产物（或 `./scripts/pack-win-x64.sh` / `scripts/pack-win-x64.ps1`）取得 `iot-daq-gateway-*-win-x64.zip`
 2. 解压到例如 `C:\iot-daq-gateway\`
-3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进镜像）。打开 `http://127.0.0.1:5080` 发布配置；采集读的是同目录 `data/published`
-4. 管理员运行 `install-service.bat` → 服务 `IotDaqGateway` 开机自启
-5. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
+3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进 zip / 不进镜像）。复制 `service.env.example` 为 `service.env` 并填写 `MQTT_USER` / `MQTT_PASSWORD`
+4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。采集读的是同目录 `data/published`（由 `data/seed` 首次复制）
+5. 管理员运行 `install-service.bat` → 注入服务环境并让 `IotDaqGateway` 开机自启
+6. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
 
 卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。
 

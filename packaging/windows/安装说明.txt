@@ -1,18 +1,29 @@
 IoT 采集网关 — Windows x64 现场包
 ================================
 
-本目录是自包含发布（win-x64 self-contained）。一个 Host.exe 同时提供页面、管理 API 和采集。
-现场工控机不需要安装 .NET SDK，也不需要 git。
-不要把 Linux Docker 当作生产 FOCAS 采集方式。
+本目录是自包含发布（win-x64 self-contained）。一个 Host.exe 同时提供页面（wwwroot）、管理 API 和采集。
+解压后同一目录里有 Host.exe、wwwroot、data\seed、install-service.bat。现场工控机不需要安装 .NET SDK，也不需要 git。
+不要把 Linux Docker 当作生产 FOCAS 采集方式。本包不包含 Fwlib64.dll。
 
 1. 解压到例如 C:\iot-daq-gateway\ （不要只拷 Host.exe，本目录全部文件都要保留）
-2. 把授权的 Fwlib64.dll 放到本目录（与 Host.exe 并列）。仓库/镜像从不附带该库
-3. 先双击 run-console.bat，浏览器打开 http://127.0.0.1:5080 ，用 admin / admin 登录
-4. 在页面里配置设备和 MQTT，发布。采集读取 data\published
-5. 确认后，右键 install-service.bat → 以管理员身份运行。开机后服务 IotDaqGateway 会自动启动
-6. 卸载：右键 uninstall-service.bat → 以管理员身份运行（不会删除 data\ 下的配置、日志或 Fwlib64.dll）
+2. 把授权的 Fwlib64.dll 放到本目录（与 Host.exe 并列）。仓库和 zip 从不附带该库
+3. 复制 service.env.example 为 service.env，填写 MQTT_USER 和 MQTT_PASSWORD。
+   页面和 YAML 只写这两个变量名，不要写密码。
+4. 双击 run-console.bat。它会加载 service.env 再启动 Host.exe
+5. 浏览器打开 http://127.0.0.1:5080
+   第一次启动会把 data\seed 复制到 data\published 和 data\draft
+   打开 data\auth\bootstrap-password.txt，用一次性密码登录，然后立刻修改密码
+   不要使用 admin/admin。角色仍是本机的 admin、engineer、viewer
+6. 在页面里配置设备和 MQTT，发布。采集读取 data\published
+   fanuc.focas 的连接测试会做真实握手。缺库、位数不对或连不上时显示中文原因
+7. 确认后，右键 install-service.bat → 以管理员身份运行
+   脚本把 service.env 写入服务环境（MQTT_USER / MQTT_PASSWORD），并设置开机自启
+   修改 service.env 后需要再运行一次本脚本
+8. 卸载：右键 uninstall-service.bat → 以管理员身份运行
+   不会删除 data\、service.env、日志或 Fwlib64.dll
 
 包里的 gateway.focas.yaml 只是参考，服务不会自动加载它。
 日志：本目录 logs\gateway-yyyyMMdd.log（保留约 14 天）。
 
-验收：订阅 daq/# ，看设备 $status 变为 online，state 随机床变化（不是 Fake 的 60 秒相位）。
+真机验收需要现场机床和授权 DLL：订阅 daq/# ，看设备 $status 变为 online。
+本仓库不能代替这一步。

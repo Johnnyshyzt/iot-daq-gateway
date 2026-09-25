@@ -36,6 +36,7 @@ Studio 页面与路径的对应关系见 [studio-ia.md](../product/studio-ia.md)
 | 400 | `invalid_json` | 正文不是 JSON，或路径参数为空 |
 | 401 | `unauthorized` | 配置了令牌但未携带或令牌不对 |
 | 403 | `forbidden` | 角色不够 |
+| 403 | `password_change_required` | 现场账号尚未修改一次性密码 |
 | 403 | `license_required` | 合同草案。M1 桩不返回这一项 |
 | 404 | `not_found` | 设备、点表或资源不存在 |
 | 404 | `revision_not_found` | 回滚目标不在 `revisions/` |
@@ -58,13 +59,14 @@ Studio 页面与路径的对应关系见 [studio-ia.md](../product/studio-ia.md)
 
 ## 认证与角色
 
-M1 是本地单用户或 Basic / Bearer 桩，不是完整身份系统。
+登录是本地账号，不是目录服务。`POST /api/v1/auth/login` 返回 Bearer 令牌。除登录和 `GET /api/v1/auth/posture` 外，`/api` 都要带 `Authorization: Bearer <token>`。
 
-- 未设置 `IOT_DAQ_STUDIO_TOKEN` 时，桩把本机同源调用视为 `admin`（仅用于同机嵌入开发）
-- 设置了该环境变量时，请求必须带 `Authorization: Bearer <token>`，该令牌映射为 `admin`
-- 不信任客户端自报的角色头
+- 开发与 `dotnet run`：`Studio:AccountMode` 缺省为 `demo`。初始口令是 `admin` / `admin`、`engineer` / `engineer`、`viewer` / `viewer`，只适合 localhost。登录页会写明这一点。
+- 现场 zip：`AccountMode` 为 `field`。首次启动把一次性密码写到 `data/auth/bootstrap-password.txt`。`admin` / `admin` 不能登录。登录响应 `mustChangePassword: true` 时，除 `GET /auth/me`、`GET /auth/posture`、`POST /auth/password` 外，接口返回 `403 password_change_required`。
+- `POST /api/v1/auth/password` 正文 `{ "currentPassword", "newPassword" }`。新密码至少 8 位，不能与当前密码、用户名或演示口令相同。密码以 PBKDF2 存在 `data/auth/accounts.json`，文件里没有明文。
+- 不信任客户端自报的角色头。
 
-角色矩阵（用户目录落地后按此执行；M1 桩可以只有 admin）：
+角色矩阵：
 
 | 操作 | viewer | engineer | admin |
 | --- | --- | --- | --- |
