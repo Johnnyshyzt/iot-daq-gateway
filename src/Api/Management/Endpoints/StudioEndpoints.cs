@@ -24,11 +24,25 @@ public static class StudioEndpoints
                 Token = token,
                 Username = username ?? "",
                 Role = role,
-                ExpiresAt = expires
+                ExpiresAt = expires,
+                MustChangePassword = tokens.MustChangePassword(username)
             });
         });
 
-        api.MapGet("/auth/me", (HttpContext http) => ApiResults.Ok(CurrentUser(http)));
+        api.MapGet("/auth/posture", (AccountStore accounts) => ApiResults.Ok(accounts.Posture()));
+
+        api.MapPost("/auth/password", (ChangePasswordRequest? body, HttpContext http, AccountStore accounts) =>
+        {
+            var username = http.Items["studio.user"] as string ?? "";
+            if (!accounts.TryChangePassword(username, body?.CurrentPassword, body?.NewPassword, out var error))
+            {
+                return ApiResults.Error(StatusCodes.Status400BadRequest, "invalid_password", error);
+            }
+
+            return ApiResults.Ok(new ChangePasswordResult());
+        });
+
+        api.MapGet("/auth/me", (HttpContext http, AccountStore accounts) => ApiResults.Ok(CurrentUser(http, accounts)));
 
         api.MapGet("/config", (ConfigStore store) => ApiResults.Ok(store.GetView()));
         api.MapGet("/config/diff", (ConfigStore store) => ApiResults.Ok(store.Diff()));
@@ -98,8 +112,8 @@ public static class StudioEndpoints
             ApiResults.Ok(await runtime.LogsAsync(lines ?? 200, cancellationToken)));
 
         api.MapGet("/license", () => ApiResults.Ok(License()));
-        api.MapGet("/settings", (HttpContext http, ConfigStore store, TokenService tokens) =>
-            ApiResults.Ok(BuildSettings(http, store, tokens)));
+        api.MapGet("/settings", (HttpContext http, ConfigStore store, AccountStore accounts) =>
+            ApiResults.Ok(BuildSettings(http, store, accounts)));
         api.MapPut("/settings", (SettingsUpdate body, ConfigStore store) =>
         {
             var gateway = store.GetGateway();
@@ -114,13 +128,12 @@ public static class StudioEndpoints
         }).RequireWriter();
     }
 
-    private static SettingsView BuildSettings(HttpContext http, ConfigStore store, TokenService tokens)
+    private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts)
     {
         var gateway = store.GetGateway();
-        var user = CurrentUser(http);
-        var users = user.Role == "admin"
-            ? tokens.Users.Select(item => new UserInfo { Username = item.Username, Role = item.Role }).ToList()
-            : [];
+        var user = CurrentUser(http, accounts);
+        var posture = accounts.Posture();
+        var users = user.Role == "admin" ? accounts.ListUsers().ToList() : [];
         return new SettingsView
         {
             SiteId = gateway.Metadata.SiteId,
@@ -132,7 +145,9 @@ public static class StudioEndpoints
             DataDirectory = store.DataDirectory,
             License = License(),
             CurrentUser = user,
-            Users = users
+            Users = users,
+            AccountMode = posture.Mode,
+            AccountMessage = posture.Message
         };
     }
 
@@ -144,11 +159,16 @@ public static class StudioEndpoints
         Message = "M1 许可证闸门为桩，当前不拦截管理 API。没有许可证时 Runtime 与 Studio 都可以运行。"
     };
 
-    private static UserInfo CurrentUser(HttpContext http) => new()
+    private static UserInfo CurrentUser(HttpContext http, AccountStore accounts)
     {
-        Username = http.Items["studio.user"] as string ?? "",
-        Role = http.Items["studio.role"] as string ?? ""
-    };
+        var username = http.Items["studio.user"] as string ?? "";
+        return new UserInfo
+        {
+            Username = username,
+            Role = http.Items["studio.role"] as string ?? "",
+            MustChangePassword = accounts.MustChangePassword(username)
+        };
+    }
 
     private static RouteHandlerBuilder RequireWriter(this RouteHandlerBuilder builder) =>
         builder.AddEndpointFilter(async (context, next) =>

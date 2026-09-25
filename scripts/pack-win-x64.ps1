@@ -58,8 +58,11 @@ Set-Content -Path (Join-Path $Stage "VERSION.txt") -Value $Informational -Encodi
 Copy-Item -Force (Join-Path $Root "packaging/windows/install-service.bat") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/uninstall-service.bat") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/run-console.bat") $Stage
+Copy-Item -Force (Join-Path $Root "packaging/windows/service-env.ps1") $Stage
+Copy-Item -Force (Join-Path $Root "packaging/windows/service.env.example") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/Fwlib64.dll.PLACE_HERE.txt") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/安装说明.txt") $Stage
+Copy-Item -Force (Join-Path $Root "packaging/windows/appsettings.Field.json") (Join-Path $Stage "appsettings.json")
 
 foreach ($dll in @("Fwlib64.dll", "fwlib64.dll")) {
     if (Test-Path (Join-Path $Stage $dll)) {
@@ -73,6 +76,19 @@ if (-not (Test-Path $exe)) {
 }
 if (-not (Test-Path (Join-Path $Stage "wwwroot/index.html"))) {
     throw "Publish did not include wwwroot/index.html. Build src/Web first."
+}
+if (-not (Test-Path (Join-Path $Stage "data/seed/gateway.yaml"))) {
+    throw "Publish did not include data/seed/gateway.yaml."
+}
+if (-not (Test-Path (Join-Path $Stage "service.env.example"))) {
+    throw "Stage is missing service.env.example."
+}
+$fieldSettings = Get-Content -LiteralPath (Join-Path $Stage "appsettings.json") -Raw
+if ($fieldSettings -notmatch '"AccountMode"\s*:\s*"field"') {
+    throw "Field appsettings.json is missing AccountMode=field."
+}
+if ($fieldSettings -match '"Password"') {
+    throw "Field appsettings.json still contains demo passwords."
 }
 
 $Folder = Join-Path $Dist $FolderName

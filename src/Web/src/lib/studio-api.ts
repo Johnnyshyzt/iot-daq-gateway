@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/stores/auth-store'
+import { persistMustChange, useAuthStore } from '@/stores/auth-store'
 
 export type ValidationIssue = {
   severity?: string
@@ -9,12 +9,14 @@ export type ValidationIssue = {
 export class StudioApiError extends Error {
   readonly status: number
   readonly issues: ValidationIssue[]
+  readonly code: string
 
-  constructor(message: string, status: number, issues: ValidationIssue[] = []) {
+  constructor(message: string, status: number, issues: ValidationIssue[] = [], code = '') {
     super(message)
     this.name = 'StudioApiError'
     this.status = status
     this.issues = issues
+    this.code = code
   }
 }
 
@@ -62,7 +64,15 @@ export async function studioApi<T>(
     }
   }
   if (!response.ok) {
-    throw await readError(response)
+    const error = await readError(response)
+    if (
+      error.code === 'password_change_required' &&
+      !window.location.pathname.startsWith('/account/password')
+    ) {
+      persistMustChange(true)
+      window.location.assign('/account/password')
+    }
+    throw error
   }
   if (response.status === 204) {
     return undefined as T
@@ -73,13 +83,16 @@ export async function studioApi<T>(
 async function readError(response: Response) {
   let message = statusText[response.status] ?? '请求失败'
   let issues: ValidationIssue[] = []
+  let code = ''
   try {
     const body = (await response.json()) as {
+      code?: string
       message?: string
       title?: string
       details?: { issues?: unknown }
       errors?: Record<string, string[]>
     }
+    if (typeof body.code === 'string') code = body.code
     if (body.message) message = body.message
     else if (body.errors) message = '请求格式不正确'
     else if (body.title && response.status >= 500) message = '服务器内部错误'
@@ -94,7 +107,7 @@ async function readError(response: Response) {
       .join('；')
     message = `${message}。${detail}`
   }
-  return new StudioApiError(message, response.status, issues)
+  return new StudioApiError(message, response.status, issues, code)
 }
 
 function readIssues(value: unknown): ValidationIssue[] {

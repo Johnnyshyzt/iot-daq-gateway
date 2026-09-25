@@ -39,4 +39,22 @@ internal static class FocasReturn
         Attrib => "EW_ATTRIB",
         _ => $"FOCAS error {rc}"
     };
+
+    public static string DescribeZh(short rc) => rc switch
+    {
+        Ok => "握手成功（EW_OK）",
+        Protocol => "FOCAS 协议错误（EW_PROTOCOL）",
+        Socket => "无法连接机床或连接被断开（EW_SOCKET）",
+        NoDll => "FOCAS 库缺失或加载失败（EW_NODLL）",
+        Handle => "库句柄无效（EW_HANDLE）",
+        Version => "数控系统或库版本不匹配（EW_VERSION）",
+        Unexpected => "FOCAS 返回未预期错误（EW_UNEXP）",
+        Reset => "调用过程中数控系统复位（EW_RESET）",
+        Busy => "数控系统忙（EW_BUSY）",
+        Func => "函数不受支持或尚未就绪（EW_FUNC）",
+        Length => "数据长度错误（EW_LENGTH）",
+        Number => "数据号错误（EW_NUMBER）",
+        Attrib => "数据属性错误（EW_ATTRIB）",
+        _ => $"FOCAS 返回未知错误码 {rc}"
+    };
 }

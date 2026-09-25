@@ -13,6 +13,15 @@ internal sealed class NativeFocasLibrary : IFocasLibrary
 
     public bool TryGetAvailability(out string error) => FocasNative.TryLoad(out error);
 
+    public FocasLibraryProblem AvailabilityProblem
+    {
+        get
+        {
+            _ = FocasNative.TryLoad(out _);
+            return FocasNative.LastProblem;
+        }
+    }
+
     public short AllocateHandle(string ipAddress, ushort port, int timeoutSeconds, out ushort handle)
     {
         try

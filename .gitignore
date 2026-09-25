@@ -54,3 +54,6 @@ data/published/
 data/draft/
 data/revisions/
 data/runtime/
+data/auth/
+service.env
+packaging/windows/service.env

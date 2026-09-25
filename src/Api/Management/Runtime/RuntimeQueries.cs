@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Text.Json;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Topics;
@@ -19,17 +18,20 @@ public sealed class RuntimeQueries
     private readonly IConfiguration _configuration;
     private readonly ILogger<RuntimeQueries> _logger;
     private readonly ICollectorControl? _collector;
+    private readonly IFocasConnectProbe _focas;
 
     public RuntimeQueries(
         ConfigStore store,
         IConfiguration configuration,
         ILogger<RuntimeQueries> logger,
-        IEnumerable<ICollectorControl> collectors)
+        IEnumerable<ICollectorControl> collectors,
+        IFocasConnectProbe focas)
     {
         _store = store;
         _configuration = configuration;
         _logger = logger;
         _collector = collectors.FirstOrDefault();
+        _focas = focas;
     }
 
     public async Task<RuntimeStatus> StatusAsync(CancellationToken cancellationToken)
@@ -215,39 +217,41 @@ public sealed class RuntimeQueries
 
         var host = device.Spec.Connection.Host;
         var port = device.Spec.Connection.Port;
+        var timeoutMs = device.Spec.Connection.FocasTimeoutMs ?? 3000;
         var watch = Stopwatch.StartNew();
+        FocasConnectProbeResult result;
         try
         {
-            using var client = new TcpClient();
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(2));
-            await client.ConnectAsync(host, port, timeout.Token);
-            watch.Stop();
-            var ok = new DeviceTestResult
-            {
-                DeviceId = id,
-                Ok = true,
-                Adapter = device.Spec.Adapter,
-                LatencyMs = (int)watch.ElapsedMilliseconds,
-                Message = "TCP 端口可达。完整 FOCAS 握手在带 Fwlib64.dll 的 Host 进程中进行，这里只探测端口。"
-            };
-            _store.AppendLog($"设备 {id} 端口探测成功 {host}:{port}");
-            return ok;
+            cancellationToken.ThrowIfCancellationRequested();
+            result = _focas.Probe(host, port, timeoutMs);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             watch.Stop();
-            var failed = new DeviceTestResult
+            var crashed = new DeviceTestResult
             {
                 DeviceId = id,
                 Ok = false,
                 Adapter = device.Spec.Adapter,
                 LatencyMs = (int)watch.ElapsedMilliseconds,
-                Message = $"无法连接 {host}:{port}。{ex.Message}"
+                Message = $"FOCAS 握手失败，进程仍在运行：{ex.Message}"
             };
-            _store.AppendLog($"设备 {id} 端口探测失败 {host}:{port}");
-            return failed;
+            _store.AppendLog($"设备 {id} FOCAS 握手异常");
+            return crashed;
         }
+
+        watch.Stop();
+        _store.AppendLog(result.Ok
+            ? $"设备 {id} FOCAS 握手成功 {host}:{port}"
+            : $"设备 {id} FOCAS 握手失败 {host}:{port} {result.Code}");
+        return new DeviceTestResult
+        {
+            DeviceId = id,
+            Ok = result.Ok,
+            Adapter = device.Spec.Adapter,
+            LatencyMs = (int)watch.ElapsedMilliseconds,
+            Message = result.Message
+        };
     }
 
     private List<string> RecentErrors()

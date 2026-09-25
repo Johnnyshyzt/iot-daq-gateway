@@ -147,6 +147,129 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
         Assert.Equal("forbidden", error!.Code);
     }
 
+    [Fact]
+    public async Task Focas_device_test_reports_a_real_handshake_failure()
+    {
+        using var client = _factory.CreateClient();
+        await Authorize(client, "engineer", "engineer");
+        var device = new DeviceDocument
+        {
+            Metadata = new DeviceMetadata { Id = "cnc-focas", DisplayName = "FOCAS 探测" },
+            Spec = new DeviceSpec
+            {
+                Adapter = "fanuc.focas",
+                Enabled = true,
+                IntervalMs = 1000,
+                Connection = new DeviceConnection { Host = "192.0.2.10", Port = 8193, FocasTimeoutMs = 1000 }
+            }
+        };
+        await Read<DeviceDocument>(await client.PutAsJsonAsync("/api/v1/config/devices/cnc-focas", device, Json));
+
+        var test = await Read<DeviceTestResult>(await client.PostAsync("/api/v1/devices/cnc-focas/test", content: null));
+
+        Assert.False(test.Ok);
+        Assert.Equal("fanuc.focas", test.Adapter);
+        Assert.Contains("Fwlib64", test.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("端口可达", test.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Demo_posture_says_localhost_accounts_are_not_a_field_password()
+    {
+        using var client = _factory.CreateClient();
+        var posture = await Read<AuthPosture>(await client.GetAsync("/api/v1/auth/posture"));
+        Assert.Equal("demo", posture.Mode);
+        Assert.Contains("admin / admin", posture.Message, StringComparison.Ordinal);
+        Assert.Contains("localhost", posture.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Field_bootstrap_rejects_admin_admin_until_password_changes()
+    {
+        var previous = Environment.GetEnvironmentVariable("STUDIO_DATA");
+        var directory = Directory.CreateTempSubdirectory("studio-field").FullName;
+        Environment.SetEnvironmentVariable("STUDIO_DATA", directory);
+        try
+        {
+            using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting("Studio:DataDirectory", directory);
+                builder.UseSetting("Host:Acquisition", "off");
+                builder.UseSetting("Studio:AccountMode", "field");
+                builder.UseSetting("Studio:GatewayLoopback", "http://127.0.0.1:9");
+            });
+            using var client = factory.CreateClient();
+
+            var posture = await Read<AuthPosture>(await client.GetAsync("/api/v1/auth/posture"));
+            Assert.Equal("field", posture.Mode);
+            Assert.Contains("bootstrap-password.txt", posture.Message, StringComparison.Ordinal);
+
+            var denied = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
+            {
+                Username = "admin",
+                Password = "admin"
+            }, Json);
+            Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+
+            var bootstrapPath = Path.Combine(directory, "auth", "bootstrap-password.txt");
+            Assert.True(File.Exists(bootstrapPath));
+            var password = BootstrapPassword(bootstrapPath, "admin");
+            var accounts = File.ReadAllText(Path.Combine(directory, "auth", "accounts.json"));
+            Assert.Contains("pbkdf2-sha256", accounts, StringComparison.Ordinal);
+            Assert.DoesNotContain(password, accounts, StringComparison.Ordinal);
+
+            var login = await Read<LoginResponse>(await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
+            {
+                Username = "admin",
+                Password = password
+            }, Json));
+            Assert.True(login.MustChangePassword);
+            Assert.Equal("admin", login.Role);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Token);
+
+            var blocked = await client.GetAsync("/api/v1/config");
+            Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+            var blockedError = await blocked.Content.ReadFromJsonAsync<ApiError>(Json);
+            Assert.Equal("password_change_required", blockedError!.Code);
+
+            var weak = await client.PostAsJsonAsync("/api/v1/auth/password", new ChangePasswordRequest
+            {
+                CurrentPassword = password,
+                NewPassword = "admin"
+            }, Json);
+            Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
+
+            var changed = await Read<ChangePasswordResult>(await client.PostAsJsonAsync("/api/v1/auth/password", new ChangePasswordRequest
+            {
+                CurrentPassword = password,
+                NewPassword = "field-pass-1"
+            }, Json));
+            Assert.True(changed.Ok);
+
+            var config = await client.GetAsync("/api/v1/config");
+            Assert.Equal(HttpStatusCode.OK, config.StatusCode);
+            var remaining = File.ReadAllText(bootstrapPath);
+            Assert.DoesNotContain("admin=", remaining, StringComparison.Ordinal);
+            Assert.Contains("engineer=", remaining, StringComparison.Ordinal);
+            Assert.False(File.ReadAllText(Path.Combine(directory, "auth", "accounts.json")).Contains(password, StringComparison.Ordinal));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("STUDIO_DATA", previous);
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    private static string BootstrapPassword(string path, string username)
+    {
+        var prefix = username + "=";
+        var line = File.ReadAllLines(path).Single(item => item.StartsWith(prefix, StringComparison.Ordinal));
+        return line[prefix.Length..];
+    }
+
     private static async Task Authorize(HttpClient client, string username, string password)
     {
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
@@ -155,6 +278,7 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
             Password = password
         }, Json);
         var login = await Read<LoginResponse>(response);
+        Assert.False(login.MustChangePassword);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Token);
     }
 

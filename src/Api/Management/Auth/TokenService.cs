@@ -7,54 +7,35 @@ public sealed class TokenService
 {
     public const string DevSigningKey = "studio-m1-dev-signing-key";
     private readonly string _key;
-    private readonly IReadOnlyList<StudioUser> _users;
+    private readonly AccountStore _accounts;
 
-    public TokenService(IConfiguration configuration, ILogger<TokenService> logger)
+    public TokenService(IConfiguration configuration, AccountStore accounts, ILogger<TokenService> logger)
     {
-        var key = configuration["Studio:SigningKey"];
-        if (string.IsNullOrWhiteSpace(key))
+        _accounts = accounts;
+        _accounts.EnsureInitialized();
+        _key = _accounts.SigningKey;
+        if (string.Equals(_key, DevSigningKey, StringComparison.Ordinal)
+            && string.IsNullOrWhiteSpace(configuration["Studio:SigningKey"]))
         {
-            key = DevSigningKey;
             logger.LogWarning(
-                "Studio:SigningKey is empty; using the development fallback. Set Studio:SigningKey or STUDIO_SIGNING_KEY before sharing this host.");
+                "Studio:SigningKey is empty; using the development fallback. Set Studio:SigningKey before sharing this host. Field packages generate a key under data/auth.");
         }
-
-        _key = key;
-        var configured = configuration.GetSection("Studio:Users").Get<List<StudioUser>>() ?? [];
-        if (configured.Count == 0)
-        {
-            configured =
-            [
-                new StudioUser { Username = "admin", Password = "admin", Role = "admin" },
-                new StudioUser { Username = "engineer", Password = "engineer", Role = "engineer" },
-                new StudioUser { Username = "viewer", Password = "viewer", Role = "viewer" }
-            ];
-        }
-
-        _users = configured;
     }
 
-    public IReadOnlyList<StudioUser> Users => _users;
+    public bool MustChangePassword(string? username) => _accounts.MustChangePassword(username);
 
     public bool TryLogin(string? username, string? password, out string token, out string role, out DateTimeOffset expiresAt)
     {
         token = "";
         role = "";
         expiresAt = default;
-        if (string.IsNullOrWhiteSpace(username) || password is null || username.Contains('\n', StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var user = _users.FirstOrDefault(item => string.Equals(item.Username, username, StringComparison.Ordinal));
-        if (user is null || user.Password is null || !Roles.Contains(user.Role) || !FixedEquals(user.Password, password))
+        if (!_accounts.TryAuthenticate(username, password, out role))
         {
             return false;
         }
 
         expiresAt = DateTimeOffset.UtcNow.AddHours(12);
-        role = user.Role;
-        token = Issue(user.Username, user.Role, expiresAt);
+        token = Issue(username!.Trim(), role, expiresAt);
         return true;
     }
 
@@ -125,13 +106,6 @@ public sealed class TokenService
     private byte[] Sign(string payload) =>
         HMACSHA256.HashData(Encoding.UTF8.GetBytes(_key), Encoding.UTF8.GetBytes(payload));
 
-    private static bool FixedEquals(string left, string right)
-    {
-        var a = SHA256.HashData(Encoding.UTF8.GetBytes(left));
-        var b = SHA256.HashData(Encoding.UTF8.GetBytes(right));
-        return CryptographicOperations.FixedTimeEquals(a, b);
-    }
-
     private static string ToBase64Url(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
@@ -152,7 +126,7 @@ public sealed class TokenService
 
 public sealed class StudioAuthMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, TokenService tokens)
+    public async Task InvokeAsync(HttpContext context, TokenService tokens, AccountStore accounts)
     {
         if (!context.Request.Path.StartsWithSegments("/api"))
         {
@@ -160,8 +134,7 @@ public sealed class StudioAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        if (HttpMethods.IsPost(context.Request.Method)
-            && context.Request.Path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
+        if (IsAnonymous(context.Request))
         {
             await next(context);
             return;
@@ -179,8 +152,30 @@ public sealed class StudioAuthMiddleware(RequestDelegate next)
             return;
         }
 
+        if (accounts.MustChangePassword(username) && !IsAllowedDuringPasswordChange(context.Request))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(
+                new Studio.Contracts.ApiError
+                {
+                    Code = "password_change_required",
+                    Message = "必须先修改密码。请使用一次性口令登录后立刻设置新密码。"
+                },
+                StudioJson.Options);
+            return;
+        }
+
         context.Items["studio.user"] = username;
         context.Items["studio.role"] = role;
         await next(context);
     }
+
+    private static bool IsAnonymous(HttpRequest request) =>
+        (HttpMethods.IsPost(request.Method) && request.Path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
+        || (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/posture", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsAllowedDuringPasswordChange(HttpRequest request) =>
+        (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/me", StringComparison.OrdinalIgnoreCase))
+        || (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/posture", StringComparison.OrdinalIgnoreCase))
+        || (HttpMethods.IsPost(request.Method) && request.Path.Equals("/api/v1/auth/password", StringComparison.OrdinalIgnoreCase));
 }

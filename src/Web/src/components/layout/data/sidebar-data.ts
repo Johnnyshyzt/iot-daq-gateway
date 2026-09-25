@@ -3,6 +3,7 @@ import {
   Command,
   LayoutDashboard,
   Radio,
+  KeyRound,
   Settings,
   Share2,
   Upload,
@@ -37,7 +38,10 @@ export const sidebarData: SidebarData = {
     },
     {
       title: '系统',
-      items: [{ title: '系统', url: '/settings', icon: Settings }],
+      items: [
+        { title: '系统', url: '/settings', icon: Settings },
+        { title: '修改密码', url: '/account/password', icon: KeyRound },
+      ],
     },
   ],
 }

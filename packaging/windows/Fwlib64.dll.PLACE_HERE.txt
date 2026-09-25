@@ -2,7 +2,8 @@
 
     Fwlib64.dll
 
-不要把该文件提交进 git，也不要打进 Docker 镜像。缺库时网关进程仍会运行，fanuc.focas 设备为 offline，日志会写明原因。
+不要把该文件提交进 git，也不要打进 Docker 镜像或现场 zip。缺库时网关进程仍会运行。
+设备测试和采集都不会把 TCP 通断当成握手成功：页面会用中文说明缺库、位数不对或连接失败。
 
 本发布包是 Windows x64 自包含包：现场不需要安装 .NET SDK 10.0.203，也不需要 git 检出源码。
 Linux Docker 不是生产 FOCAS 路径。

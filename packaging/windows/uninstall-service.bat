@@ -35,6 +35,7 @@ if errorlevel 1 (
 
 echo.
 echo [完成] 服务已删除。开机将不再自动启动。
-echo gateway.yaml、logs\、Fwlib64.dll 仍保留在本目录，可手动删除。
+echo data\、service.env、logs\、Fwlib64.dll 仍保留在本目录，可手动删除。
+echo 卸载不会清掉已修改的本地密码或 MQTT 环境文件。
 endlocal
 exit /b 0

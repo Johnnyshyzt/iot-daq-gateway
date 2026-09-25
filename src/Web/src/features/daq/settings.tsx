@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { ChangePasswordForm } from '@/features/auth/change-password-form'
 import { canWrite, describeError, roleLabel, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
@@ -18,8 +19,10 @@ type SettingsView = {
   changeOnly: boolean
   dataDirectory: string
   license: { enforced: boolean; message: string }
-  currentUser: { username: string; role: string }
-  users: Array<{ username: string; role: string }>
+  currentUser: { username: string; role: string; mustChangePassword?: boolean }
+  users: Array<{ username: string; role: string; mustChangePassword?: boolean }>
+  accountMode?: string
+  accountMessage?: string
 }
 
 export function SettingsPage() {
@@ -59,7 +62,10 @@ export function SettingsPage() {
   }
 
   return (
-    <PageShell title='系统' description='站点名写入 Gateway 草稿。许可证桩当前不拦截管理 API。'>
+    <PageShell
+      title='系统'
+      description='站点名写入 Gateway 草稿。许可证桩当前不拦截管理 API。账号只存在本机。'
+    >
       <div className='grid gap-4 lg:grid-cols-2'>
         <Card>
           <CardHeader>
@@ -111,18 +117,29 @@ export function SettingsPage() {
           <CardContent className='space-y-2 text-sm'>
             <p>
               当前用户：{settings.currentUser.username} · {roleLabel(settings.currentUser.role)}
+              {settings.currentUser.mustChangePassword ? ' · 必须修改密码' : ''}
             </p>
             <p>数据目录：{settings.dataDirectory}</p>
+            {settings.accountMessage ? <p>{settings.accountMessage}</p> : null}
             <p>{settings.license.message}</p>
             {settings.users.length > 0 ? (
               <ul>
                 {settings.users.map((user) => (
                   <li key={user.username}>
                     {user.username} · {roleLabel(user.role)}
+                    {user.mustChangePassword ? ' · 待修改密码' : ''}
                   </li>
                 ))}
               </ul>
             ) : null}
+          </CardContent>
+        </Card>
+        <Card className='lg:col-span-2'>
+          <CardHeader>
+            <CardTitle>修改密码</CardTitle>
+          </CardHeader>
+          <CardContent className='max-w-md'>
+            <ChangePasswordForm />
           </CardContent>
         </Card>
       </div>

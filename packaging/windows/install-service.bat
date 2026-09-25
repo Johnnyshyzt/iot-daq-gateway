@@ -52,6 +52,19 @@ if errorlevel 1 (
 
 sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://127.0.0.1:5080 发布配置，同一进程会重新加载 data\published。现场不需要 .NET SDK。"
 sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul
+
+if not exist "%~dp0service.env" (
+  echo [警告] 没有 service.env。MQTT 密码不会注入。
+  echo         复制 service.env.example 为 service.env，填写 MQTT_USER 和 MQTT_PASSWORD。
+  echo.
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0service-env.ps1" -Mode service -ServiceName "%SERVICE_NAME%"
+if errorlevel 1 (
+  echo [错误] 写入服务环境变量失败。MQTT_USER / MQTT_PASSWORD 未注入。
+  exit /b 1
+)
+
 sc start "%SERVICE_NAME%"
 if errorlevel 1 (
   echo [错误] 服务已创建但启动失败。请查看本目录 logs\ 下当天的 gateway-yyyyMMdd.log
@@ -60,7 +73,10 @@ if errorlevel 1 (
 
 echo.
 echo [完成] 服务 %SERVICE_NAME% 已启动，开机将自动运行。
-echo 页面:   http://127.0.0.1:5080    账号 admin / admin
+echo 页面:   http://127.0.0.1:5080
+echo 登录:   现场模式不使用 admin/admin。一次性密码在 data\auth\bootstrap-password.txt
+echo         登录后必须修改密码。角色仍是本机 admin / engineer / viewer。
+echo MQTT:   密码只在 service.env。修改后重新以管理员运行本脚本。
 echo 改配置: 在页面发布。采集读取 data\published，不必为此重启服务。
 echo 日志:   %~dp0logs\
 echo 状态:   sc query %SERVICE_NAME%

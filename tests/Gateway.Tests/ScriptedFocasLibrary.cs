@@ -9,6 +9,14 @@ internal sealed class ScriptedFocasLibrary : IFocasLibrary
 
     public bool Available { get; set; } = true;
 
+    private FocasLibraryProblem _availabilityProblem = FocasLibraryProblem.MissingLibrary;
+
+    public FocasLibraryProblem AvailabilityProblem
+    {
+        get => Available ? FocasLibraryProblem.None : _availabilityProblem;
+        set => _availabilityProblem = value;
+    }
+
     public string UnavailableReason { get; set; } =
         "Missing Fwlib64.dll next to the process. Licensed FANUC FOCAS libraries are not shipped.";
 

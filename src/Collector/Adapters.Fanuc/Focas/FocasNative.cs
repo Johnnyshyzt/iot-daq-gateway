@@ -14,6 +14,18 @@ internal static class FocasNative
     private static readonly object LoadGate = new();
     private static bool? _available;
     private static string _loadError = string.Empty;
+    private static FocasLibraryProblem _problem = FocasLibraryProblem.None;
+
+    public static FocasLibraryProblem LastProblem
+    {
+        get
+        {
+            lock (LoadGate)
+            {
+                return _problem;
+            }
+        }
+    }
 
     /// <summary>
     /// Seconds passed to <c>cnc_allclibhndl3</c> / <c>cnc_settimeout</c> (FOCAS uses seconds, not ms).
@@ -38,18 +50,20 @@ internal static class FocasNative
                 return cached;
             }
 
-            var ok = Probe(out var reason);
+            var ok = Probe(out var reason, out var problem);
             _available = ok;
             _loadError = reason;
+            _problem = problem;
             error = reason;
             return ok;
         }
     }
 
-    private static bool Probe(out string error)
+    private static bool Probe(out string error, out FocasLibraryProblem problem)
     {
         if (!OperatingSystem.IsWindows())
         {
+            problem = FocasLibraryProblem.UnsupportedOperatingSystem;
             error =
                 "FOCAS collection is Windows x64 only. Place licensed Fwlib64.dll next to the gateway process. " +
                 "Linux Docker is not a production FOCAS path.";
@@ -58,6 +72,7 @@ internal static class FocasNative
 
         if (!Environment.Is64BitProcess)
         {
+            problem = FocasLibraryProblem.WrongProcessArchitecture;
             error = "FOCAS adapter requires a 64-bit process to load Fwlib64.dll.";
             return false;
         }
@@ -69,12 +84,14 @@ internal static class FocasNative
                 NativeLibrary.TryLoad(WindowsLibrary, out _) ||
                 NativeLibrary.TryLoad(WindowsLibraryFile, out _))
             {
+                problem = FocasLibraryProblem.None;
                 error = string.Empty;
                 return true;
             }
         }
         catch (BadImageFormatException)
         {
+            problem = FocasLibraryProblem.WrongLibraryArchitecture;
             error =
                 $"{WindowsLibraryFile} is the wrong bitness (BadImageFormat). " +
                 "Use the 64-bit FANUC library with a 64-bit gateway process.";
@@ -82,10 +99,12 @@ internal static class FocasNative
         }
         catch (Exception ex)
         {
+            problem = FocasLibraryProblem.LoadFailed;
             error = $"Failed to load {WindowsLibraryFile}: {ex.Message}";
             return false;
         }
 
+        problem = FocasLibraryProblem.MissingLibrary;
         error =
             $"Missing {WindowsLibraryFile} next to the process (searched {AppContext.BaseDirectory}). " +
             "Licensed FANUC FOCAS libraries are not shipped in git or container images.";

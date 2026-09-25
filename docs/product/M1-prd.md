@@ -41,14 +41,14 @@
 | 能力 | Collector | Api + Web |
 | --- | --- | --- |
 | YAML | 读 `data/published`，或 `--config` 覆盖 | 写草稿并发布 |
-| Fake + FOCAS 桩 | ✅ | 连接测试：Fake 成功，FOCAS 只探测 TCP |
+| Fake + FOCAS | ✅ | 连接测试：Fake 成功；FOCAS 走与采集相同的握手。缺库时失败且进程不崩 |
 | MQTT Sink | ✅ | 编辑 Broker 与环境变量名 |
 | 可视化编辑 / 发布 | 发布后进程内重载 | ✅ |
 | 点位 CSV | — | ✅；Excel 另存为 CSV |
 | 角色 | — | admin / engineer / viewer 本地桩 |
 | 运行态 | 进程内状态、观测、日志 | `live`；采集关闭时为 `mock` |
 
-连接测试的 HTTP 合同是 `POST /api/v1/devices/{id}/test`。Fake 恒成功。FOCAS 的完整握手在带 `Fwlib64.dll` 的 Host 进程里；这个接口只探测端口。
+连接测试的 HTTP 合同是 `POST /api/v1/devices/{id}/test`。Fake 恒成功。`fanuc.focas` 调用与采集相同的 `cnc_allclibhndl3`：缺 `Fwlib64.dll`、位数不对或连接失败时 `ok` 为 false，并返回中文原因。没有厂商库时不会假装 TCP 成功，进程也不退出。真机是否采到点位仍要在现场 Windows 采集机上验收。
 
 ## 页面树（Studio IA）
 
@@ -58,7 +58,7 @@
 4. **北向 MQTT** `/sinks/mqtt` — Broker、认证引用、Topic 模板、JSON 字段预览
 5. **发布** `/publish` — 草稿 diff、校验结果、发布、回滚历史
 6. **运行态** `/runtime` — 状态流、最近观测短窗口、日志尾
-7. **系统** `/settings` — 站点名、许可证、用户角色（M1 可本地单用户+默认 admin）
+7. **系统** `/settings` — 站点名、许可证、本地角色。演示模式可用默认口令；现场包首次登录必须修改密码
 
 各页调用的 API 与角色见 [studio-ia.md](studio-ia.md)。
 

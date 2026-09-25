@@ -13,8 +13,9 @@ FOCAS 面板以太网通常是明文工业协议，**不能**直接暴露到工�
 ## 网关部署
 
 - 以普通用户运行服务或容器，不要默认 `--privileged`。
-- MQTT 生产环境启用账号与 TLS（配置项 `mqtt.tls`）。
-- 不要在仓库或镜像里写入 FOCAS 库、机床口令、broker 密码。用环境变量或密钥注入。
+- MQTT 生产环境启用账号与 TLS（配置项 `mqtt.tls`）。密码只放在环境变量里。Windows 现场包用安装目录的 `service.env`，由 `install-service.bat` 注入服务进程的 `MQTT_USER` / `MQTT_PASSWORD`（或页面上写的同名变量）。不要把密码写进 YAML。
+- 不要在仓库、zip 或镜像里写入 FOCAS 库、机床口令、broker 密码。
+- Studio 只监听 `127.0.0.1:5080`。开发机演示账号是 `admin` / `admin` 等，登录页会标明只适合 localhost。现场包改为一次性引导密码，首次登录必须修改，角色仍是本机 admin / engineer / viewer。
 - 限制出站：仅允许 MQTT broker 与已登记的机床地址。
 
 ## 变更发布
