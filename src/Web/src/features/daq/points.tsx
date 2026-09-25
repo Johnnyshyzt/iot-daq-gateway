@@ -3,15 +3,17 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -32,6 +34,7 @@ import {
   type PointDefinition,
   type PointTemplateDocument,
 } from '@/lib/studio-api'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
@@ -41,12 +44,15 @@ const idPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 export function PointsPage() {
   const writable = canWrite(useAuthStore((state) => state.auth.user?.role[0]))
   const fileRef = useRef<HTMLInputElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
+  const focusName = useRef(false)
   const [templates, setTemplates] = useState<PointTemplateDocument[]>([])
   const [devices, setDevices] = useState<DeviceDocument[]>([])
   const [templateId, setTemplateId] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [points, setPoints] = useState<PointDefinition[]>([])
   const [catalog, setCatalog] = useState<PointCatalogDocument | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [newId, setNewId] = useState('')
   const [newName, setNewName] = useState('')
   const [message, setMessage] = useState('')
@@ -68,13 +74,16 @@ export function PointsPage() {
     void reload()
       .then((items) => {
         if (items[0]) setTemplateId(items[0].metadata.id)
-        else setMessage('还没有点位模板。下面可以新建一份发那科模板。')
       })
       .catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
   useEffect(() => {
-    if (!templateId) return
+    if (!templateId) {
+      setDisplayName('')
+      setPoints([])
+      return
+    }
     let cancelled = false
     void studioApi<PointTemplateDocument>(`/api/v1/config/point-templates/${encodeURIComponent(templateId)}`)
       .then((document) => {
@@ -193,21 +202,39 @@ export function PointsPage() {
     })
     setNewId('')
     setNewName('')
+    focusName.current = true
     await reload()
     setTemplateId(id)
+    setCreateOpen(false)
     setMessage('新模板已写入草稿，并带上发那科目录里的三个点。按需要改启用后再发布。')
     toast.success('已新建点位模板')
   }
 
   async function removeTemplate() {
     if (!templateId) return
-    await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(templateId)}`, {
+    const removed = templateId
+    const index = templates.findIndex((item) => item.metadata.id === removed)
+    await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(removed)}`, {
       method: 'DELETE',
     })
     const items = await reload()
-    setTemplateId(items[0]?.metadata.id ?? '')
+    const next = items[index] ?? items[index - 1] ?? items[0]
+    setTemplateId(next?.metadata.id ?? '')
     setMessage('模板已从草稿删除。')
     toast.success('点位模板已删除')
+  }
+
+  function selectTemplate(id: string) {
+    setTemplateId(id)
+    setMessage('')
+  }
+
+  function closeCreate(open: boolean) {
+    setCreateOpen(open)
+    if (!open) {
+      setNewId('')
+      setNewName('')
+    }
   }
 
   function addFromCatalog() {
@@ -313,6 +340,7 @@ export function PointsPage() {
   const missing =
     catalog?.points.filter((entry) => !points.some((point) => point.id.trim().toLowerCase() === entry.id.toLowerCase())) ??
     []
+  const groups = groupByAdapter(templates)
   const description = catalog
     ? `${catalog.message} 一类模板给多台同类设备用，不是每台各写一张地址表。可改启用、单位、倍率和死区。Excel 请另存为 CSV。`
     : '正在读取发那科点位目录… 一类模板给多台同类设备用，不是每台各写一张地址表。'
@@ -354,208 +382,295 @@ export function PointsPage() {
         </div>
       }
     >
-      <Card>
-        <CardHeader className='flex flex-row flex-wrap items-center justify-between gap-3'>
-          <CardTitle>模板点表</CardTitle>
-          {templates.length > 0 ? (
-            <Select
-              value={templateId}
-              onValueChange={(id) => {
-                setTemplateId(id)
-                setMessage('')
-              }}
-            >
-              <SelectTrigger className='w-80'>
-                <SelectValue placeholder='选择模板' />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((item) => (
-                  <SelectItem key={item.metadata.id} value={item.metadata.id}>
-                    {(item.metadata.displayName || item.metadata.id) + `（${item.metadata.id}）`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {!templateId ? (
-            <p className='text-sm text-muted-foreground'>请先新建一个发那科点位模板。</p>
-          ) : (
-            <div className='grid gap-4'>
-              <div className='grid max-w-md gap-1.5'>
-                <Label>显示名称</Label>
-                <Input
-                  value={displayName}
-                  disabled={!writable}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                />
-              </div>
-              <p className='text-xs text-muted-foreground'>
-                适配器族 fanuc，供 fanuc.fake 与 fanuc.focas 共用。内部地址由目录填写，采集按点位 id。
-              </p>
-              <div className='overflow-auto'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>点位 Id</TableHead>
-                      <TableHead>采集方式</TableHead>
-                      <TableHead>类型</TableHead>
-                      <TableHead>单位</TableHead>
-                      <TableHead>倍率</TableHead>
-                      <TableHead>死区</TableHead>
-                      <TableHead>启用</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {points.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className='text-muted-foreground'>
-                          {catalog
-                            ? `模板里还没有点位。点「从目录添加」加入 ${catalog.points.map((item) => item.id).join('、')}。`
-                            : '正在读取发那科点位目录…'}
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                    {points.map((point, index) => {
-                      const entry = entryFor(point.id)
+      <div className='grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]'>
+        <Card className='gap-0 overflow-hidden py-0'>
+          <div className='border-b px-4 py-3'>
+            <CardTitle className='text-base'>模板</CardTitle>
+          </div>
+          <ScrollArea className='h-64 lg:h-[min(36rem,calc(100vh-14rem))]'>
+            <nav aria-label='点位模板' className='grid gap-4 p-2'>
+              {groups.length === 0 ? (
+                <p className='px-2 py-3 text-sm text-muted-foreground'>还没有点位模板。</p>
+              ) : (
+                groups.map((group) => (
+                  <div key={group.adapter} className='grid gap-0.5'>
+                    <p className='px-2 py-1 text-xs font-medium text-muted-foreground'>{group.label}</p>
+                    {group.templates.map((item) => {
+                      const active = item.metadata.id === templateId
                       return (
-                        <TableRow key={`${point.id}-${index}`}>
-                          <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
-                          <TableCell className='max-w-64 text-sm text-muted-foreground'>
-                            {!catalog
-                              ? '正在读取发那科点位目录…'
-                              : entry
-                                ? entry.description
-                                : '不在发那科目录中。请移除，否则无法发布。'}
-                          </TableCell>
-                          <TableCell className='text-sm'>{entry?.dataType ?? normalizeDataType(point.dataType)}</TableCell>
-                          <TableCell>
-                            <Input
-                              value={point.unit}
-                              disabled={!writable}
-                              onChange={(event) => update(index, { unit: event.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type='number'
-                              className='w-24'
-                              value={point.scale}
-                              disabled={!writable}
-                              onChange={(event) => update(index, { scale: Number(event.target.value) })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type='number'
-                              className='w-24'
-                              value={point.deadband}
-                              disabled={!writable}
-                              onChange={(event) => update(index, { deadband: Number(event.target.value) })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={point.enabled}
-                              disabled={!writable}
-                              onCheckedChange={(enabled) => update(index, { enabled })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              disabled={!writable}
-                              onClick={() => setPoints((current) => current.filter((_, i) => i !== index))}
-                            >
-                              移除
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        <button
+                          key={item.metadata.id}
+                          type='button'
+                          aria-current={active ? 'true' : undefined}
+                          className={cn(
+                            'rounded-md px-2 py-2 text-start text-sm hover:bg-accent',
+                            active && 'bg-accent font-medium text-accent-foreground'
+                          )}
+                          onClick={() => selectTemplate(item.metadata.id)}
+                        >
+                          <span className='block truncate'>
+                            {item.metadata.displayName || item.metadata.id}
+                          </span>
+                          <span className='block truncate font-mono text-xs text-muted-foreground'>
+                            {item.metadata.id}
+                          </span>
+                        </button>
                       )
                     })}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className='flex flex-wrap items-center gap-3'>
-                <Button disabled={!writable || !catalog} onClick={() => void save().catch(fail)}>
-                  保存草稿
-                </Button>
-                <Button
-                  variant='destructive'
-                  disabled={!writable}
-                  onClick={() => void removeTemplate().catch(fail)}
-                >
-                  删除模板
-                </Button>
-                {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
-              </div>
-            </div>
-          )}
-          {!templateId && message ? <p className='mt-4 text-sm text-muted-foreground'>{message}</p> : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>使用此模板的设备</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!templateId ? (
-            <p className='text-sm text-muted-foreground'>选择模板后，这里列出引用它的设备。设备页只选择模板，不重填点位。</p>
-          ) : users.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>还没有设备引用「{displayName || template?.metadata.displayName || templateId}」。</p>
-          ) : (
-            <div className='flex flex-wrap gap-2'>
-              {users.map((device) => (
-                <Badge key={device.metadata.id} variant='secondary'>
-                  {(device.metadata.displayName || device.metadata.id) + ` · ${device.metadata.id} · ${device.spec.adapter}`}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>新建模板</CardTitle>
-        </CardHeader>
-        <CardContent className='grid max-w-xl gap-3'>
-          <p className='text-sm text-muted-foreground'>
-            新建的是另一类发那科设备的点表，例如只启用报警。创建后带上目录中的三个点，可再关掉不需要的。
-          </p>
-          <div className='grid gap-3 sm:grid-cols-2'>
-            <div className='grid gap-1.5'>
-              <Label>模板 Id</Label>
-              <Input
-                value={newId}
-                disabled={!writable}
-                placeholder='fanuc-alarm-only'
-                onChange={(event) => setNewId(event.target.value)}
-              />
-            </div>
-            <div className='grid gap-1.5'>
-              <Label>显示名称</Label>
-              <Input
-                value={newName}
-                disabled={!writable}
-                placeholder='Fanuc 只看报警'
-                onChange={(event) => setNewName(event.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <Button disabled={!writable || !catalog || !newId.trim()} onClick={() => void createTemplate().catch(fail)}>
+                  </div>
+                ))
+              )}
+            </nav>
+          </ScrollArea>
+          <div className='border-t p-3'>
+            <Button
+              className='w-full'
+              disabled={!writable || !catalog}
+              onClick={() => setCreateOpen(true)}
+            >
               新建模板
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+
+        <div className='grid min-w-0 gap-4'>
+          <Card className='min-w-0'>
+            <CardHeader>
+              <CardTitle>模板点表</CardTitle>
+            </CardHeader>
+            <CardContent className='min-w-0'>
+              {!templateId ? (
+                <div className='grid gap-3'>
+                  <p className='text-sm text-muted-foreground'>
+                    {templates.length === 0
+                      ? '还没有点位模板。点「新建模板」创建一份发那科模板。'
+                      : '从左侧选择一个模板。'}
+                  </p>
+                  {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
+                </div>
+              ) : (
+                <div className='grid gap-4'>
+                  <div className='grid max-w-md gap-1.5'>
+                    <Label htmlFor='template-display-name'>显示名称</Label>
+                    <Input
+                      id='template-display-name'
+                      ref={nameRef}
+                      value={displayName}
+                      disabled={!writable}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                    />
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    适配器族 fanuc，供 fanuc.fake 与 fanuc.focas 共用。内部地址由目录填写，采集按点位 id。
+                  </p>
+                  <div className='overflow-auto'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>点位 Id</TableHead>
+                          <TableHead>采集方式</TableHead>
+                          <TableHead>类型</TableHead>
+                          <TableHead>单位</TableHead>
+                          <TableHead>倍率</TableHead>
+                          <TableHead>死区</TableHead>
+                          <TableHead>启用</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {points.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className='text-muted-foreground'>
+                              {catalog
+                                ? `模板里还没有点位。点「从目录添加」加入 ${catalog.points.map((item) => item.id).join('、')}。`
+                                : '正在读取发那科点位目录…'}
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                        {points.map((point, index) => {
+                          const entry = entryFor(point.id)
+                          return (
+                            <TableRow key={`${point.id}-${index}`}>
+                              <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
+                              <TableCell className='max-w-64 whitespace-normal text-sm text-muted-foreground'>
+                                {!catalog
+                                  ? '正在读取发那科点位目录…'
+                                  : entry
+                                    ? entry.description
+                                    : '不在发那科目录中。请移除，否则无法发布。'}
+                              </TableCell>
+                              <TableCell className='text-sm'>{entry?.dataType ?? normalizeDataType(point.dataType)}</TableCell>
+                              <TableCell>
+                                <Input
+                                  value={point.unit}
+                                  disabled={!writable}
+                                  onChange={(event) => update(index, { unit: event.target.value })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type='number'
+                                  className='w-24'
+                                  value={point.scale}
+                                  disabled={!writable}
+                                  onChange={(event) => update(index, { scale: Number(event.target.value) })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type='number'
+                                  className='w-24'
+                                  value={point.deadband}
+                                  disabled={!writable}
+                                  onChange={(event) => update(index, { deadband: Number(event.target.value) })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Switch
+                                  checked={point.enabled}
+                                  disabled={!writable}
+                                  onCheckedChange={(enabled) => update(index, { enabled })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  disabled={!writable}
+                                  onClick={() => setPoints((current) => current.filter((_, i) => i !== index))}
+                                >
+                                  移除
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <Button disabled={!writable || !catalog} onClick={() => void save().catch(fail)}>
+                      保存草稿
+                    </Button>
+                    <Button
+                      variant='destructive'
+                      disabled={!writable}
+                      onClick={() => void removeTemplate().catch(fail)}
+                    >
+                      删除模板
+                    </Button>
+                    {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className='min-w-0'>
+            <CardHeader>
+              <CardTitle>使用此模板的设备</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!templateId ? (
+                <p className='text-sm text-muted-foreground'>选择模板后，这里列出引用它的设备。设备页只选择模板，不重填点位。</p>
+              ) : users.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>还没有设备引用「{displayName || template?.metadata.displayName || templateId}」。</p>
+              ) : (
+                <div className='flex flex-wrap gap-2'>
+                  {users.map((device) => (
+                    <Badge key={device.metadata.id} variant='secondary'>
+                      {(device.metadata.displayName || device.metadata.id) + ` · ${device.metadata.id} · ${device.spec.adapter}`}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Dialog open={createOpen} onOpenChange={closeCreate}>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            if (!focusName.current) return
+            focusName.current = false
+            event.preventDefault()
+            nameRef.current?.focus()
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>新建模板</DialogTitle>
+            <DialogDescription>
+              新建的是另一类发那科设备的点表，例如只启用报警。创建后带上目录中的三个点，可再关掉不需要的。
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className='grid gap-4'
+            onSubmit={(event) => {
+              event.preventDefault()
+              void createTemplate().catch(fail)
+            }}
+          >
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <div className='grid gap-1.5'>
+                <Label htmlFor='new-template-id'>模板 Id</Label>
+                <Input
+                  id='new-template-id'
+                  value={newId}
+                  disabled={!writable}
+                  placeholder='fanuc-alarm-only'
+                  autoFocus
+                  onChange={(event) => setNewId(event.target.value)}
+                />
+              </div>
+              <div className='grid gap-1.5'>
+                <Label htmlFor='new-template-name'>显示名称</Label>
+                <Input
+                  id='new-template-name'
+                  value={newName}
+                  disabled={!writable}
+                  placeholder='Fanuc 只看报警'
+                  onChange={(event) => setNewName(event.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type='button' variant='outline' onClick={() => closeCreate(false)}>
+                取消
+              </Button>
+              <Button type='submit' disabled={!writable || !catalog || !newId.trim()}>
+                新建模板
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
+}
+
+function groupByAdapter(templates: PointTemplateDocument[]) {
+  const order: string[] = []
+  const groups = new Map<string, PointTemplateDocument[]>()
+  for (const template of templates) {
+    const adapter = template.spec.adapter?.trim() || ''
+    const existing = groups.get(adapter)
+    if (existing) existing.push(template)
+    else {
+      groups.set(adapter, [template])
+      order.push(adapter)
+    }
+  }
+  order.sort((left, right) => {
+    if (left === 'fanuc') return -1
+    if (right === 'fanuc') return 1
+    return left.localeCompare(right)
+  })
+  return order.map((adapter) => ({
+    adapter: adapter || 'ungrouped',
+    label: adapter === 'fanuc' ? 'Fanuc' : adapter || '未分组',
+    templates: groups.get(adapter) ?? [],
+  }))
 }
 
 function fromCatalog(entry: PointCatalogEntry): PointDefinition {
