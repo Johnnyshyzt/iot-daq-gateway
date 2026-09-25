@@ -12,7 +12,7 @@ public sealed class HostInfoTests
     public void Version_IsNonEmptyAndStartsWithAssemblyVersion()
     {
         Assert.False(string.IsNullOrWhiteSpace(HostInfo.Version));
-        Assert.StartsWith("0.3.0", HostInfo.Version, StringComparison.Ordinal);
+        Assert.StartsWith("0.4.0", HostInfo.Version, StringComparison.Ordinal);
         Assert.Equal("IotDaqGateway", HostInfo.WindowsServiceName);
     }
 }
@@ -26,11 +26,11 @@ public sealed class RollingFileLoggerTests
             "Gateway.Host",
             LogLevel.Information,
             new EventId(0),
-            "iot-daq-gateway 0.3.0 starting",
+            "iot-daq-gateway 0.4.0 starting",
             exception: null);
 
         Assert.Contains("Gateway.Host", line, StringComparison.Ordinal);
-        Assert.Contains("iot-daq-gateway 0.3.0 starting", line, StringComparison.Ordinal);
+        Assert.Contains("iot-daq-gateway 0.4.0 starting", line, StringComparison.Ordinal);
         Assert.Matches(@"\d{4}-\d{2}-\d{2} ", line);
     }
 
