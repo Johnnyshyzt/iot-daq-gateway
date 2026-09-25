@@ -125,7 +125,7 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
         {
             DeviceId = DeviceId,
             Status = _connected ? AdapterStatus.Online : AdapterStatus.Offline,
-            Message = _connected ? "fake adapter" : "not connected",
+            Message = _connected ? "Fake 适配器已连接" : "Fake 适配器未连接",
             Timestamp = DateTimeOffset.UtcNow
         });
     }

@@ -168,6 +168,9 @@ internal static class V1BundleLoader
             ClientId = OptionalString(broker, "clientId") ?? "iot-daq-gateway",
             Qos = OptionalInt(spec, "qos") ?? 1,
             Tls = OptionalBool(broker, "tls") ?? false,
+            Retain = OptionalBool(spec, "retain") ?? false,
+            TopicTemplate = OptionalString(spec, "topicTemplate") ?? "daq/{site}/{deviceId}/{point}",
+            StatusTopic = OptionalString(spec, "statusTopic") ?? "daq/{site}/{deviceId}/$status",
             Username = ResolveEnv(OptionalString(broker, "usernameFromEnv")),
             Password = ResolveEnv(OptionalString(broker, "passwordFromEnv"))
         };

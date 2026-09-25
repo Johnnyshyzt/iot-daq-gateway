@@ -54,7 +54,10 @@ public sealed class InProcessAcquisitionTests
 
             var before = await Read<RuntimeStatus>(await client.GetAsync("/api/v1/runtime/status"));
             Assert.Equal("live", before.Mode);
-            Assert.Contains(before.Devices, device => device.Id == "cnc-01");
+            Assert.Contains(before.Devices, device => device.Id == "cnc-01" && device.StatusTopic == "daq/plant-a/cnc-01/$status");
+
+            var observations = await Read<ObservationList>(await client.GetAsync("/api/v1/runtime/observations?deviceId=cnc-01&limit=20"));
+            Assert.Contains(observations.Observations, item => item.Point == "state" && item.Topic == "daq/plant-a/cnc-01/state");
 
             await Authorize(client);
             var device = await Read<DeviceDocument>(await client.GetAsync("/api/v1/config/devices/cnc-01"));
@@ -69,6 +72,64 @@ public sealed class InProcessAcquisitionTests
             Assert.Equal("live", after.Mode);
             Assert.Equal(published.Revision, after.ActiveRevision);
             Assert.Contains(after.Devices, item => item.Id == "cnc-01" && item.DisplayName == "In-process lathe");
+        }
+        finally
+        {
+            await server.StopAsync();
+            if (Directory.Exists(data))
+            {
+                Directory.Delete(data, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Publish_uses_the_mqtt_topic_template_from_the_draft()
+    {
+        var port = FreeTcpPort();
+        var data = Directory.CreateTempSubdirectory("host-topic").FullName;
+        CopySeed(FindSeed(), Path.Combine(data, "seed"));
+        var mqttPath = Path.Combine(data, "seed", "sinks", "mqtt.yaml");
+        var mqttYaml = File.ReadAllText(mqttPath)
+            .Replace("port: 1883", $"port: {port}", StringComparison.Ordinal)
+            .Replace("clientId: iot-daq-gateway", "clientId: host-topic-" + Guid.NewGuid().ToString("N")[..8], StringComparison.Ordinal);
+        File.WriteAllText(mqttPath, mqttYaml);
+
+        var factory = new MqttServerFactory();
+        var server = factory.CreateMqttServer(new MqttServerOptionsBuilder()
+            .WithDefaultEndpoint()
+            .WithDefaultEndpointPort(port)
+            .Build());
+        var received = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        server.InterceptingPublishAsync += args =>
+        {
+            if (args.ApplicationMessage.Topic == "daq/plant-a/cnc-01/live/state")
+            {
+                received.TrySetResult(args.ApplicationMessage.Topic);
+            }
+
+            return Task.CompletedTask;
+        };
+        await server.StartAsync();
+
+        await using var host = new AcquisitionFactory(data);
+        try
+        {
+            using var client = host.CreateClient();
+            await Authorize(client);
+            var mqtt = await Read<MqttSinkDocument>(await client.GetAsync("/api/v1/config/sinks/mqtt"));
+            mqtt.Spec.TopicTemplate = "daq/{site}/{deviceId}/live/{point}";
+            await Read<MqttSinkDocument>(await client.PutAsJsonAsync("/api/v1/config/sinks/mqtt", mqtt, Json));
+            await Read<PublishResult>(await client.PostAsJsonAsync(
+                "/api/v1/config/publish",
+                new PublishRequest { Note = "custom topic" },
+                Json));
+
+            var topic = await received.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.Equal("daq/plant-a/cnc-01/live/state", topic);
+
+            var observations = await Read<ObservationList>(await client.GetAsync("/api/v1/runtime/observations?deviceId=cnc-01&limit=20"));
+            Assert.Contains(observations.Observations, item => item.Topic == "daq/plant-a/cnc-01/live/state");
         }
         finally
         {

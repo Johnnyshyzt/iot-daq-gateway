@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { canWrite, studioApi } from '@/lib/studio-api'
+import { actionLabel, canWrite, describeError, studioApi, StudioApiError, type ValidationIssue } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
@@ -32,8 +32,17 @@ export function PublishPage() {
   const [diff, setDiff] = useState<Diff | null>(null)
   const [revisions, setRevisions] = useState<Revision[]>([])
   const [note, setNote] = useState('')
-  const [issues, setIssues] = useState<string[]>([])
+  const [issues, setIssues] = useState<ValidationIssue[]>([])
   const [message, setMessage] = useState('')
+
+  function fail(error: unknown) {
+    if (error instanceof StudioApiError) {
+      setIssues(error.issues)
+      setMessage(error.message)
+      return
+    }
+    setMessage(describeError(error))
+  }
 
   async function reload() {
     const [nextDiff, nextRevisions] = await Promise.all([
@@ -45,7 +54,7 @@ export function PublishPage() {
   }
 
   useEffect(() => {
-    void reload().catch((error: Error) => setMessage(error.message))
+    void reload().catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
   async function validate() {
@@ -53,8 +62,8 @@ export function PublishPage() {
       '/api/v1/config/validate',
       { method: 'POST' }
     )
-    setIssues(result.issues.map((issue) => issue.message))
-    setMessage(result.valid ? '校验通过' : '校验未通过')
+    setIssues(result.issues)
+    setMessage(result.valid ? '校验通过，可以发布' : '校验未通过，请先处理下面的错误')
   }
 
   async function publish() {
@@ -66,8 +75,8 @@ export function PublishPage() {
       method: 'POST',
       body: JSON.stringify({ note }),
     })
-    setIssues(result.issues.map((issue) => issue.message))
-    setMessage(result.unchanged ? '内容没有变化' : `已发布 ${result.revision.slice(0, 12)}`)
+    setIssues(result.issues)
+    setMessage(result.unchanged ? '内容没有变化' : `已发布 ${result.revision.slice(0, 12)}。运行态会切到这份修订。`)
     toast.success(result.unchanged ? '修订未变化' : '已发布')
     await reload()
   }
@@ -84,7 +93,7 @@ export function PublishPage() {
   return (
     <PageShell
       title='发布'
-      description='校验草稿后发布到 studio/data/published。网关在跑时会收到重载请求。'
+      description='校验草稿后发布到 data/published。同一 Host 进程会立刻重新加载采集。'
     >
       <div className='grid gap-4 lg:grid-cols-2'>
         <Card>
@@ -113,17 +122,21 @@ export function PublishPage() {
               onChange={(event) => setNote(event.target.value)}
             />
             <div className='flex gap-2'>
-              <Button variant='outline' disabled={!writable} onClick={() => void validate().catch((error: Error) => setMessage(error.message))}>
+              <Button variant='outline' disabled={!writable} onClick={() => void validate().catch(fail)}>
                 校验
               </Button>
-              <Button disabled={!writable} onClick={() => void publish().catch((error: Error) => setMessage(error.message))}>
+              <Button disabled={!writable} onClick={() => void publish().catch(fail)}>
                 发布
               </Button>
             </div>
             {message ? <p className='text-sm'>{message}</p> : null}
             {issues.map((issue) => (
-              <p key={issue} className='text-sm text-destructive'>
-                {issue}
+              <p
+                key={`${issue.path}-${issue.message}`}
+                className={issue.severity === 'warning' ? 'text-sm text-amber-700 dark:text-amber-400' : 'text-sm text-destructive'}
+              >
+                {issue.severity === 'warning' ? '警告' : '错误'}
+                {issue.path ? ` · ${issue.path}` : ''}：{issue.message}
               </p>
             ))}
           </CardContent>
@@ -146,15 +159,15 @@ export function PublishPage() {
                   <TableRow key={item.revision}>
                     <TableCell>
                       <div className='font-mono text-xs'>{item.revision.slice(0, 12)}</div>
-                      <div className='text-xs text-muted-foreground'>{item.note || item.action}</div>
+                      <div className='text-xs text-muted-foreground'>{item.note || actionLabel(item.action)}</div>
                     </TableCell>
-                    <TableCell>{item.action}</TableCell>
+                    <TableCell>{actionLabel(item.action)}</TableCell>
                     <TableCell className='text-end'>
                       <Button
                         size='sm'
                         variant='outline'
                         disabled={!writable}
-                        onClick={() => void rollback(item.revision).catch((error: Error) => setMessage(error.message))}
+                        onClick={() => void rollback(item.revision).catch(fail)}
                       >
                         回滚
                       </Button>

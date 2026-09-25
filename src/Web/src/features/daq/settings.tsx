@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { canWrite, roleLabel, studioApi } from '@/lib/studio-api'
+import { canWrite, describeError, roleLabel, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
@@ -30,7 +30,7 @@ export function SettingsPage() {
   useEffect(() => {
     void studioApi<SettingsView>('/api/v1/settings')
       .then(setSettings)
-      .catch((error: Error) => setMessage(error.message))
+      .catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
   async function save() {
@@ -98,7 +98,7 @@ export function SettingsPage() {
                 onCheckedChange={(changeOnly) => setSettings({ ...settings, changeOnly })}
               />
             </div>
-            <Button disabled={!writable} onClick={() => void save().catch((error: Error) => setMessage(error.message))}>
+            <Button disabled={!writable} onClick={() => void save().catch((error: unknown) => setMessage(describeError(error)))}>
               保存草稿
             </Button>
             {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}

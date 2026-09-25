@@ -48,6 +48,12 @@ public sealed class MqttOptions
     public int Qos { get; set; } = 1;
 
     public bool Tls { get; set; }
+
+    public bool Retain { get; set; }
+
+    public string TopicTemplate { get; set; } = "daq/{site}/{deviceId}/{point}";
+
+    public string StatusTopic { get; set; } = "daq/{site}/{deviceId}/$status";
 }
 
 public sealed class DeviceBinding

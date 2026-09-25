@@ -219,6 +219,8 @@ public sealed class DeviceHealthView
     public DateTimeOffset? LastSeen { get; set; }
 
     public string Message { get; set; } = "";
+
+    public string StatusTopic { get; set; } = "";
 }
 
 public sealed class ObservationView
@@ -232,6 +234,8 @@ public sealed class ObservationView
     public string Quality { get; set; } = "good";
 
     public string? Unit { get; set; }
+
+    public string Topic { get; set; } = "";
 
     public DateTimeOffset Timestamp { get; set; }
 }

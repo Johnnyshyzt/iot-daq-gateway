@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { studioApi, type RuntimeStatus } from '@/lib/studio-api'
+import { describeError, studioApi, type RuntimeStatus } from '@/lib/studio-api'
 import { PageShell } from './page-shell'
 
 type Observation = {
@@ -22,6 +22,7 @@ type Observation = {
   point: string
   value?: string | null
   quality: string
+  topic?: string
   timestamp: string
 }
 
@@ -46,7 +47,7 @@ export function RuntimePage() {
         setLines(logs.lines)
         setError('')
       } catch (err) {
-        if (!stop) setError(err instanceof Error ? err.message : '加载失败')
+        if (!stop) setError(describeError(err))
       }
     }
     void load()
@@ -64,7 +65,7 @@ export function RuntimePage() {
       title='运行态'
       description={
         live
-          ? '数据来自本进程的采集会话。发布后会立刻重新加载已发布配置。'
+          ? '数据来自本进程的采集会话。下面的主题就是当前发布到 MQTT 的主题。'
           : '采集未启动，当前是模拟数据。用默认方式启动 Host 后会切换为真实状态。'
       }
     >
@@ -86,6 +87,7 @@ export function RuntimePage() {
                   <TableHead>设备</TableHead>
                   <TableHead>适配器</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>状态主题</TableHead>
                   <TableHead>说明</TableHead>
                 </TableRow>
               </TableHeader>
@@ -98,6 +100,7 @@ export function RuntimePage() {
                     </TableCell>
                     <TableCell>{device.adapter}</TableCell>
                     <TableCell>{statusLabel(device.status)}</TableCell>
+                    <TableCell className='font-mono text-xs break-all'>{device.statusTopic || '—'}</TableCell>
                     <TableCell className='text-xs'>{device.message}</TableCell>
                   </TableRow>
                 ))}
@@ -116,9 +119,17 @@ export function RuntimePage() {
                   <TableHead>设备</TableHead>
                   <TableHead>点位</TableHead>
                   <TableHead>值</TableHead>
+                  <TableHead>MQTT 主题</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {observations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className='text-muted-foreground'>
+                      尚无观测。发布 Fake 设备后，采集运行数秒内会出现。
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {observations.map((item, index) => (
                   <TableRow key={`${item.deviceId}-${item.point}-${item.timestamp}-${index}`}>
                     <TableCell>{item.deviceId}</TableCell>
@@ -126,6 +137,7 @@ export function RuntimePage() {
                     <TableCell>
                       {item.value} <span className='text-xs text-muted-foreground'>{item.quality}</span>
                     </TableCell>
+                    <TableCell className='font-mono text-xs break-all'>{item.topic || '—'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

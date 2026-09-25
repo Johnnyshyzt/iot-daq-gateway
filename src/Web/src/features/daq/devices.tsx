@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table'
 import {
   canWrite,
+  describeError,
   studioApi,
   type DeviceDocument,
 } from '@/lib/studio-api'
@@ -49,6 +50,7 @@ export function DevicesPage() {
   const writable = canWrite(role)
   const [devices, setDevices] = useState<DeviceDocument[]>([])
   const [draft, setDraft] = useState<DeviceDocument>(emptyDevice())
+  const [mode, setMode] = useState<'create' | 'edit'>('create')
   const [message, setMessage] = useState('')
 
   async function reload() {
@@ -56,18 +58,35 @@ export function DevicesPage() {
   }
 
   useEffect(() => {
-    void reload().catch((error: Error) => setMessage(error.message))
+    void reload().catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
+  function fail(error: unknown) {
+    const text = describeError(error)
+    setMessage(text)
+    toast.error(text)
+  }
+
   function select(device: DeviceDocument) {
+    setMode('edit')
     setDraft(structuredClone(device))
+    setMessage('')
+  }
+
+  function createNew() {
+    setMode('create')
+    setDraft(emptyDevice())
     setMessage('')
   }
 
   async function save() {
     const id = draft.metadata.id.trim()
     if (!id) {
-      setMessage('设备 id 不能为空')
+      setMessage('请填写设备 Id')
+      return
+    }
+    if (!draft.metadata.displayName.trim()) {
+      setMessage('请填写显示名')
       return
     }
     const body: DeviceDocument = {
@@ -79,8 +98,9 @@ export function DevicesPage() {
       body: JSON.stringify(body),
     })
     await reload()
+    setMode('edit')
     setDraft(body)
-    setMessage('已写入草稿')
+    setMessage('已写入草稿。到「发布」页校验并发布后，采集才会加载这台设备。')
     toast.success('设备已保存到草稿')
   }
 
@@ -88,7 +108,10 @@ export function DevicesPage() {
     await studioApi(`/api/v1/config/devices/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     })
-    if (draft.metadata.id === id) setDraft(emptyDevice())
+    if (draft.metadata.id === id) {
+      setDraft(emptyDevice())
+      setMode('create')
+    }
     await reload()
     toast.success('设备已从草稿删除')
   }
@@ -110,7 +133,7 @@ export function DevicesPage() {
         <Button
           variant='outline'
           disabled={!writable}
-          onClick={() => setDraft(emptyDevice())}
+          onClick={createNew}
         >
           新建设备
         </Button>
@@ -132,6 +155,13 @@ export function DevicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {devices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className='text-muted-foreground'>
+                      还没有设备。点击「新建设备」，适配器选 fanuc.fake。
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {devices.map((device) => (
                   <TableRow key={device.metadata.id}>
                     <TableCell>
@@ -152,7 +182,7 @@ export function DevicesPage() {
                         size='sm'
                         variant='outline'
                         disabled={!writable}
-                        onClick={() => void test(device.metadata.id)}
+                        onClick={() => void test(device.metadata.id).catch(fail)}
                       >
                         测试
                       </Button>
@@ -165,13 +195,13 @@ export function DevicesPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{draft.metadata.id ? '编辑设备' : '新建设备'}</CardTitle>
+            <CardTitle>{mode === 'edit' ? '编辑设备' : '新建设备'}</CardTitle>
           </CardHeader>
           <CardContent className='grid gap-3'>
-            <Field label='设备 id'>
+            <Field label='设备 Id'>
               <Input
                 value={draft.metadata.id}
-                disabled={!writable}
+                disabled={!writable || mode === 'edit'}
                 onChange={(event) =>
                   setDraft({
                     ...draft,
@@ -180,6 +210,9 @@ export function DevicesPage() {
                 }
               />
             </Field>
+            {mode === 'edit' ? (
+              <p className='text-xs text-muted-foreground'>设备 Id 创建后不可修改。要换 Id，请新建一台再删除原来的。</p>
+            ) : null}
             <Field label='显示名'>
               <Input
                 value={draft.metadata.displayName}
@@ -269,14 +302,14 @@ export function DevicesPage() {
               />
             </div>
             <div className='flex gap-2'>
-              <Button disabled={!writable} onClick={() => void save().catch((error: Error) => setMessage(error.message))}>
+              <Button disabled={!writable} onClick={() => void save().catch(fail)}>
                 保存草稿
               </Button>
               <Button
                 variant='destructive'
                 disabled={!writable || !draft.metadata.id}
                 onClick={() =>
-                  void remove(draft.metadata.id).catch((error: Error) => setMessage(error.message))
+                  void remove(draft.metadata.id).catch(fail)
                 }
               >
                 删除
