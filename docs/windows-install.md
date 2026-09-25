@@ -4,6 +4,8 @@
 
 **不要把 Linux Docker 当作生产 FOCAS 路径。** Compose 镜像只用于 Fake 演示 / 附属 Mosquitto。
 
+首次安装以本文为准。升级、备份、日志和磁盘见 [ops-field.md](ops-field.md)。症状对照见 [field-fault-guide.md](field-fault-guide.md)。尚无自有发那科机床时的验收口径见 [product/pilot-acceptance.md](product/pilot-acceptance.md)。
+
 现场 **不需要** 安装 .NET SDK（包括钉死的 10.0.203），也不需要 git 检出本仓库。构建机才需要 SDK。
 
 ## 发布形态：自包含 win-x64
@@ -47,7 +49,7 @@
    - 把 `service.env` 写进服务的环境（`MQTT_USER`、`MQTT_PASSWORD`，以及 `STUDIO_ACCOUNT_MODE=field`）
    - `start= auto`，开机自启；进程工作目录按安装目录解析 `wwwroot` 和 `data\seed`
    - 失败后自动重启
-9. 真机验收（需要现场机床和授权 DLL，仓库不代做）：订阅 `daq/#`，看到真实 `$status=online` 以及随机床变化的 `state`（不是 Fake 的 60 秒相位）。
+9. 本机可先用 `fanuc.fake` 看 `$status=online` 和大约 60 秒相位。真机 `$status=online` 与随机床变化的 `state` 留到客户现场，见 [product/pilot-acceptance.md](product/pilot-acceptance.md)。仓库不代做这一步。
 
 ## MQTT 密钥（只走环境变量）
 
@@ -141,6 +143,8 @@ sc delete IotDaqGateway
 
 ## 升级
 
+停服务、覆盖程序、保留 `data\published`、`data\auth` 和 `service.env` 的步骤见 [ops-field.md](ops-field.md)。不要先删掉安装目录再解压。根目录的 `gateway.yaml` 不是服务读取的配置。摘要：
+
 1. `sc stop IotDaqGateway`
 2. 备份 `data\`（含 `published`、`draft`、`auth`）、`service.env`、`Fwlib64.dll` 和需要保留的 `logs\`
 3. 用新 zip 覆盖二进制和 `wwwroot`。不要覆盖 `data\`、`service.env`、`Fwlib64.dll`
@@ -148,6 +152,8 @@ sc delete IotDaqGateway
 5. `sc start IotDaqGateway`，核对启动日志中的版本号。已改过的本地密码会保留；不要删 `data\auth`，除非就是要重置口令
 
 ## 常见故障
+
+对照表在 [field-fault-guide.md](field-fault-guide.md)。页面发布会重载 `data\published`，改配置不必重启服务。换程序、换 `Fwlib64.dll`、改 `service.env` 后要重新注入并重启。
 
 | 现象 | 处理 |
 | --- | --- |
@@ -159,5 +165,3 @@ sc delete IotDaqGateway
 | MQTT 反复重连 | broker 地址/端口错；发布被丢弃，采集仍继续 |
 | 两台网关互踢 | `mqtt.clientId` 重复 |
 | 改了页面但采集没变化 | 还没在「发布」页发布。发布后同一进程会重载 `data\published` |
-
-`fanuc.fake` 仅供开发演示，生产请用 `fanuc.focas`。
