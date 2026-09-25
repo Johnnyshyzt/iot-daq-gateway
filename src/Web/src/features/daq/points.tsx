@@ -351,7 +351,7 @@ export function PointsPage() {
       title='点位模板'
       description={description}
       fluid
-      className='py-4'
+      className='px-3 py-4'
       actions={
         <div className='flex flex-wrap gap-2'>
           <Button variant='outline' onClick={exportCsv} disabled={!templateId}>
@@ -385,7 +385,7 @@ export function PointsPage() {
         </div>
       }
     >
-      <div className='grid w-full min-w-0 items-start gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]'>
+      <div className='grid w-full min-w-0 items-start gap-2 lg:grid-cols-[12rem_minmax(0,1fr)]'>
         <Card className='gap-0 overflow-hidden py-0'>
           <div className='flex items-center justify-between gap-2 border-b px-2 py-1.5'>
             <CardTitle className='text-sm'>模板</CardTitle>
