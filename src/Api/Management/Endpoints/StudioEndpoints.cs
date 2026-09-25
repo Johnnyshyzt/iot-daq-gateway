@@ -56,6 +56,16 @@ public static class StudioEndpoints
             return Results.NoContent();
         }).RequireWriter();
 
+        api.MapGet("/config/point-templates", (ConfigStore store) => ApiResults.Ok(store.ListPointTemplates()));
+        api.MapGet("/config/point-templates/{id}", (string id, ConfigStore store) => ApiResults.Ok(store.GetPointTemplate(id)));
+        api.MapPut("/config/point-templates/{id}", (string id, PointTemplateDocument body, ConfigStore store) =>
+            ApiResults.Ok(store.UpsertPointTemplate(id, body))).RequireWriter();
+        api.MapDelete("/config/point-templates/{id}", (string id, ConfigStore store) =>
+        {
+            store.DeletePointTemplate(id);
+            return Results.NoContent();
+        }).RequireWriter();
+
         api.MapGet("/catalog/points", (string? adapter) =>
         {
             var kind = (adapter ?? "").Trim().ToLowerInvariant();

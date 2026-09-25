@@ -134,6 +134,7 @@ export type DeviceDocument = {
     adapter: string
     enabled: boolean
     intervalMs: number
+    pointTemplateId?: string | null
     connection: { host: string; port: number; focasTimeoutMs?: number | null }
   }
 }
@@ -166,6 +167,13 @@ export type PointDefinition = {
   scale: number
   deadband: number
   enabled: boolean
+}
+
+export type PointTemplateDocument = {
+  apiVersion?: string
+  kind?: string
+  metadata: { id: string; displayName: string }
+  spec: { adapter: string; points: PointDefinition[] }
 }
 
 export type PointSetDocument = {
@@ -211,6 +219,7 @@ export type ConfigView = {
   draft: {
     gateway: GatewayDocument
     devices?: DeviceDocument[]
+    pointTemplates?: PointTemplateDocument[]
     pointSets?: PointSetDocument[]
     mqtt?: MqttSinkDocument
   }

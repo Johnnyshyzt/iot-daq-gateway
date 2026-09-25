@@ -21,7 +21,8 @@ public interface IConfigStore
     /// <summary>
     /// Writes one draft document. <paramref name="document"/>.<see cref="ConfigDocument.RelativePath"/>
     /// uses forward slashes and must be <c>gateway.yaml</c>, <c>devices/{id}.yaml</c>,
-    /// <c>points/{deviceId}.yaml</c>, or <c>sinks/mqtt.yaml</c>.
+    /// <c>point-templates/{id}.yaml</c>, <c>points/{deviceId}.yaml</c> (optional per-device override),
+    /// or <c>sinks/mqtt.yaml</c>.
     /// </summary>
     Task WriteDraftAsync(ConfigDocument document, CancellationToken cancellationToken);
 

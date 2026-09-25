@@ -20,9 +20,25 @@ public static class FanucPointCatalog
         Entry("program", "string", "当前程序，如 O0001", "cnc/program")
     ];
 
+    public const string Family = "fanuc";
+
     public static bool IsFanuc(string? adapter) =>
         string.Equals(adapter, FakeAdapter, StringComparison.Ordinal)
         || string.Equals(adapter, FocasAdapter, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A Fanuc template (<c>adapter: fanuc</c>, or a legacy adapter id) matches both Fanuc device adapters.
+    /// </summary>
+    public static bool MatchesFamily(string? templateAdapter, string? deviceAdapter)
+    {
+        var family = (templateAdapter ?? "").Trim().ToLowerInvariant();
+        if (family is Family or FakeAdapter or FocasAdapter)
+        {
+            return IsFanuc(deviceAdapter);
+        }
+
+        return false;
+    }
 
     public static string IdList => string.Join("、", Entries.Select(entry => entry.Id));
 

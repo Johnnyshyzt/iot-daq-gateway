@@ -25,6 +25,22 @@ public static class CanonicalRevision
             Devices = bundle.Devices
                 .OrderBy(device => device.Metadata.Id, StringComparer.Ordinal)
                 .ToList(),
+            PointTemplates = (bundle.PointTemplates ?? [])
+                .OrderBy(template => template.Metadata.Id, StringComparer.Ordinal)
+                .Select(template => new PointTemplateDocument
+                {
+                    ApiVersion = template.ApiVersion,
+                    Kind = template.Kind,
+                    Metadata = template.Metadata,
+                    Spec = new PointTemplateSpec
+                    {
+                        Adapter = template.Spec.Adapter,
+                        Points = template.Spec.Points
+                            .OrderBy(point => point.Id, StringComparer.Ordinal)
+                            .ToList()
+                    }
+                })
+                .ToList(),
             PointSets = bundle.PointSets
                 .OrderBy(set => set.Metadata.DeviceId, StringComparer.Ordinal)
                 .Select(set => new PointSetDocument

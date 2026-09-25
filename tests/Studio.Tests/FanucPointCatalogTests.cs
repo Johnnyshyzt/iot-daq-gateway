@@ -15,7 +15,7 @@ public sealed class FanucPointCatalogTests : IDisposable
     {
         var bundle = ConfigDefaults.Create();
         bundle.Devices[0].Spec.Adapter = adapter;
-        var state = bundle.PointSets[0].Spec.Points[0];
+        var state = bundle.PointTemplates[0].Spec.Points[0];
         state.Id = "State";
         state.Address = "D100";
         state.DataType = "int";
@@ -26,7 +26,7 @@ public sealed class FanucPointCatalogTests : IDisposable
         Assert.Equal("state", state.Id);
         Assert.Equal("cnc/statinfo", state.Address);
         Assert.Equal("string", state.DataType);
-        Assert.Equal(["state", "alarm", "program"], bundle.PointSets[0].Spec.Points.Select(point => point.Id).ToArray());
+        Assert.Equal(["state", "alarm", "program"], bundle.PointTemplates[0].Spec.Points.Select(point => point.Id).ToArray());
     }
 
     [Theory]
@@ -36,7 +36,7 @@ public sealed class FanucPointCatalogTests : IDisposable
     {
         var bundle = ConfigDefaults.Create();
         bundle.Devices[0].Spec.Adapter = adapter;
-        bundle.PointSets[0].Spec.Points.Add(new PointDefinition
+        bundle.PointTemplates[0].Spec.Points.Add(new PointDefinition
         {
             Id = "spindle",
             Address = "cnc/spindle",
@@ -58,7 +58,7 @@ public sealed class FanucPointCatalogTests : IDisposable
     public void Disabled_unknown_point_still_fails_validation()
     {
         var bundle = ConfigDefaults.Create();
-        bundle.PointSets[0].Spec.Points.Add(new PointDefinition
+        bundle.PointTemplates[0].Spec.Points.Add(new PointDefinition
         {
             Id = "spindle",
             Address = "D200",
@@ -77,22 +77,22 @@ public sealed class FanucPointCatalogTests : IDisposable
     {
         var store = new ConfigStore(_directory);
         store.EnsureInitialized();
-        var points = store.GetPoints("cnc-01");
-        points.Spec.Points[0].Address = "typed-wrong";
-        points.Spec.Points[0].Unit = "mode";
-        var saved = store.UpsertPoints("cnc-01", points);
+        var template = store.GetPointTemplate(ConfigDefaults.DefaultFanucTemplateId);
+        template.Spec.Points[0].Address = "typed-wrong";
+        template.Spec.Points[0].Unit = "mode";
+        var saved = store.UpsertPointTemplate(ConfigDefaults.DefaultFanucTemplateId, template);
 
         Assert.Equal("cnc/statinfo", saved.Spec.Points[0].Address);
         Assert.Equal("mode", saved.Spec.Points[0].Unit);
-        Assert.Contains("address: cnc/statinfo", File.ReadAllText(Path.Combine(_directory, "draft", "points", "cnc-01.yaml")), StringComparison.Ordinal);
-        Assert.DoesNotContain("typed-wrong", File.ReadAllText(Path.Combine(_directory, "draft", "points", "cnc-01.yaml")), StringComparison.Ordinal);
+        var yamlPath = Path.Combine(_directory, "draft", "point-templates", "fanuc-standard.yaml");
+        Assert.Contains("address: cnc/statinfo", File.ReadAllText(yamlPath), StringComparison.Ordinal);
+        Assert.DoesNotContain("typed-wrong", File.ReadAllText(yamlPath), StringComparison.Ordinal);
 
-        var yamlPath = Path.Combine(_directory, "draft", "points", "cnc-01.yaml");
         File.WriteAllText(yamlPath, File.ReadAllText(yamlPath).Replace("cnc/alarm", "MW100", StringComparison.Ordinal));
         var published = store.Publish("normalize address");
 
         Assert.True(published.Published, string.Join("; ", published.Issues.Select(issue => issue.Message)));
-        var publishedYaml = File.ReadAllText(Path.Combine(_directory, "published", "points", "cnc-01.yaml"));
+        var publishedYaml = File.ReadAllText(Path.Combine(_directory, "published", "point-templates", "fanuc-standard.yaml"));
         Assert.Contains("address: cnc/alarm", publishedYaml, StringComparison.Ordinal);
         Assert.DoesNotContain("MW100", publishedYaml, StringComparison.Ordinal);
         Assert.DoesNotContain("MW100", File.ReadAllText(yamlPath), StringComparison.Ordinal);

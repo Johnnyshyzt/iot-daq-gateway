@@ -12,6 +12,9 @@ public static partial class ConfigValidator
     public static ValidationResult Validate(ConfigBundle bundle)
     {
         var issues = new List<ValidationIssue>();
+        bundle.PointTemplates ??= [];
+        bundle.PointSets ??= [];
+        bundle.Devices ??= [];
         var gateway = bundle.Gateway;
         if (!string.Equals(gateway.ApiVersion, StudioApi.Version, StringComparison.Ordinal) || gateway.Kind != "Gateway")
         {
@@ -78,6 +81,32 @@ public static partial class ConfigValidator
                 Error(issues, $"{path}.adapter", "M1 只支持 fanuc.fake 和 fanuc.focas");
             }
 
+            if (FanucPointCatalog.IsFanuc(device.Spec.Adapter))
+            {
+                var templateId = (device.Spec.PointTemplateId ?? "").Trim();
+                device.Spec.PointTemplateId = templateId;
+                if (!SafeId().IsMatch(templateId))
+                {
+                    Error(issues, $"{path}.pointTemplateId", "请选择点位模板。一类模板给多台同类设备用，不必每台各写一张地址表。");
+                }
+                else
+                {
+                    var template = bundle.PointTemplates.FirstOrDefault(item =>
+                        string.Equals(item.Metadata.Id, templateId, StringComparison.OrdinalIgnoreCase));
+                    if (template is null)
+                    {
+                        Error(issues, $"{path}.pointTemplateId", $"点位模板「{templateId}」不存在。");
+                    }
+                    else if (!FanucPointCatalog.MatchesFamily(template.Spec.Adapter, device.Spec.Adapter))
+                    {
+                        Error(
+                            issues,
+                            $"{path}.pointTemplateId",
+                            $"点位模板「{templateId}」的适配器族是「{template.Spec.Adapter}」，与设备适配器「{device.Spec.Adapter}」不一致。发那科设备请使用发那科模板。");
+                    }
+                }
+            }
+
             if (device.Spec.IntervalMs is < 100 or > 86_400_000)
             {
                 Error(issues, $"{path}.intervalMs", "采集周期需在 100 到 86400000 毫秒之间");
@@ -104,6 +133,48 @@ public static partial class ConfigValidator
             Warning(issues, "devices", "没有启用的设备，发布后不会采集数据");
         }
 
+        var templateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bundle.PointTemplates ??= [];
+        foreach (var template in bundle.PointTemplates)
+        {
+            template.Metadata ??= new PointTemplateMetadata();
+            template.Spec ??= new PointTemplateSpec();
+            template.Spec.Points ??= [];
+            var id = (template.Metadata.Id ?? "").Trim();
+            template.Metadata.Id = id;
+            var path = string.IsNullOrEmpty(id) ? "point-templates" : $"point-templates/{id}";
+            if (!SafeId().IsMatch(id))
+            {
+                Error(issues, path, "点位模板 Id 只能包含字母、数字、下划线和连字符，且必须以字母或数字开头");
+            }
+            else if (!templateIds.Add(id))
+            {
+                Error(issues, path, "点位模板 Id 重复");
+            }
+
+            if (!string.Equals(template.ApiVersion, StudioApi.Version, StringComparison.Ordinal) || template.Kind != "PointTemplate")
+            {
+                Error(issues, path, "点位模板的 apiVersion 或 kind 不正确");
+            }
+
+            if (string.IsNullOrWhiteSpace(template.Metadata.DisplayName) || template.Metadata.DisplayName.Length > 128)
+            {
+                Error(issues, $"{path}.displayName", "请填写模板显示名称，且不超过 128 个字符");
+            }
+
+            template.Spec.Adapter = (template.Spec.Adapter ?? "").Trim().ToLowerInvariant();
+            if (!string.Equals(template.Spec.Adapter, FanucPointCatalog.Family, StringComparison.Ordinal))
+            {
+                Error(issues, $"{path}.adapter", "M1 点位模板只支持发那科（adapter: fanuc）。fanuc.fake 与 fanuc.focas 共用这一族，不能按其他品牌编目录。");
+            }
+
+            ValidatePointList(issues, path, template.Spec.Points, "模板点位", fanuc: true);
+            if (template.Spec.Points.Count == 0)
+            {
+                Warning(issues, path, "点位模板还没有任何点");
+            }
+        }
+
         var pointDevices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var set in bundle.PointSets)
         {
@@ -128,65 +199,29 @@ public static partial class ConfigValidator
             var device = bundle.Devices.First(item =>
                 string.Equals(item.Metadata.Id, deviceId, StringComparison.OrdinalIgnoreCase));
             var fanuc = FanucPointCatalog.IsFanuc(device.Spec.Adapter);
-            var pointIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var point in set.Spec.Points)
-            {
-                point.Id = (point.Id ?? "").Trim();
-                var known = fanuc && FanucPointCatalog.TryNormalize(point);
-                var pointId = point.Id ?? "";
-                var pointPath = $"{path}/{pointId}";
-                if (fanuc && !known)
-                {
-                    Error(
-                        issues,
-                        pointPath,
-                        $"点位 Id「{pointId}」不在发那科适配器目录中。只能使用 {FanucPointCatalog.IdList}。这些点由适配器采集，不是可以手填的协议地址。");
-                }
-
-                if (!SafeId().IsMatch(pointId))
-                {
-                    Error(issues, pointPath, "点位 Id 只能包含字母、数字、下划线和连字符");
-                }
-                else if (!pointIds.Add(pointId))
-                {
-                    Error(issues, pointPath, "点位 Id 重复");
-                }
-
-                if (!fanuc && string.IsNullOrWhiteSpace(point.Address))
-                {
-                    Error(issues, $"{pointPath}.address", "请填写点位地址");
-                }
-
-                if (!DataTypes.Contains(point.DataType, StringComparer.Ordinal))
-                {
-                    Error(issues, $"{pointPath}.dataType", "数据类型必须是 string、bool、int32、int64、float、double、int 或 number");
-                }
-
-                if (!double.IsFinite(point.Scale))
-                {
-                    Error(issues, $"{pointPath}.scale", "倍率必须是有限数字");
-                }
-
-                if (!double.IsFinite(point.Deadband) || point.Deadband < 0)
-                {
-                    Error(issues, $"{pointPath}.deadband", "死区必须是大于等于 0 的有限数字");
-                }
-            }
-
+            ValidatePointList(issues, path, set.Spec.Points, "本机覆盖点位", fanuc);
         }
 
         foreach (var device in bundle.Devices)
         {
+            if (!FanucPointCatalog.IsFanuc(device.Spec.Adapter))
+            {
+                continue;
+            }
+
+            var template = bundle.PointTemplates.FirstOrDefault(item =>
+                string.Equals(item.Metadata.Id, device.Spec.PointTemplateId, StringComparison.OrdinalIgnoreCase));
+            if (template is null)
+            {
+                continue;
+            }
+
             var set = bundle.PointSets.FirstOrDefault(item =>
                 string.Equals(item.Metadata.DeviceId, device.Metadata.Id, StringComparison.OrdinalIgnoreCase));
-            var enabledPoints = set?.Spec.Points.Count(point => point.Enabled) ?? 0;
+            var enabledPoints = PointExpansion.EffectivePoints(template, set).Count(point => point.Enabled);
             if (device.Spec.Enabled && enabledPoints == 0)
             {
-                Error(issues, $"points/{device.Metadata.Id}", "启用的设备至少需要一个启用的点位");
-            }
-            else if (set is null || set.Spec.Points.Count == 0)
-            {
-                Warning(issues, $"points/{device.Metadata.Id}", "该设备还没有点位");
+                Error(issues, $"devices/{device.Metadata.Id}.pointTemplateId", "启用的设备至少需要一个启用的点位。请在点位模板里启用，或去掉把点位关掉的本机覆盖。");
             }
         }
 
@@ -247,6 +282,59 @@ public static partial class ConfigValidator
         if (string.IsNullOrWhiteSpace(broker.PasswordFromEnv) && !string.IsNullOrWhiteSpace(broker.UsernameFromEnv))
         {
             Warning(issues, "sinks/mqtt.broker.passwordFromEnv", "已填写用户名环境变量，但没有密码环境变量");
+        }
+    }
+
+    private static void ValidatePointList(
+        List<ValidationIssue> issues,
+        string path,
+        List<PointDefinition> points,
+        string role,
+        bool fanuc)
+    {
+        var pointIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var point in points)
+        {
+            point.Id = (point.Id ?? "").Trim();
+            var known = fanuc && FanucPointCatalog.TryNormalize(point);
+            var pointId = point.Id ?? "";
+            var pointPath = $"{path}/{pointId}";
+            if (fanuc && !known)
+            {
+                Error(
+                    issues,
+                    pointPath,
+                    $"{role} Id「{pointId}」不在发那科适配器目录中。只能使用 {FanucPointCatalog.IdList}。覆盖不能新增目录以外的点，也不能手填协议地址。");
+            }
+
+            if (!SafeId().IsMatch(pointId))
+            {
+                Error(issues, pointPath, "点位 Id 只能包含字母、数字、下划线和连字符");
+            }
+            else if (!pointIds.Add(pointId))
+            {
+                Error(issues, pointPath, "点位 Id 重复");
+            }
+
+            if (!fanuc && string.IsNullOrWhiteSpace(point.Address))
+            {
+                Error(issues, $"{pointPath}.address", "请填写点位地址");
+            }
+
+            if (!DataTypes.Contains(point.DataType, StringComparer.Ordinal))
+            {
+                Error(issues, $"{pointPath}.dataType", "数据类型必须是 string、bool、int32、int64、float、double、int 或 number");
+            }
+
+            if (!double.IsFinite(point.Scale))
+            {
+                Error(issues, $"{pointPath}.scale", "倍率必须是有限数字");
+            }
+
+            if (!double.IsFinite(point.Deadband) || point.Deadband < 0)
+            {
+                Error(issues, $"{pointPath}.deadband", "死区必须是大于等于 0 的有限数字");
+            }
         }
     }
 

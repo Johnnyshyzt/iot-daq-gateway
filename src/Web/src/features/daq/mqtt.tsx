@@ -41,8 +41,10 @@ export function MqttPage() {
         if (site) setSiteId(site)
         const device = view.draft.devices?.[0]
         if (device?.metadata.id) setSampleDevice(device.metadata.id)
-        const points = view.draft.pointSets?.find((set) => set.metadata.deviceId === device?.metadata.id)
-        const point = points?.spec.points.find((item) => item.enabled) ?? points?.spec.points[0]
+        const template = view.draft.pointTemplates?.find(
+          (item) => item.metadata.id === device?.spec.pointTemplateId
+        )
+        const point = template?.spec.points.find((item) => item.enabled) ?? template?.spec.points[0]
         if (point?.id) setSamplePoint(point.id)
       })
       .catch(() => {

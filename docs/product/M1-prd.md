@@ -54,7 +54,7 @@
 
 1. **概览** `/` — 网关健康、revision、设备在线数、最近错误
 2. **设备** `/devices` — 列表/新建/编辑；连接测试
-3. **点位** `/points` — 表格式编辑；按设备过滤；CSV 导入导出（Excel 另存为 CSV）
+3. **点位模板** `/points` — 编辑设备类模板（多台共用）；CSV 导入导出（Excel 另存为 CSV）
 4. **北向 MQTT** `/sinks/mqtt` — Broker、认证引用、Topic 模板、JSON 字段预览
 5. **发布** `/publish` — 草稿 diff、校验结果、发布、回滚历史
 6. **运行态** `/runtime` — 状态流、最近观测短窗口、日志尾

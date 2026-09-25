@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -22,51 +24,63 @@ import {
 import {
   canWrite,
   describeError,
-  isFanucAdapter,
   normalizeDataType,
   studioApi,
   type DeviceDocument,
   type PointCatalogDocument,
   type PointCatalogEntry,
   type PointDefinition,
-  type PointSetDocument,
+  type PointTemplateDocument,
 } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
 const csvHeaders = ['id', 'address', 'dataType', 'unit', 'scale', 'deadband', 'enabled'] as const
+const idPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 
 export function PointsPage() {
   const writable = canWrite(useAuthStore((state) => state.auth.user?.role[0]))
   const fileRef = useRef<HTMLInputElement>(null)
+  const [templates, setTemplates] = useState<PointTemplateDocument[]>([])
   const [devices, setDevices] = useState<DeviceDocument[]>([])
-  const [deviceId, setDeviceId] = useState('')
+  const [templateId, setTemplateId] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [points, setPoints] = useState<PointDefinition[]>([])
   const [catalog, setCatalog] = useState<PointCatalogDocument | null>(null)
+  const [newId, setNewId] = useState('')
+  const [newName, setNewName] = useState('')
   const [message, setMessage] = useState('')
 
-  const device = devices.find((item) => item.metadata.id === deviceId)
-  const adapter = device?.spec.adapter ?? ''
-  const fanuc = isFanucAdapter(adapter)
+  const template = templates.find((item) => item.metadata.id === templateId)
+  const users = devices.filter((device) => device.spec.pointTemplateId === templateId)
+
+  async function reload() {
+    const [templateItems, deviceItems] = await Promise.all([
+      studioApi<PointTemplateDocument[]>('/api/v1/config/point-templates'),
+      studioApi<DeviceDocument[]>('/api/v1/config/devices'),
+    ])
+    setTemplates(templateItems)
+    setDevices(deviceItems)
+    return templateItems
+  }
 
   useEffect(() => {
-    void studioApi<DeviceDocument[]>('/api/v1/config/devices')
+    void reload()
       .then((items) => {
-        setDevices(items)
-        if (items[0]) setDeviceId(items[0].metadata.id)
-        else setMessage('请先在设备页添加一台设备')
+        if (items[0]) setTemplateId(items[0].metadata.id)
+        else setMessage('还没有点位模板。下面可以新建一份发那科模板。')
       })
       .catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
   useEffect(() => {
-    if (!deviceId) return
+    if (!templateId) return
     let cancelled = false
-    void studioApi<PointSetDocument>(`/api/v1/config/points/${encodeURIComponent(deviceId)}`)
+    void studioApi<PointTemplateDocument>(`/api/v1/config/point-templates/${encodeURIComponent(templateId)}`)
       .then((document) => {
-        if (!cancelled) {
-          setPoints(document.spec.points.map((point) => ({ ...point, dataType: normalizeDataType(point.dataType) })))
-        }
+        if (cancelled) return
+        setDisplayName(document.metadata.displayName)
+        setPoints(document.spec.points.map((point) => ({ ...point, dataType: normalizeDataType(point.dataType) })))
       })
       .catch((error: unknown) => {
         if (!cancelled) setMessage(describeError(error))
@@ -74,12 +88,11 @@ export function PointsPage() {
     return () => {
       cancelled = true
     }
-  }, [deviceId])
+  }, [templateId])
 
   useEffect(() => {
-    if (!fanuc) return
     let cancelled = false
-    void studioApi<PointCatalogDocument>(`/api/v1/catalog/points?adapter=${encodeURIComponent(adapter)}`)
+    void studioApi<PointCatalogDocument>('/api/v1/catalog/points?adapter=fanuc.fake')
       .then((document) => {
         if (!cancelled) setCatalog(document)
       })
@@ -92,7 +105,7 @@ export function PointsPage() {
     return () => {
       cancelled = true
     }
-  }, [adapter, fanuc])
+  }, [])
 
   function entryFor(id: string) {
     const key = id.trim().toLowerCase()
@@ -125,7 +138,13 @@ export function PointsPage() {
   }
 
   async function save() {
-    if (!fanuc || !catalog) return
+    if (!templateId || !catalog) return
+    if (!displayName.trim()) {
+      const text = '请填写模板显示名称'
+      setMessage(text)
+      toast.error(text)
+      return
+    }
     const unknown = points
       .map((point) => point.id.trim())
       .filter((id) => id && !entryFor(id))
@@ -135,19 +154,60 @@ export function PointsPage() {
       toast.error(text)
       return
     }
-    const body: PointSetDocument = {
-      metadata: { deviceId },
+    const body: PointTemplateDocument = {
+      metadata: { id: templateId, displayName: displayName.trim() },
       spec: {
+        adapter: 'fanuc',
         points: points.filter((point) => point.id.trim()).map(withCatalog),
       },
     }
-    await studioApi(`/api/v1/config/points/${encodeURIComponent(deviceId)}`, {
+    await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(templateId)}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     })
     setPoints(body.spec.points)
-    setMessage('点位已写入草稿。发布后采集才会使用这份点表。')
-    toast.success('点位已保存')
+    await reload()
+    setMessage('模板已写入草稿。引用它的设备要等发布后才会按这份点表采集。')
+    toast.success('点位模板已保存')
+  }
+
+  async function createTemplate() {
+    if (!catalog) return
+    const id = newId.trim()
+    if (!idPattern.test(id)) {
+      const text = '模板 Id 只能包含字母、数字、下划线和连字符，且必须以字母或数字开头'
+      setMessage(text)
+      toast.error(text)
+      return
+    }
+    const body: PointTemplateDocument = {
+      metadata: { id, displayName: newName.trim() || id },
+      spec: {
+        adapter: 'fanuc',
+        points: catalog.points.map(fromCatalog),
+      },
+    }
+    await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
+    setNewId('')
+    setNewName('')
+    await reload()
+    setTemplateId(id)
+    setMessage('新模板已写入草稿，并带上发那科目录里的三个点。按需要改启用后再发布。')
+    toast.success('已新建点位模板')
+  }
+
+  async function removeTemplate() {
+    if (!templateId) return
+    await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(templateId)}`, {
+      method: 'DELETE',
+    })
+    const items = await reload()
+    setTemplateId(items[0]?.metadata.id ?? '')
+    setMessage('模板已从草稿删除。')
+    toast.success('点位模板已删除')
   }
 
   function addFromCatalog() {
@@ -183,13 +243,13 @@ export function PointsPage() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${deviceId || 'points'}.csv`
+    link.download = `${templateId || 'point-template'}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
 
   async function importCsv(file: File) {
-    if (!fanuc || !catalog) {
+    if (!catalog) {
       const text = 'M1 只支持发那科点位目录，不能按通用地址导入 CSV。'
       setMessage(text)
       toast.error(text)
@@ -247,71 +307,71 @@ export function PointsPage() {
           }
         })
     )
-    setMessage('已按发那科目录填入表格。地址列已忽略。确认后点「保存草稿」。')
+    setMessage('已按发那科目录填入模板。地址列已忽略。确认后点「保存草稿」。')
   }
 
   const missing =
     catalog?.points.filter((entry) => !points.some((point) => point.id.trim().toLowerCase() === entry.id.toLowerCase())) ??
     []
-  const description = describePage(deviceId, fanuc, adapter, catalog)
+  const description = catalog
+    ? `${catalog.message} 一类模板给多台同类设备用，不是每台各写一张地址表。可改启用、单位、倍率和死区。Excel 请另存为 CSV。`
+    : '正在读取发那科点位目录… 一类模板给多台同类设备用，不是每台各写一张地址表。'
 
   return (
     <PageShell
-      title='点位'
+      title='点位模板'
       description={description}
       actions={
-        fanuc ? (
-          <div className='flex flex-wrap gap-2'>
-            <Button variant='outline' onClick={exportCsv} disabled={!deviceId}>
-              导出 CSV
-            </Button>
-            <Button
-              variant='outline'
-              disabled={!writable || !deviceId || !catalog}
-              onClick={() => fileRef.current?.click()}
-            >
-              导入 CSV
-            </Button>
-            <input
-              ref={fileRef}
-              type='file'
-              accept='.csv,text/csv'
-              className='hidden'
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                if (file) void importCsv(file).catch(fail)
-              }}
-            />
-            <Button
-              disabled={!writable || !catalog || missing.length === 0}
-              title={missing.length === 0 ? '目录中的点位都已在表中' : '加入目录里还没有的点位'}
-              onClick={addFromCatalog}
-            >
-              从目录添加
-            </Button>
-          </div>
-        ) : null
+        <div className='flex flex-wrap gap-2'>
+          <Button variant='outline' onClick={exportCsv} disabled={!templateId}>
+            导出 CSV
+          </Button>
+          <Button
+            variant='outline'
+            disabled={!writable || !templateId || !catalog}
+            onClick={() => fileRef.current?.click()}
+          >
+            导入 CSV
+          </Button>
+          <input
+            ref={fileRef}
+            type='file'
+            accept='.csv,text/csv'
+            className='hidden'
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file) void importCsv(file).catch(fail)
+            }}
+          />
+          <Button
+            disabled={!writable || !catalog || !templateId || missing.length === 0}
+            title={missing.length === 0 ? '目录中的点位都已在表中' : '加入目录里还没有的点位'}
+            onClick={addFromCatalog}
+          >
+            从目录添加
+          </Button>
+        </div>
       }
     >
       <Card>
-        <CardHeader className='flex flex-row items-center justify-between gap-3'>
-          <CardTitle>点表</CardTitle>
-          {devices.length > 0 ? (
+        <CardHeader className='flex flex-row flex-wrap items-center justify-between gap-3'>
+          <CardTitle>模板点表</CardTitle>
+          {templates.length > 0 ? (
             <Select
-              value={deviceId}
+              value={templateId}
               onValueChange={(id) => {
-                setDeviceId(id)
+                setTemplateId(id)
                 setMessage('')
               }}
             >
-              <SelectTrigger className='w-72'>
-                <SelectValue placeholder='选择设备' />
+              <SelectTrigger className='w-80'>
+                <SelectValue placeholder='选择模板' />
               </SelectTrigger>
               <SelectContent>
-                {devices.map((item) => (
+                {templates.map((item) => (
                   <SelectItem key={item.metadata.id} value={item.metadata.id}>
-                    {(item.metadata.displayName || item.metadata.id) + `（${item.spec.adapter}）`}
+                    {(item.metadata.displayName || item.metadata.id) + `（${item.metadata.id}）`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -319,127 +379,183 @@ export function PointsPage() {
           ) : null}
         </CardHeader>
         <CardContent>
-          {!deviceId ? (
-            <p className='text-sm text-muted-foreground'>请先添加设备。</p>
-          ) : !fanuc ? (
-            <p className='text-sm text-muted-foreground'>
-              M1 只支持发那科点位目录（fanuc.fake、fanuc.focas）。当前适配器是「{adapter || '未填写'}」，不能按通用地址编辑。请在设备页改回发那科适配器。
-            </p>
+          {!templateId ? (
+            <p className='text-sm text-muted-foreground'>请先新建一个发那科点位模板。</p>
           ) : (
-            <div className='overflow-auto'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>点位 Id</TableHead>
-                    <TableHead>采集方式</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>单位</TableHead>
-                    <TableHead>倍率</TableHead>
-                    <TableHead>死区</TableHead>
-                    <TableHead>启用</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {points.length === 0 ? (
+            <div className='grid gap-4'>
+              <div className='grid max-w-md gap-1.5'>
+                <Label>显示名称</Label>
+                <Input
+                  value={displayName}
+                  disabled={!writable}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                />
+              </div>
+              <p className='text-xs text-muted-foreground'>
+                适配器族 fanuc，供 fanuc.fake 与 fanuc.focas 共用。内部地址由目录填写，采集按点位 id。
+              </p>
+              <div className='overflow-auto'>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className='text-muted-foreground'>
-                        {catalog
-                          ? `这台设备还没有点位。点「从目录添加」加入 ${catalog.points.map((item) => item.id).join('、')}。`
-                          : '正在读取发那科点位目录…'}
-                      </TableCell>
+                      <TableHead>点位 Id</TableHead>
+                      <TableHead>采集方式</TableHead>
+                      <TableHead>类型</TableHead>
+                      <TableHead>单位</TableHead>
+                      <TableHead>倍率</TableHead>
+                      <TableHead>死区</TableHead>
+                      <TableHead>启用</TableHead>
+                      <TableHead />
                     </TableRow>
-                  ) : null}
-                  {points.map((point, index) => {
-                    const entry = entryFor(point.id)
-                    return (
-                      <TableRow key={`${point.id}-${index}`}>
-                        <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
-                        <TableCell className='max-w-64 text-sm text-muted-foreground'>
-                          {!catalog
-                            ? '正在读取发那科点位目录…'
-                            : entry
-                              ? entry.description
-                              : '不在发那科目录中。请移除，否则无法发布。'}
-                        </TableCell>
-                        <TableCell className='text-sm'>{entry?.dataType ?? normalizeDataType(point.dataType)}</TableCell>
-                        <TableCell>
-                          <Input
-                            value={point.unit}
-                            disabled={!writable}
-                            onChange={(event) => update(index, { unit: event.target.value })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type='number'
-                            className='w-24'
-                            value={point.scale}
-                            disabled={!writable}
-                            onChange={(event) => update(index, { scale: Number(event.target.value) })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type='number'
-                            className='w-24'
-                            value={point.deadband}
-                            disabled={!writable}
-                            onChange={(event) => update(index, { deadband: Number(event.target.value) })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={point.enabled}
-                            disabled={!writable}
-                            onCheckedChange={(enabled) => update(index, { enabled })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            disabled={!writable}
-                            onClick={() => setPoints((current) => current.filter((_, i) => i !== index))}
-                          >
-                            移除
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {points.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className='text-muted-foreground'>
+                          {catalog
+                            ? `模板里还没有点位。点「从目录添加」加入 ${catalog.points.map((item) => item.id).join('、')}。`
+                            : '正在读取发那科点位目录…'}
                         </TableCell>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                    ) : null}
+                    {points.map((point, index) => {
+                      const entry = entryFor(point.id)
+                      return (
+                        <TableRow key={`${point.id}-${index}`}>
+                          <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
+                          <TableCell className='max-w-64 text-sm text-muted-foreground'>
+                            {!catalog
+                              ? '正在读取发那科点位目录…'
+                              : entry
+                                ? entry.description
+                                : '不在发那科目录中。请移除，否则无法发布。'}
+                          </TableCell>
+                          <TableCell className='text-sm'>{entry?.dataType ?? normalizeDataType(point.dataType)}</TableCell>
+                          <TableCell>
+                            <Input
+                              value={point.unit}
+                              disabled={!writable}
+                              onChange={(event) => update(index, { unit: event.target.value })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type='number'
+                              className='w-24'
+                              value={point.scale}
+                              disabled={!writable}
+                              onChange={(event) => update(index, { scale: Number(event.target.value) })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type='number'
+                              className='w-24'
+                              value={point.deadband}
+                              disabled={!writable}
+                              onChange={(event) => update(index, { deadband: Number(event.target.value) })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={point.enabled}
+                              disabled={!writable}
+                              onCheckedChange={(enabled) => update(index, { enabled })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size='sm'
+                              variant='ghost'
+                              disabled={!writable}
+                              onClick={() => setPoints((current) => current.filter((_, i) => i !== index))}
+                            >
+                              移除
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className='flex flex-wrap items-center gap-3'>
+                <Button disabled={!writable || !catalog} onClick={() => void save().catch(fail)}>
+                  保存草稿
+                </Button>
+                <Button
+                  variant='destructive'
+                  disabled={!writable}
+                  onClick={() => void removeTemplate().catch(fail)}
+                >
+                  删除模板
+                </Button>
+                {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
+              </div>
             </div>
           )}
-          {fanuc ? (
-            <div className='mt-4 flex items-center gap-3'>
-              <Button disabled={!writable || !deviceId || !catalog} onClick={() => void save().catch(fail)}>
-                保存草稿
-              </Button>
-              {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
+          {!templateId && message ? <p className='mt-4 text-sm text-muted-foreground'>{message}</p> : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>使用此模板的设备</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!templateId ? (
+            <p className='text-sm text-muted-foreground'>选择模板后，这里列出引用它的设备。设备页只选择模板，不重填点位。</p>
+          ) : users.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>还没有设备引用「{displayName || template?.metadata.displayName || templateId}」。</p>
+          ) : (
+            <div className='flex flex-wrap gap-2'>
+              {users.map((device) => (
+                <Badge key={device.metadata.id} variant='secondary'>
+                  {(device.metadata.displayName || device.metadata.id) + ` · ${device.metadata.id} · ${device.spec.adapter}`}
+                </Badge>
+              ))}
             </div>
-          ) : message ? (
-            <p className='mt-4 text-sm text-muted-foreground'>{message}</p>
-          ) : null}
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>新建模板</CardTitle>
+        </CardHeader>
+        <CardContent className='grid max-w-xl gap-3'>
+          <p className='text-sm text-muted-foreground'>
+            新建的是另一类发那科设备的点表，例如只启用报警。创建后带上目录中的三个点，可再关掉不需要的。
+          </p>
+          <div className='grid gap-3 sm:grid-cols-2'>
+            <div className='grid gap-1.5'>
+              <Label>模板 Id</Label>
+              <Input
+                value={newId}
+                disabled={!writable}
+                placeholder='fanuc-alarm-only'
+                onChange={(event) => setNewId(event.target.value)}
+              />
+            </div>
+            <div className='grid gap-1.5'>
+              <Label>显示名称</Label>
+              <Input
+                value={newName}
+                disabled={!writable}
+                placeholder='Fanuc 只看报警'
+                onChange={(event) => setNewName(event.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <Button disabled={!writable || !catalog || !newId.trim()} onClick={() => void createTemplate().catch(fail)}>
+              新建模板
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </PageShell>
   )
-}
-
-function describePage(
-  deviceId: string,
-  fanuc: boolean,
-  adapter: string,
-  catalog: PointCatalogDocument | null
-) {
-  if (!deviceId) return '请先在设备页添加一台设备。'
-  if (!fanuc) {
-    return 'M1 只支持发那科点位目录（fanuc.fake、fanuc.focas）。这里没有通用地址编辑器。'
-  }
-  const notice = catalog?.message ?? '正在读取发那科点位目录…'
-  return `${notice} 当前适配器 ${adapter}。可改启用、单位、倍率和死区。Excel 请另存为 CSV。导入只接受目录中的点位 Id，地址列不会当成协议地址。`
 }
 
 function fromCatalog(entry: PointCatalogEntry): PointDefinition {

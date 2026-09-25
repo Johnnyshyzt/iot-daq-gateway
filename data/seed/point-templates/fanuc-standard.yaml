@@ -1,8 +1,10 @@
 apiVersion: daq.gateway/v1
-kind: PointSet
+kind: PointTemplate
 metadata:
-  deviceId: cnc-01
+  id: fanuc-standard
+  displayName: Fanuc 标准三态
 spec:
+  adapter: fanuc
   points:
     - id: state
       address: cnc/statinfo

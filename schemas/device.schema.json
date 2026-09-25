@@ -35,7 +35,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["adapter", "enabled", "intervalMs", "connection"],
+      "required": ["adapter", "enabled", "intervalMs", "pointTemplateId", "connection"],
       "properties": {
         "adapter": {
           "type": "string",
@@ -51,6 +51,13 @@
           "minimum": 100,
           "maximum": 86400000,
           "description": "Scan interval for this device. Overrides Gateway.spec.acquisition.defaultIntervalMs."
+        },
+        "pointTemplateId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "description": "Point template shared by devices of the same class. Fanuc devices (fanuc.fake and fanuc.focas) reference a template whose spec.adapter is fanuc. Required for Fanuc devices before publish. Optional per-device overrides live in points/{metadata.id}.yaml."
         },
         "connection": {
           "type": "object",

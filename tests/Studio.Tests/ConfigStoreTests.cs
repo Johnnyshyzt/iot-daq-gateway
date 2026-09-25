@@ -30,9 +30,14 @@ public sealed class ConfigStoreTests : IDisposable
             }
         });
         Assert.Equal("cnc-02", created.Metadata.Id);
-        Assert.Equal(3, store.GetPoints("cnc-02").Spec.Points.Count);
+        Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, created.Spec.PointTemplateId);
+        Assert.Empty(store.GetPoints("cnc-02").Spec.Points);
         Assert.True(File.Exists(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")));
-        Assert.True(File.Exists(Path.Combine(_directory, "draft", "points", "cnc-02.yaml")));
+        Assert.False(File.Exists(Path.Combine(_directory, "draft", "points", "cnc-02.yaml")));
+        Assert.Contains(
+            "pointTemplateId: fanuc-standard",
+            File.ReadAllText(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")),
+            StringComparison.Ordinal);
 
         var mqtt = store.GetMqtt();
         mqtt.Spec.Broker.UsernameFromEnv = "MQTT_USER";
@@ -83,9 +88,13 @@ public sealed class ConfigStoreTests : IDisposable
     {
         var store = new ConfigStore(_directory);
         store.EnsureInitialized();
-        var points = store.GetPoints("cnc-01");
-        points.Spec.Points.Clear();
-        store.UpsertPoints("cnc-01", points);
+        var template = store.GetPointTemplate(ConfigDefaults.DefaultFanucTemplateId);
+        foreach (var point in template.Spec.Points)
+        {
+            point.Enabled = false;
+        }
+
+        store.UpsertPointTemplate(ConfigDefaults.DefaultFanucTemplateId, template);
 
         var result = store.Validate();
 

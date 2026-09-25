@@ -41,7 +41,7 @@ export function SignIn() {
           <CardDescription>
             {accountMode === 'field'
               ? '现场采集机。一次性引导密码登录后必须修改。'
-              : '进入采集配置台，编辑 Fanuc 设备、点位和 MQTT。'}
+              : '进入采集配置台，编辑 Fanuc 设备、点位模板和 MQTT。'}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -4,13 +4,16 @@ namespace Studio.Host.Config;
 
 public static class ConfigDefaults
 {
+    public const string DefaultFanucTemplateId = "fanuc-standard";
+
     public static ConfigBundle Create()
     {
         return new ConfigBundle
         {
             Gateway = Gateway(),
             Devices = [Device()],
-            PointSets = [DefaultPoints("cnc-01")],
+            PointTemplates = [FanucTemplate()],
+            PointSets = [],
             Mqtt = Mqtt()
         };
     }
@@ -50,12 +53,29 @@ public static class ConfigDefaults
             Adapter = "fanuc.fake",
             Enabled = true,
             IntervalMs = 1000,
+            PointTemplateId = DefaultFanucTemplateId,
             Connection = new DeviceConnection
             {
                 Host = "192.168.1.10",
                 Port = 8193,
                 FocasTimeoutMs = 3000
             }
+        }
+    };
+
+    public static PointTemplateDocument FanucTemplate() => new()
+    {
+        ApiVersion = StudioApi.Version,
+        Kind = "PointTemplate",
+        Metadata = new PointTemplateMetadata
+        {
+            Id = DefaultFanucTemplateId,
+            DisplayName = "Fanuc 标准三态"
+        },
+        Spec = new PointTemplateSpec
+        {
+            Adapter = FanucPointCatalog.Family,
+            Points = FanucPointCatalog.DefaultPoints()
         }
     };
 

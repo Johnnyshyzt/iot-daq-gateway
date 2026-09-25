@@ -11,6 +11,11 @@ public sealed class ConfigBundle
 
     public List<DeviceDocument> Devices { get; set; } = [];
 
+    public List<PointTemplateDocument> PointTemplates { get; set; } = [];
+
+    /// <summary>
+    /// Optional per-device overrides. Absent means the device uses its point template as-is.
+    /// </summary>
     public List<PointSetDocument> PointSets { get; set; } = [];
 
     public MqttSinkDocument Mqtt { get; set; } = new();
@@ -81,6 +86,12 @@ public sealed class DeviceSpec
 
     public int IntervalMs { get; set; } = 1000;
 
+    /// <summary>
+    /// Point template shared by devices of the same class. Fanuc devices reference a template
+    /// whose adapter family is <c>fanuc</c> (<c>fanuc.fake</c> and <c>fanuc.focas</c> both match).
+    /// </summary>
+    public string? PointTemplateId { get; set; }
+
     public DeviceConnection Connection { get; set; } = new();
 }
 
@@ -91,6 +102,34 @@ public sealed class DeviceConnection
     public int Port { get; set; } = 8193;
 
     public int? FocasTimeoutMs { get; set; }
+}
+
+public sealed class PointTemplateDocument
+{
+    public string ApiVersion { get; set; } = StudioApi.Version;
+
+    public string Kind { get; set; } = "PointTemplate";
+
+    public PointTemplateMetadata Metadata { get; set; } = new();
+
+    public PointTemplateSpec Spec { get; set; } = new();
+}
+
+public sealed class PointTemplateMetadata
+{
+    public string Id { get; set; } = "";
+
+    public string DisplayName { get; set; } = "";
+}
+
+public sealed class PointTemplateSpec
+{
+    /// <summary>
+    /// Adapter family. M1 only <c>fanuc</c>, shared by <c>fanuc.fake</c> and <c>fanuc.focas</c>.
+    /// </summary>
+    public string Adapter { get; set; } = "fanuc";
+
+    public List<PointDefinition> Points { get; set; } = [];
 }
 
 public sealed class PointSetDocument

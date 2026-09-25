@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Studio.Contracts;
+using Studio.Host.Config;
 using Xunit;
 
 namespace Studio.Tests;
@@ -71,11 +72,27 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
         };
         var saved = await Read<DeviceDocument>(await client.PutAsJsonAsync("/api/v1/config/devices/cnc-09", device, Json));
         Assert.Equal("cnc-09", saved.Metadata.Id);
+        Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, saved.Spec.PointTemplateId);
 
-        var points = await Read<PointSetDocument>(await client.GetAsync("/api/v1/config/points/cnc-09"));
-        var statePoint = Assert.Single(points.Spec.Points, point => point.Id == "state");
-        statePoint.Address = "typed-by-hand";
-        statePoint.Unit = "mode";
+        var points = new PointSetDocument
+        {
+            Metadata = new PointSetMetadata { DeviceId = "cnc-09" },
+            Spec = new PointSetSpec
+            {
+                Points =
+                [
+                    new PointDefinition
+                    {
+                        Id = "state",
+                        Address = "typed-by-hand",
+                        DataType = "string",
+                        Unit = "mode",
+                        Scale = 1,
+                        Enabled = true
+                    }
+                ]
+            }
+        };
         var savedPoints = await Read<PointSetDocument>(await client.PutAsJsonAsync("/api/v1/config/points/cnc-09", points, Json));
         Assert.Equal("cnc/statinfo", Assert.Single(savedPoints.Spec.Points, point => point.Id == "state").Address);
         Assert.Equal("mode", Assert.Single(savedPoints.Spec.Points, point => point.Id == "state").Unit);
@@ -282,19 +299,19 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
     {
         using var client = _factory.CreateClient();
         await Authorize(client, "engineer", "engineer");
-        var points = await Read<PointSetDocument>(await client.GetAsync("/api/v1/config/points/cnc-01"));
-        var original = JsonSerializer.Deserialize<PointSetDocument>(JsonSerializer.Serialize(points, Json), Json);
+        var template = await Read<PointTemplateDocument>(await client.GetAsync("/api/v1/config/point-templates/fanuc-standard"));
+        var original = JsonSerializer.Deserialize<PointTemplateDocument>(JsonSerializer.Serialize(template, Json), Json);
         Assert.NotNull(original);
         try
         {
-            points.Spec.Points.Add(new PointDefinition
+            template.Spec.Points.Add(new PointDefinition
             {
                 Id = "spindle",
                 Address = "cnc/spindle",
                 DataType = "string",
                 Enabled = true
             });
-            await Read<PointSetDocument>(await client.PutAsJsonAsync("/api/v1/config/points/cnc-01", points, Json));
+            await Read<PointTemplateDocument>(await client.PutAsJsonAsync("/api/v1/config/point-templates/fanuc-standard", template, Json));
 
             var validation = await Read<ValidationResult>(await client.PostAsync("/api/v1/config/validate", content: null));
             Assert.False(validation.Valid);
@@ -309,7 +326,7 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
         }
         finally
         {
-            await client.PutAsJsonAsync("/api/v1/config/points/cnc-01", original, Json);
+            await client.PutAsJsonAsync("/api/v1/config/point-templates/fanuc-standard", original, Json);
         }
     }
 

@@ -84,7 +84,7 @@ public sealed class V1BundleTests
         var source = Path.Combine(AppContext.BaseDirectory, "examples", "v1");
         var directory = Directory.CreateTempSubdirectory("v1-address").FullName;
         CopyDirectory(source, directory);
-        var pointsPath = Path.Combine(directory, "points", "cnc-01.yaml");
+        var pointsPath = Path.Combine(directory, "point-templates", "fanuc-standard.yaml");
         var yaml = File.ReadAllText(pointsPath)
             .Replace("cnc/statinfo", "D100", StringComparison.Ordinal)
             .Replace("cnc/alarm", "D101", StringComparison.Ordinal)
@@ -102,6 +102,74 @@ public sealed class V1BundleTests
         var state = observations.Single(item => item.Point == "state").Value?.ToString();
         Assert.True(state is "IDLE" or "RUNNING" or "ALARM", state);
         Assert.Equal("O0001", observations.Single(item => item.Point == "program").Value);
+    }
+
+    [Fact]
+    public void Two_devices_expand_the_same_fanuc_template()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "examples", "v1");
+        var directory = Directory.CreateTempSubdirectory("v1-two-devices").FullName;
+        CopyDirectory(source, directory);
+        File.WriteAllText(
+            Path.Combine(directory, "devices", "cnc-02.yaml"),
+            """
+            apiVersion: daq.gateway/v1
+            kind: Device
+            metadata:
+              id: cnc-02
+              displayName: Lathe 02
+            spec:
+              adapter: fanuc.focas
+              enabled: true
+              intervalMs: 1000
+              pointTemplateId: fanuc-standard
+              connection:
+                host: 192.168.1.11
+                port: 8193
+                focasTimeoutMs: 3000
+            """);
+
+        var loaded = V1BundleLoader.Load(directory);
+        Assert.Equal(["cnc-01", "cnc-02"], loaded.Configuration.Devices.Select(device => device.Id).ToArray());
+        Assert.All(loaded.Configuration.Devices, device =>
+            Assert.Equal("state,alarm,program", device.Options["points"]?.ToString()));
+    }
+
+    [Fact]
+    public void Override_can_disable_a_template_point_but_not_replace_the_class()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "examples", "v1");
+        var directory = Directory.CreateTempSubdirectory("v1-override").FullName;
+        CopyDirectory(source, directory);
+        Directory.CreateDirectory(Path.Combine(directory, "points"));
+        File.WriteAllText(
+            Path.Combine(directory, "points", "cnc-01.yaml"),
+            """
+            apiVersion: daq.gateway/v1
+            kind: PointSet
+            metadata:
+              deviceId: cnc-01
+            spec:
+              points:
+                - id: alarm
+                  enabled: false
+            """);
+
+        var loaded = V1BundleLoader.Load(directory);
+        var device = Assert.Single(loaded.Configuration.Devices);
+        Assert.Equal("state,program", device.Options["points"]?.ToString());
+    }
+
+    [Fact]
+    public void Missing_point_template_fails_to_load()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "examples", "v1");
+        var directory = Directory.CreateTempSubdirectory("v1-missing-template").FullName;
+        CopyDirectory(source, directory);
+        File.Delete(Path.Combine(directory, "point-templates", "fanuc-standard.yaml"));
+
+        var error = Assert.Throws<InvalidOperationException>(() => V1BundleLoader.Load(directory));
+        Assert.Contains("fanuc-standard", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

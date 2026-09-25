@@ -73,6 +73,7 @@ public static class YamlFiles
         bundle.Gateway.Spec.Features ??= new GatewayFeatures();
         bundle.Gateway.Spec.Acquisition ??= new AcquisitionSpec();
         bundle.Devices ??= [];
+        bundle.PointTemplates ??= [];
         bundle.PointSets ??= [];
         bundle.Mqtt ??= ConfigDefaults.Mqtt();
         bundle.Mqtt.Metadata ??= new MqttSinkMetadata();
@@ -84,6 +85,13 @@ public static class YamlFiles
             device.Metadata ??= new DeviceMetadata();
             device.Spec ??= new DeviceSpec();
             device.Spec.Connection ??= new DeviceConnection();
+        }
+
+        foreach (var template in bundle.PointTemplates)
+        {
+            template.Metadata ??= new PointTemplateMetadata();
+            template.Spec ??= new PointTemplateSpec();
+            template.Spec.Points ??= [];
         }
 
         foreach (var points in bundle.PointSets)

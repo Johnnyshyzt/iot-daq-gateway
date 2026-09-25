@@ -30,7 +30,7 @@ export const sidebarData: SidebarData = {
       items: [
         { title: '概览', url: '/', icon: LayoutDashboard },
         { title: '设备', url: '/devices', icon: Cpu },
-        { title: '点位', url: '/points', icon: Activity },
+        { title: '点位模板', url: '/points', icon: Activity },
         { title: '北向 MQTT', url: '/sinks/mqtt', icon: Share2 },
         { title: '发布', url: '/publish', icon: Upload },
         { title: '运行态', url: '/runtime', icon: Radio },
