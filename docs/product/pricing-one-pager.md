@@ -2,6 +2,8 @@
 
 Open Core 的产品边界见 [open-core.md](open-core.md)。没有自有发那科机床时能承诺什么、不能写什么，见 [pilot-acceptance.md](pilot-acceptance.md)。
 
+相关文档：可贴进合同的范围附件 [pilot-contract-appendix.md](pilot-contract-appendix.md)，给买家的 [sales-one-pager.md](sales-one-pager.md)，安全口径 [security-narrative.md](security-narrative.md)。本文仍只留价格空位。
+
 **价格数字由 Johnny 填写。** 下表只留空位，仓库里不写人民币或其他金额。
 
 ## 开源、随仓库交付

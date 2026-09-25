@@ -67,3 +67,9 @@ M1 是 Open Core：现场一台 Windows x64 Host，浏览器即 Studio。本仓�
 ## 合同口径
 
 软件交付的范围是 Host 与 Studio，以及出发前 Fake 清单。**第一次 FOCAS 联调单列实施人天**，在客户提供机床、网络和 `Fwlib64.dll` 的前提下进行。不在本文写价格。联调人天不包括 OPC UA、其他品牌和远程 Fleet。
+
+## 相关文档
+
+- 可贴进试点合同的附件草稿：[pilot-contract-appendix.md](pilot-contract-appendix.md)
+- 给买家或集成商的一页：[sales-one-pager.md](sales-one-pager.md)
+- 销售和实施可复述的安全口径：[security-narrative.md](security-narrative.md)
