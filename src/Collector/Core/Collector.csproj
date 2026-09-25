@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Gateway.Host</RootNamespace>
+    <AssemblyName>Collector</AssemblyName>
+    <Description>Fanuc acquisition, MQTT sink composition, and reloadable collector session.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gateway.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <ProjectReference Include="..\Adapters.Fanuc\Adapters.Fanuc.csproj" />
+    <ProjectReference Include="..\Sinks.Mqtt\Sinks.Mqtt.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+</Project>

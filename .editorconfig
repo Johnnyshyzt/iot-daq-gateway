@@ -11,5 +11,8 @@ trim_trailing_whitespace = true
 [*.{yml,yaml,json,md,props,csproj}]
 indent_size = 2
 
+[studio/web/**]
+indent_size = 2
+
 [*.sln]
 indent_style = tab

@@ -8,9 +8,19 @@ Set-Location $Root
 $Configuration = if ($env:CONFIGURATION) { $env:CONFIGURATION } else { "Release" }
 $Rid = "win-x64"
 
-$Version = (dotnet msbuild src/Gateway.Host/Gateway.Host.csproj -nologo -getProperty:Version).Trim()
+if (-not (Test-Path "src/Web/dist/index.html")) {
+    Write-Host "Building src/Web ..."
+    Push-Location src/Web
+    npm ci
+    if ($LASTEXITCODE -ne 0) { throw "npm ci failed" }
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "npm run build failed" }
+    Pop-Location
+}
+
+$Version = (dotnet msbuild src/Host/Host.csproj -nologo -getProperty:Version).Trim()
 if (-not $Version) {
-    throw "Could not read Version from Gateway.Host.csproj"
+    throw "Could not read Version from Host.csproj"
 }
 
 $Sha = ""
@@ -25,8 +35,8 @@ $Zip = Join-Path $Dist "$FolderName.zip"
 if (Test-Path $Stage) { Remove-Item -Recurse -Force $Stage }
 New-Item -ItemType Directory -Force -Path $Stage, $Dist | Out-Null
 
-Write-Host "Publishing Gateway.Host $Informational ($Rid self-contained)..."
-dotnet publish src/Gateway.Host/Gateway.Host.csproj `
+Write-Host "Publishing Host $Informational ($Rid self-contained)..."
+dotnet publish src/Host/Host.csproj `
   -c $Configuration `
   -r $Rid `
   --self-contained true `
@@ -57,9 +67,12 @@ foreach ($dll in @("Fwlib64.dll", "fwlib64.dll")) {
     }
 }
 
-$exe = Join-Path $Stage "Gateway.Host.exe"
+$exe = Join-Path $Stage "Host.exe"
 if (-not (Test-Path $exe)) {
-    throw "Publish did not produce Gateway.Host.exe"
+    throw "Publish did not produce Host.exe"
+}
+if (-not (Test-Path (Join-Path $Stage "wwwroot/index.html"))) {
+    throw "Publish did not include wwwroot/index.html. Build src/Web first."
 }
 
 $Folder = Join-Path $Dist $FolderName

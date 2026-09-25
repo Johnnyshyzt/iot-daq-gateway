@@ -11,9 +11,14 @@ export PATH="${DOTNET_ROOT}:${PATH}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 RID="win-x64"
 
-VERSION="$(dotnet msbuild src/Gateway.Host/Gateway.Host.csproj -nologo -getProperty:Version | tr -d '\r' | tail -n 1 | xargs)"
+if [[ ! -f "$ROOT/src/Web/dist/index.html" ]]; then
+  echo "Building src/Web ..."
+  (cd "$ROOT/src/Web" && npm ci && npm run build)
+fi
+
+VERSION="$(dotnet msbuild src/Host/Host.csproj -nologo -getProperty:Version | tr -d '\r' | tail -n 1 | xargs)"
 if [[ -z "$VERSION" ]]; then
-  echo "Could not read Version from Gateway.Host.csproj" >&2
+  echo "Could not read Version from Host.csproj" >&2
   exit 1
 fi
 
@@ -35,8 +40,8 @@ ZIP="${DIST}/${FOLDER}.zip"
 rm -rf "$STAGE"
 mkdir -p "$STAGE" "$DIST"
 
-echo "Publishing Gateway.Host $INFORMATIONAL ($RID self-contained)..."
-dotnet publish src/Gateway.Host/Gateway.Host.csproj \
+echo "Publishing Host $INFORMATIONAL ($RID self-contained)..."
+dotnet publish src/Host/Host.csproj \
   -c "$CONFIGURATION" \
   -r "$RID" \
   --self-contained true \
@@ -82,8 +87,12 @@ if [[ -e "$STAGE/Fwlib64.dll" || -e "$STAGE/fwlib64.dll" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$STAGE/Gateway.Host.exe" ]]; then
-  echo "Publish did not produce Gateway.Host.exe" >&2
+if [[ ! -f "$STAGE/Host.exe" ]]; then
+  echo "Publish did not produce Host.exe" >&2
+  exit 1
+fi
+if [[ ! -f "$STAGE/wwwroot/index.html" ]]; then
+  echo "Publish did not include wwwroot/index.html. Build src/Web first." >&2
   exit 1
 fi
 
@@ -104,7 +113,8 @@ import sys, zipfile
 z = zipfile.ZipFile(sys.argv[1])
 names = z.namelist()
 required = [
-    "Gateway.Host.exe",
+    "Host.exe",
+    "wwwroot/index.html",
     "gateway.yaml",
     "install-service.bat",
     "uninstall-service.bat",

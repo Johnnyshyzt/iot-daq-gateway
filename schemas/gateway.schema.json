@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Johnnyshyzt/iot-daq-gateway/blob/main/schemas/gateway.schema.json",
+  "title": "Gateway",
+  "description": "Site-level resource stored as gateway.yaml. apiVersion is daq.gateway/v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "daq.gateway/v1"
+    },
+    "kind": {
+      "const": "Gateway"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["siteId", "name"],
+      "properties": {
+        "siteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "description": "MQTT topic segment {site}. Maps from legacy gateway.site."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Display name shown in Config Studio."
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logLevel", "features", "acquisition"],
+      "properties": {
+        "logLevel": {
+          "type": "string",
+          "enum": ["Trace", "Debug", "Information", "Warning", "Error", "Critical"],
+          "description": "Microsoft.Extensions.Logging level for the gateway process."
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["programWrite"],
+          "properties": {
+            "programWrite": {
+              "type": "boolean",
+              "description": "Maps from legacy programTransfer.enabled. M1 keeps this false; IProgramService stays read-only."
+            }
+          }
+        },
+        "acquisition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["defaultIntervalMs", "changeOnly"],
+          "properties": {
+            "defaultIntervalMs": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 86400000,
+              "description": "Default scan interval in milliseconds. Device.spec.intervalMs overrides it. Maps from legacy pipeline.sweepInterval."
+            },
+            "changeOnly": {
+              "type": "boolean",
+              "description": "Publish a point only when its value changes. The $status topic is still published every sweep."
+            }
+          }
+        }
+      }
+    }
+  }
+}

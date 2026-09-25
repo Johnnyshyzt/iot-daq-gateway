@@ -1,0 +1,13 @@
+apiVersion: daq.gateway/v1
+kind: Device
+metadata:
+  id: cnc-01
+  displayName: Lathe 01
+spec:
+  adapter: fanuc.fake
+  enabled: true
+  intervalMs: 1000
+  connection:
+    host: 192.168.1.10
+    port: 8193
+    focasTimeoutMs: 3000

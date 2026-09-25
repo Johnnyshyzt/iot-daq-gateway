@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.203
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Web
+        working-directory: src/Web
+        run: npm ci && npm run build
       - name: Pack self-contained win-x64 zip
         shell: pwsh
         run: ./scripts/pack-win-x64.ps1
@@ -31,3 +37,17 @@ jobs:
           name: iot-daq-gateway-win-x64
           path: artifacts/win-x64/*.zip
           if-no-files-found: error
+
+  studio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.203
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Web
+        working-directory: src/Web
+        run: npm ci && npm run build

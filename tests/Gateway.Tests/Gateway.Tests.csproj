@@ -13,14 +13,20 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="MQTTnet" />
+    <PackageReference Include="MQTTnet.Server" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Adapters.Fanuc\Adapters.Fanuc.csproj" />
-    <ProjectReference Include="..\..\src\Gateway.Abstractions\Gateway.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\Gateway.Host\Gateway.Host.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Adapters.Fanuc\Adapters.Fanuc.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Core\Collector.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Sinks.Mqtt\Sinks.Mqtt.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\configs\examples\*.yaml" Link="examples\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\configs\examples\v1\**\*" Link="examples\v1\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

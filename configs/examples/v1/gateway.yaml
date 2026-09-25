@@ -1,0 +1,16 @@
+# v1 bundle example. Point Gateway.Host at this directory (or this file):
+#   dotnet run --project src/Gateway.Host -- --config configs/examples/v1
+# The single-file quick start remains configs/examples/gateway.yaml.
+# Layout and revision rules: docs/config/README.md
+apiVersion: daq.gateway/v1
+kind: Gateway
+metadata:
+  siteId: plant-a
+  name: Plant A Gateway
+spec:
+  logLevel: Information
+  features:
+    programWrite: false
+  acquisition:
+    defaultIntervalMs: 1000
+    changeOnly: true

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Studio.Host</RootNamespace>
+    <AssemblyName>Api</AssemblyName>
+    <Product>IoT DAQ Config Studio</Product>
+    <Description>Management API library: draft, publish, rollback, and runtime queries.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Contracts\Studio.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+</Project>

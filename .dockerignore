@@ -1,8 +1,16 @@
-.git
+**/.git
 **/.vs
 **/bin
 **/obj
+**/node_modules
 **/Fwlib*.dll
 **/fwlib*.dll
 **/libfwlib32.so*
 **/*.user
+src/Web/dist
+artifacts
+data/published
+data/draft
+data/revisions
+data/runtime
+studio/data
