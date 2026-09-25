@@ -38,13 +38,10 @@ jobs:
           path: artifacts/win-x64/*.zip
           if-no-files-found: error
 
-  studio:
+  web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.203
       - uses: actions/setup-node@v4
         with:
           node-version: 22

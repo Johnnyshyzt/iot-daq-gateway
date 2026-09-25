@@ -1,4 +1,4 @@
-把授权的 64 位 FANUC FOCAS 库放到与 Gateway.Host.exe 同一目录，文件名必须是：
+把授权的 64 位 FANUC FOCAS 库放到与 Host.exe 同一目录，文件名必须是：
 
     Fwlib64.dll
 
