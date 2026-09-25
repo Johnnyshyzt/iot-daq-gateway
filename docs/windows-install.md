@@ -37,7 +37,7 @@
 
 https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest
 
-文件名是 `iot-daq-gateway-<version>-win-x64.zip`。标签 `v0.3.0` 对应的附件名是 `iot-daq-gateway-0.3.0-win-x64.zip`（版本号没有前缀 `v`）。
+文件名是 `iot-daq-gateway-<version>-win-x64.zip`。下一版标签 `v0.4.0` 对应的附件名是 `iot-daq-gateway-0.4.0-win-x64.zip`（版本号没有前缀 `v`；`Directory.Build.props` 的 `Version` 已是 `0.4.0`）。
 
 还没有 Release 时，用 GitHub Actions 里 `pack-win-x64` 作业的同名 artifact，或在构建机执行上面的脚本。zip 里有 `Host.exe`、`wwwroot`、`data/seed` 和 `install-service.bat` 等安装脚本，没有 `Fwlib64.dll`。
 
