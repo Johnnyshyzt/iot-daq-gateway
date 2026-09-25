@@ -1,0 +1,13 @@
+apiVersion: daq.gateway/v1
+kind: MqttSink
+metadata:
+  id: mqtt-main
+spec:
+  broker:
+    host: 127.0.0.1
+    port: 1883
+    clientId: iot-daq-gateway
+  topicTemplate: daq/{site}/{deviceId}/{point}
+  qos: 1
+  retain: false
+  statusTopic: daq/{site}/{deviceId}/$status

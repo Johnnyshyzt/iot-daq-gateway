@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Studio.Contracts</RootNamespace>
+    <Product>IoT DAQ Config Studio</Product>
+    <Description>Config Studio API and YAML document contracts.</Description>
+  </PropertyGroup>
+</Project>

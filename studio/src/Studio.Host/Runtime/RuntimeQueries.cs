@@ -1,0 +1,198 @@
+using System.Diagnostics;
+using System.Net.Sockets;
+using Studio.Contracts;
+using Studio.Host.Config;
+
+namespace Studio.Host.Runtime;
+
+public sealed class RuntimeQueries(ConfigStore store)
+{
+    public RuntimeStatus Status()
+    {
+        var published = store.ReadPublished();
+        var now = DateTimeOffset.UtcNow;
+        var devices = published.Devices
+            .OrderBy(device => device.Metadata.Id, StringComparer.Ordinal)
+            .Select(device => ToHealth(device, now))
+            .ToList();
+
+        return new RuntimeStatus
+        {
+            Name = published.Gateway.Metadata.Name,
+            SiteId = published.Gateway.Metadata.SiteId,
+            State = "running",
+            Mode = "mock",
+            ActiveRevision = store.ActiveRevision(),
+            UtcNow = now,
+            Devices = devices,
+            RecentErrors = RecentErrors()
+        };
+    }
+
+    public ObservationList Observations(string? deviceId, int limit)
+    {
+        limit = Math.Clamp(limit, 1, 200);
+        var published = store.ReadPublished();
+        var now = DateTimeOffset.UtcNow;
+        var phase = now.ToUnixTimeSeconds() % 60;
+        var (state, alarm, quality) = phase switch
+        {
+            < 20 => ("IDLE", "0", "good"),
+            < 50 => ("RUNNING", "0", "good"),
+            _ => ("ALARM", "100", "uncertain")
+        };
+
+        var rows = new List<ObservationView>();
+        foreach (var device in published.Devices.OrderBy(device => device.Metadata.Id, StringComparer.Ordinal))
+        {
+            if (!device.Spec.Enabled)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(deviceId)
+                && !string.Equals(device.Metadata.Id, deviceId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var points = published.PointSets
+                .FirstOrDefault(set => string.Equals(set.Metadata.DeviceId, device.Metadata.Id, StringComparison.Ordinal))
+                ?.Spec.Points ?? [];
+            foreach (var point in points.Where(point => point.Enabled))
+            {
+                rows.Add(new ObservationView
+                {
+                    DeviceId = device.Metadata.Id,
+                    Point = point.Id,
+                    Value = Sample(point, state, alarm),
+                    Quality = quality,
+                    Unit = point.Unit,
+                    Timestamp = now
+                });
+            }
+        }
+
+        return new ObservationList { Observations = rows.Take(limit).ToList() };
+    }
+
+    public LogTail Logs(int lines) => new()
+    {
+        Lines = store.ReadLogTail(lines).ToList()
+    };
+
+    public async Task<DeviceTestResult> TestDeviceAsync(string id, CancellationToken cancellationToken)
+    {
+        var device = store.GetDevice(id);
+        if (string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal))
+        {
+            var fake = new DeviceTestResult
+            {
+                DeviceId = id,
+                Ok = true,
+                Adapter = device.Spec.Adapter,
+                Message = "Fake 适配器握手成功（未连接真实机床）",
+                LatencyMs = 1
+            };
+            store.AppendLog($"设备 {id} 连接测试成功：Fake");
+            return fake;
+        }
+
+        if (!string.Equals(device.Spec.Adapter, "fanuc.focas", StringComparison.Ordinal))
+        {
+            return new DeviceTestResult
+            {
+                DeviceId = id,
+                Ok = false,
+                Adapter = device.Spec.Adapter,
+                Message = "M1 只支持 fanuc.fake 与 fanuc.focas"
+            };
+        }
+
+        var host = device.Spec.Connection.Host;
+        var port = device.Spec.Connection.Port;
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            using var client = new TcpClient();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(2));
+            await client.ConnectAsync(host, port, timeout.Token);
+            watch.Stop();
+            var ok = new DeviceTestResult
+            {
+                DeviceId = id,
+                Ok = true,
+                Adapter = device.Spec.Adapter,
+                LatencyMs = (int)watch.ElapsedMilliseconds,
+                Message = "TCP 端口可达。完整 FOCAS 握手需在带 Fwlib64.dll 的网关进程中进行，Studio 独立进程只探测端口。"
+            };
+            store.AppendLog($"设备 {id} 端口探测成功 {host}:{port}");
+            return ok;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            watch.Stop();
+            var failed = new DeviceTestResult
+            {
+                DeviceId = id,
+                Ok = false,
+                Adapter = device.Spec.Adapter,
+                LatencyMs = (int)watch.ElapsedMilliseconds,
+                Message = $"无法连接 {host}:{port}。{ex.Message}"
+            };
+            store.AppendLog($"设备 {id} 端口探测失败 {host}:{port}");
+            return failed;
+        }
+    }
+
+    private List<string> RecentErrors()
+    {
+        return store.ReadLogTail(200)
+            .Where(line => line.Contains("失败", StringComparison.Ordinal) || line.Contains("错误", StringComparison.OrdinalIgnoreCase) || line.Contains("error", StringComparison.OrdinalIgnoreCase))
+            .TakeLast(5)
+            .Reverse()
+            .ToList();
+    }
+
+    private static DeviceHealthView ToHealth(DeviceDocument device, DateTimeOffset now)
+    {
+        var status = !device.Spec.Enabled
+            ? "disabled"
+            : device.Spec.Adapter == "fanuc.fake"
+                ? "online"
+                : "offline";
+        var message = status switch
+        {
+            "online" => "Fake 适配器模拟在线",
+            "offline" => "FOCAS 运行态未接入，Studio 独立进程只提供模拟",
+            _ => "设备已禁用"
+        };
+        return new DeviceHealthView
+        {
+            Id = device.Metadata.Id,
+            DisplayName = device.Metadata.DisplayName,
+            Enabled = device.Spec.Enabled,
+            Adapter = device.Spec.Adapter,
+            Status = status,
+            LastSeen = status == "online" ? now : null,
+            Message = message
+        };
+    }
+
+    private static string Sample(PointDefinition point, string state, string alarm)
+    {
+        return point.Id switch
+        {
+            "state" => state,
+            "alarm" => alarm,
+            "program" => "O0001",
+            _ => point.DataType switch
+            {
+                "bool" => "true",
+                "int" or "float" or "number" => "0",
+                _ => "mock"
+            }
+        };
+    }
+}

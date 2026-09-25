@@ -27,6 +27,7 @@ src/Gateway.Host/           宿主、YAML、扫描循环
 src/Adapters.Fanuc/         Fake + Windows FOCAS（Fwlib64 P/Invoke）
 src/Sinks.Mqtt/             MQTTnet JSON
 tests/Gateway.Tests/        无硬件回归（缺 DLL / YAML）
+studio/                   Config Studio（M1 脚手架，独立解决方案）
 configs/examples/
 packaging/windows/        服务安装脚本与现场说明（打进 zip）
 scripts/pack-win-x64.*   自包含 win-x64 打包
@@ -35,6 +36,16 @@ docs/
 ```
 
 更多见 [docs/architecture.md](docs/architecture.md)。
+
+## Config Studio
+
+M1 配置台与网关同仓，代码在 [`studio/`](studio/README.md)。`Studio.Host` 现在可以单独跑管理 API 和页面，接口按以后嵌入网关进程来拆；设备只做 Fanuc（含 Fake），北向只做 MQTT。配置真相在 `studio/data` 的 YAML 里，不在数据库。
+
+```bash
+dotnet run --project studio/src/Studio.Host
+```
+
+页面开发与构建见 [studio/README.md](studio/README.md)。
 
 ## 环境
 
