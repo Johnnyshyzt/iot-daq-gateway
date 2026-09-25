@@ -1,6 +1,6 @@
-using Gateway.Abstractions.Configuration;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
+using Gateway.Host.Acquisition;
 
 namespace Gateway.Host.Programs;
 
@@ -8,16 +8,9 @@ namespace Gateway.Host.Programs;
 /// V1 program surface: read-only and disabled unless the feature flag is set.
 /// Transfer is not implemented.
 /// </summary>
-internal sealed class FeatureGatedProgramService : IProgramService
+internal sealed class FeatureGatedProgramService(GatewayConfigHolder holder) : IProgramService
 {
-    private readonly GatewayConfiguration _config;
-
-    public FeatureGatedProgramService(GatewayConfiguration config)
-    {
-        _config = config;
-    }
-
-    public bool IsEnabled => _config.ProgramTransfer.Enabled;
+    public bool IsEnabled => holder.Current.ProgramTransfer.Enabled;
 
     public Task<IReadOnlyList<CncProgramInfo>> ListAsync(string deviceId, CancellationToken cancellationToken)
     {

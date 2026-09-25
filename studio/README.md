@@ -1,8 +1,8 @@
 # Config Studio（M1 脚手架）
 
-采集网关的可视化配置台。M1 和开源网关放在同一个仓库里：`Studio.Host` 现在可以单独跑，接口按以后嵌入网关进程来拆。设备只做 Fanuc（`fanuc.fake` / `fanuc.focas`），北向只做 MQTT。
+采集网关的可视化配置台。M1 和开源网关放在同一个仓库里。`Studio.Host` 现在单独跑管理 API 和页面；`MapStudioApi()` 留给以后嵌进网关进程。设备只做 Fanuc（`fanuc.fake` / `fanuc.focas`），北向只做 MQTT。
 
-许可证与仓库根目录相同：[Apache-2.0](../LICENSE)。
+许可证与仓库根目录相同：[Apache-2.0](../LICENSE)。产品边界见 [docs/product/open-core.md](../docs/product/open-core.md)，配置树见 [docs/config/README.md](../docs/config/README.md)，页面树见 [docs/product/studio-ia.md](../docs/product/studio-ia.md)。
 
 ## 配置怎么存
 
@@ -11,13 +11,13 @@ YAML 文件是唯一真相，不靠数据库。目录在 `studio/data`（可用�
 ```
 studio/data/
   seed/                 首次启动时复制的示例（进 git）
-  config/               已发布配置，含 .revision
+  published/            已发布配置，含 .revision；Gateway.Host 读这里
   draft/                正在编辑的草稿
   revisions/{sha256}/   发布快照，供回滚
   runtime/studio.log    Studio 自己的日志
 ```
 
-`config/`、`draft/`、`revisions/`、`runtime/` 是本机状态，不进 git。修订号是整包规范化 JSON 的 SHA-256。发布时把草稿写成已发布配置并留下快照；回滚会同时覆盖已发布配置和草稿。
+`published/`、`draft/`、`revisions/`、`runtime/` 是本机状态，不进 git。更早的 `studio/data/config/` 会在下次启动时复制到 `published/`。修订号是 `CanonicalRevision`：整包规范化 JSON 的 SHA-256（见配置说明）。发布时把草稿写成已发布配置并留下快照；回滚会同时覆盖已发布配置和草稿。发布和回滚之后，Studio 会请求网关 `POST /api/v1/runtime/reload`。
 
 MQTT 密码只写环境变量名（`passwordFromEnv`），不把明文密码写进 YAML。示例见 `studio/data/seed/secrets.env.example`。
 
@@ -31,7 +31,7 @@ studio/web/                   Vue 3 + Vite
 studio/tests/Studio.Tests/    草稿、发布、回滚
 ```
 
-`MapStudioApi()` 是以后嵌入 `Gateway.Host` 的接缝。这一版不改网关进程。
+`MapStudioApi()` 是以后嵌入 `Gateway.Host` 的接缝。当前是两个进程：Studio 写 `published/`，网关加载该目录，并通过 `127.0.0.1:5081` 把运行态交回 Studio。
 
 ## 运行 API
 
@@ -80,7 +80,35 @@ dotnet run --project studio/src/Studio.Host
 
 页面（中文）：概览、设备、点位、北向 MQTT、发布、运行态、系统。点位支持 CSV 导入导出；Excel 请另存为 CSV。
 
-运行态是模拟数据：Fake 设备显示在线，观测值按时间相位变化。FOCAS 的「连接测试」在独立 Studio 里只探测 TCP 端口，完整握手仍在带 `Fwlib64.dll` 的网关进程中。
+## 和 Gateway.Host 一起跑
+
+需要本机 MQTT broker 才能在 Studio 里看到真实报文。没有 broker 时网关仍会采集，只是 MQTT 发布被丢掉，运行态里的观测仍然来自适配器。
+
+```bash
+# 终端 1：broker
+mosquitto -c docker/mosquitto.conf
+
+# 终端 2：先启动 Studio，生成 studio/data/published
+dotnet run --project studio/src/Studio.Host
+
+# 终端 3：网关读取 Studio 已发布目录
+dotnet run --project src/Gateway.Host --no-launch-profile -- --config studio/data/published
+
+# 另开终端看 MQTT
+mosquitto_sub -h 127.0.0.1 -t 'daq/#' -v
+```
+
+然后打开 `http://127.0.0.1:5080`，用 `admin` / `admin` 登录。改设备或点位，打开发布页发布。Studio 会通知 `http://127.0.0.1:5081/api/v1/runtime/reload`（可用 `Studio:GatewayLoopback` 或网关侧 `GATEWAY_LOOPBACK` 修改；设为 `off` 则网关不监听）。网关也监视已发布目录，作为这次通知的备份。重载失败时上一份会话继续跑。
+
+运行态页在网关可达时显示「来自本机 Gateway.Host」（`mode` 为 `live`）。只开 Studio 时仍是模拟数据（`mode` 为 `mock`）：Fake 设备显示在线，观测值按时间相位变化。FOCAS 的「连接测试」在 Studio 里只探测 TCP 端口，完整握手仍在带 `Fwlib64.dll` 的网关进程中。
+
+不想开 Studio 时，网关仍可直接加载示例包：
+
+```bash
+dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/examples/v1
+```
+
+单文件快速开始 `configs/examples/gateway.yaml` 保持不变，见仓库根 [README](../README.md)。
 
 ## API
 
@@ -102,7 +130,7 @@ dotnet run --project studio/src/Studio.Host
 | GET | `/config/revisions` | 最近修订 |
 | POST | `/config/rollback` | `{ "revision": "<sha256>" }` |
 | POST | `/devices/{id}/test` | 连接测试 |
-| GET | `/runtime/status` | 模拟运行态 |
+| GET | `/runtime/status` | 网关在跑时为真实状态，否则模拟 |
 | GET | `/runtime/observations` | `deviceId`、`limit` |
 | GET | `/runtime/logs/tail` | `lines` |
 | GET | `/settings` | 站点、许可证桩、用户 |
@@ -127,4 +155,4 @@ curl -s -X POST http://127.0.0.1:5080/api/v1/config/publish \
 
 ## 许可证桩
 
-`GET /api/v1/license` 固定返回未强制校验。没有许可证文件时，开源 Runtime 仍按自己的 YAML 运行；Studio 这一版也不拦截管理 API。
+`GET /api/v1/license` 固定返回未强制校验。没有许可证文件时，Runtime 与 Studio 都可以运行，管理 API 也不拦截。

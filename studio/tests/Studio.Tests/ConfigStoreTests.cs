@@ -60,7 +60,7 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.False(published.Unchanged);
         Assert.NotEqual(initial, published.Revision);
         Assert.Equal(published.Revision, store.ActiveRevision());
-        Assert.Contains("cnc-02", File.ReadAllText(Path.Combine(_directory, "config", "devices", "cnc-02.yaml")), StringComparison.Ordinal);
+        Assert.Contains("cnc-02", File.ReadAllText(Path.Combine(_directory, "published", "devices", "cnc-02.yaml")), StringComparison.Ordinal);
 
         var again = store.Publish("noop");
         Assert.True(again.Unchanged);
@@ -70,7 +70,7 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Equal(initial, store.ActiveRevision());
         Assert.Equal("Lathe 01", store.GetDevice("cnc-01").Metadata.DisplayName);
         Assert.Throws<ConfigStoreException>(() => store.GetDevice("cnc-02"));
-        Assert.False(File.Exists(Path.Combine(_directory, "config", "devices", "cnc-02.yaml")));
+        Assert.False(File.Exists(Path.Combine(_directory, "published", "devices", "cnc-02.yaml")));
         Assert.False(File.Exists(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")));
 
         var revisions = store.ListRevisions(10);

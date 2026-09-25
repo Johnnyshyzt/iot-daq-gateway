@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Johnnyshyzt/iot-daq-gateway/blob/main/schemas/mqtt-sink.schema.json",
+  "title": "MqttSink",
+  "description": "The single northbound MQTT sink, stored as sinks/mqtt.yaml. Commercial V1 has no OPC UA sink.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "daq.gateway/v1"
+    },
+    "kind": {
+      "const": "MqttSink"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["broker", "topicTemplate", "qos", "retain", "statusTopic"],
+      "properties": {
+        "broker": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host", "port", "clientId"],
+          "dependentRequired": {
+            "usernameFromEnv": ["passwordFromEnv"],
+            "passwordFromEnv": ["usernameFromEnv"]
+          },
+          "properties": {
+            "host": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "clientId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "usernameFromEnv": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Environment variable that holds the MQTT user name. The secret value is not stored in the bundle."
+            },
+            "passwordFromEnv": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Environment variable that holds the MQTT password. Plaintext password fields are rejected."
+            },
+            "tls": {
+              "type": "boolean",
+              "default": false,
+              "description": "Maps from legacy mqtt.tls. Omitted means false."
+            }
+          }
+        },
+        "topicTemplate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Point topic. Placeholders: {site} (Gateway.metadata.siteId), {deviceId}, {point}. Default pattern is daq/{site}/{deviceId}/{point}."
+        },
+        "qos": {
+          "type": "integer",
+          "enum": [0, 1, 2],
+          "description": "MQTT QoS. Matches MqttObservationSink: 0 at most once, 1 at least once, 2 exactly once."
+        },
+        "retain": {
+          "type": "boolean"
+        },
+        "statusTopic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Device health topic. Default pattern is daq/{site}/{deviceId}/$status, aligned with DaqTopics.Status."
+        }
+      }
+    }
+  }
+}

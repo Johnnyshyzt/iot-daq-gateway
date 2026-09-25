@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Johnnyshyzt/iot-daq-gateway/blob/main/schemas/device.schema.json",
+  "title": "Device",
+  "description": "One southbound device stored as devices/{metadata.id}.yaml. M1 adapters are Fanuc only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "daq.gateway/v1"
+    },
+    "kind": {
+      "const": "Device"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "description": "Stable device id. Must match the file name and the MQTT {deviceId} segment."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "enabled", "intervalMs", "connection"],
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "enum": ["fanuc.fake", "fanuc.focas"],
+          "description": "fanuc.fake needs no hardware. fanuc.focas is the Windows x64 Fwlib64 P/Invoke path; the vendor DLL is not in this repo."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Disabled devices are not acquired and are omitted from the online count."
+        },
+        "intervalMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 86400000,
+          "description": "Scan interval for this device. Overrides Gateway.spec.acquisition.defaultIntervalMs."
+        },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host", "port"],
+          "properties": {
+            "host": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253,
+              "description": "Panel IPv4/IPv6 address or host name. Maps from legacy devices[].options.host."
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "FOCAS Ethernet port. 8193 is the usual panel port."
+            },
+            "focasTimeoutMs": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 120000,
+              "description": "Connect timeout in milliseconds. The FOCAS call rounds this up to whole seconds (cnc_allclibhndl3). Maps from legacy options.timeoutMs."
+            }
+          }
+        }
+      }
+    }
+  }
+}

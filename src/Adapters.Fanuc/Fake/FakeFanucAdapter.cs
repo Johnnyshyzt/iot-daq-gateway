@@ -1,3 +1,4 @@
+using System.Globalization;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
     private readonly ILogger<FakeFanucAdapter> _logger;
     private readonly string _host;
     private readonly int _port;
+    private readonly string[]? _points;
     private bool _connected;
 
     public FakeFanucAdapter(
@@ -26,6 +28,7 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
         _logger = logger;
         _host = OptionReader.GetString(options, "host", "127.0.0.1");
         _port = OptionReader.GetInt(options, "port", 8193);
+        _points = ReadPoints(options);
     }
 
     public string AdapterKind => Kind;
@@ -60,35 +63,60 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
             _ => ("ALARM", 100, "uncertain")
         };
 
-        IReadOnlyList<Observation> points =
-        [
-            new Observation
+        var ids = _points ?? ["state", "alarm", "program"];
+        var points = new List<Observation>(ids.Length);
+        foreach (var id in ids)
+        {
+            object? value = id switch
+            {
+                "state" => state,
+                "alarm" => alarm,
+                "program" => "O0001",
+                _ => 0
+            };
+            var pointQuality = id is "state" or "alarm" ? quality : "good";
+            points.Add(new Observation
             {
                 DeviceId = DeviceId,
-                Point = "state",
-                Value = state,
+                Point = id,
+                Value = value,
                 Timestamp = now,
-                Quality = quality
-            },
-            new Observation
-            {
-                DeviceId = DeviceId,
-                Point = "alarm",
-                Value = alarm,
-                Timestamp = now,
-                Quality = quality
-            },
-            new Observation
-            {
-                DeviceId = DeviceId,
-                Point = "program",
-                Value = "O0001",
-                Timestamp = now,
-                Quality = "good"
-            }
-        ];
+                Quality = pointQuality
+            });
+        }
 
-        return Task.FromResult(points);
+        return Task.FromResult<IReadOnlyList<Observation>>(points);
+    }
+
+    private static string[]? ReadPoints(IReadOnlyDictionary<string, object?> options)
+    {
+        if (!options.TryGetValue("points", out var value) || value is null)
+        {
+            return null;
+        }
+
+        if (value is string text)
+        {
+            var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return parts.Length == 0 ? null : parts;
+        }
+
+        if (value is System.Collections.IEnumerable list and not string)
+        {
+            var parts = new List<string>();
+            foreach (var item in list)
+            {
+                var part = Convert.ToString(item, CultureInfo.InvariantCulture);
+                if (!string.IsNullOrWhiteSpace(part))
+                {
+                    parts.Add(part);
+                }
+            }
+
+            return parts.Count == 0 ? null : parts.ToArray();
+        }
+
+        return null;
     }
 
     public Task<DeviceHealth> GetHealthAsync(CancellationToken cancellationToken)

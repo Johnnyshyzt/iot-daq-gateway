@@ -39,13 +39,16 @@ docs/
 
 ## Config Studio
 
-M1 配置台与网关同仓，代码在 [`studio/`](studio/README.md)。`Studio.Host` 现在可以单独跑管理 API 和页面，接口按以后嵌入网关进程来拆；设备只做 Fanuc（含 Fake），北向只做 MQTT。配置真相在 `studio/data` 的 YAML 里，不在数据库。
+M1 配置台与网关同仓，都是 Apache-2.0。代码在 [`studio/`](studio/README.md)，产品边界在 [docs/product/open-core.md](docs/product/open-core.md)。以后可以再拆出 `iot-daq-studio`；当前没有第二个仓库。
+
+Studio 写 `studio/data/published`。网关用 `--config` 指向这个目录，本机 `127.0.0.1:5081` 提供运行态和重载。一起启动：
 
 ```bash
 dotnet run --project studio/src/Studio.Host
+dotnet run --project src/Gateway.Host --no-launch-profile -- --config studio/data/published
 ```
 
-页面开发与构建见 [studio/README.md](studio/README.md)。
+先起 Studio，它会从 `studio/data/seed` 生成已发布目录。页面、账号和 Fake + MQTT 联调见 [studio/README.md](studio/README.md)。只想跑网关、不打开配置台时，仍用下面的单文件示例。
 
 ## 环境
 
@@ -139,7 +142,7 @@ docker compose -f docker/docker-compose.yml up --build
 | `mqtt.*` | broker、clientId、QoS、可选 TLS/账号 |
 | `devices[].adapter` | `fanuc.fake` 或 `fanuc.focas` |
 
-配置路径：`--config <file>` 或环境变量 `GATEWAY_CONFIG`。未指定时依次尝试当前目录 `gateway.yaml`、`configs/examples/gateway.yaml`、输出目录内副本。
+配置路径：`--config <file-or-directory>` 或环境变量 `GATEWAY_CONFIG`。文件可以是单文件 YAML，也可以是 v1 包里的 `gateway.yaml`（会连同目录一起加载）。目录则按 [docs/config/README.md](docs/config/README.md) 读取。未指定时依次尝试当前目录 `gateway.yaml`、`configs/examples/gateway.yaml`、输出目录内副本。Studio 联调指向 `studio/data/published`。
 
 ## FOCAS 与安全
 

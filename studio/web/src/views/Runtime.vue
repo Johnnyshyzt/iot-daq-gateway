@@ -37,7 +37,8 @@ onUnmounted(() => window.clearInterval(timer))
 
 <template>
   <main class="page">
-    <p class="banner warn">当前运行态是模拟数据，方便在 Studio 独立运行时看在线状态和最近观测。接入网关进程后可以换成真实状态。</p>
+    <p v-if="status?.mode === 'live'" class="banner ok">运行态来自本机 Gateway.Host。发布配置后，网关会重新加载已发布目录。</p>
+    <p v-else class="banner warn">当前运行态是模拟数据。先启动 Studio，再让 Gateway.Host 读取 studio/data/published，这里就会显示真实适配器和 MQTT 活动。</p>
     <p v-if="error" class="banner error">{{ error }}</p>
     <section class="cards">
       <article class="card">

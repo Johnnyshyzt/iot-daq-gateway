@@ -1,13 +1,40 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text.Json;
 using Studio.Contracts;
 using Studio.Host.Config;
 
 namespace Studio.Host.Runtime;
 
-public sealed class RuntimeQueries(ConfigStore store)
+public sealed class RuntimeQueries(ConfigStore store, IConfiguration configuration, ILogger<RuntimeQueries> logger)
 {
-    public RuntimeStatus Status()
+    private static readonly JsonSerializerOptions LiveJson = new(StudioJson.Options)
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public async Task<RuntimeStatus> StatusAsync(CancellationToken cancellationToken)
+    {
+        var live = await TryGetAsync<RuntimeStatus>("/api/v1/runtime/status", cancellationToken);
+        return live ?? MockStatus();
+    }
+
+    public async Task<ObservationList> ObservationsAsync(string? deviceId, int limit, CancellationToken cancellationToken)
+    {
+        var query = string.IsNullOrWhiteSpace(deviceId)
+            ? $"?limit={limit}"
+            : $"?deviceId={Uri.EscapeDataString(deviceId)}&limit={limit}";
+        var live = await TryGetAsync<ObservationList>("/api/v1/runtime/observations" + query, cancellationToken);
+        return live ?? MockObservations(deviceId, limit);
+    }
+
+    public async Task<LogTail> LogsAsync(int lines, CancellationToken cancellationToken)
+    {
+        var live = await TryGetAsync<LogTail>($"/api/v1/runtime/logs/tail?lines={lines}", cancellationToken);
+        return live ?? Logs(lines);
+    }
+
+    public RuntimeStatus MockStatus()
     {
         var published = store.ReadPublished();
         var now = DateTimeOffset.UtcNow;
@@ -29,7 +56,33 @@ public sealed class RuntimeQueries(ConfigStore store)
         };
     }
 
-    public ObservationList Observations(string? deviceId, int limit)
+    private async Task<T?> TryGetAsync<T>(string path, CancellationToken cancellationToken)
+    {
+        var baseUrl = configuration["Studio:GatewayLoopback"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return default;
+        }
+
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(800) };
+            using var response = await client.GetAsync(baseUrl.TrimEnd('/') + path, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return default;
+            }
+
+            return await response.Content.ReadFromJsonAsync<T>(LiveJson, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogDebug(ex, "Gateway loopback unavailable; using mock runtime");
+            return default;
+        }
+    }
+
+    private ObservationList MockObservations(string? deviceId, int limit)
     {
         limit = Math.Clamp(limit, 1, 200);
         var published = store.ReadPublished();

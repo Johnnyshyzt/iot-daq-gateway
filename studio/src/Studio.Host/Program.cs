@@ -19,6 +19,7 @@ var dataDirectory = ResolveDataDirectory(builder.Environment, builder.Configurat
 builder.Services.AddSingleton(new ConfigStore(dataDirectory));
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<RuntimeQueries>();
+builder.Services.AddSingleton<GatewayReloadClient>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("studio-dev", policy =>

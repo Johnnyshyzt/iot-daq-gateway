@@ -24,7 +24,7 @@ public sealed partial class ConfigStore
         DataDirectory = dataDirectory;
         _seed = Path.Combine(dataDirectory, "seed");
         _draft = Path.Combine(dataDirectory, "draft");
-        _published = Path.Combine(dataDirectory, "config");
+        _published = Path.Combine(dataDirectory, "published");
         _revisions = Path.Combine(dataDirectory, "revisions");
         _runtime = Path.Combine(dataDirectory, "runtime");
     }
@@ -39,6 +39,12 @@ public sealed partial class ConfigStore
             Directory.CreateDirectory(_published);
             Directory.CreateDirectory(_revisions);
             Directory.CreateDirectory(_runtime);
+
+            var legacy = Path.Combine(DataDirectory, "config");
+            if (!File.Exists(GatewayPath(_published)) && File.Exists(GatewayPath(legacy)))
+            {
+                CopyBundleFiles(legacy, _published);
+            }
 
             if (!File.Exists(GatewayPath(_published)))
             {

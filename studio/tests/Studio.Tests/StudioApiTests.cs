@@ -20,6 +20,7 @@ public sealed class StudioApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
         builder.UseSetting("Studio:DataDirectory", DataDirectory);
+        builder.UseSetting("Studio:GatewayLoopback", "http://127.0.0.1:9");
     }
 
     protected override void Dispose(bool disposing)

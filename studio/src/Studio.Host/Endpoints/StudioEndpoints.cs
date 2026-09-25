@@ -55,7 +55,7 @@ public static class StudioEndpoints
             ApiResults.Ok(store.UpsertGateway(body))).RequireWriter();
 
         api.MapPost("/config/validate", (ConfigStore store) => ApiResults.Ok(store.Validate())).RequireWriter();
-        api.MapPost("/config/publish", (PublishRequest? body, ConfigStore store) =>
+        api.MapPost("/config/publish", async (PublishRequest? body, ConfigStore store, GatewayReloadClient reload, CancellationToken cancellationToken) =>
         {
             var outcome = store.Publish(body?.Note);
             if (!outcome.Published)
@@ -63,6 +63,7 @@ public static class StudioEndpoints
                 return ApiResults.Error(StatusCodes.Status400BadRequest, "validation_failed", "草稿未通过校验，未发布", new { outcome.Issues });
             }
 
+            await reload.NotifyAsync(cancellationToken);
             return ApiResults.Ok(new PublishResult
             {
                 Revision = outcome.Revision,
@@ -75,9 +76,10 @@ public static class StudioEndpoints
         api.MapGet("/config/revisions", (int? limit, ConfigStore store) =>
             ApiResults.Ok(new RevisionList { Revisions = store.ListRevisions(limit ?? 20).ToList() }));
 
-        api.MapPost("/config/rollback", (RollbackRequest? body, ConfigStore store) =>
+        api.MapPost("/config/rollback", async (RollbackRequest? body, ConfigStore store, GatewayReloadClient reload, CancellationToken cancellationToken) =>
         {
             var outcome = store.Rollback(body?.Revision ?? "");
+            await reload.NotifyAsync(cancellationToken);
             return ApiResults.Ok(new RollbackResult
             {
                 Revision = outcome.Revision,
@@ -88,11 +90,12 @@ public static class StudioEndpoints
         api.MapPost("/devices/{id}/test", async (string id, RuntimeQueries runtime, CancellationToken cancellationToken) =>
             ApiResults.Ok(await runtime.TestDeviceAsync(id, cancellationToken))).RequireWriter();
 
-        api.MapGet("/runtime/status", (RuntimeQueries runtime) => ApiResults.Ok(runtime.Status()));
-        api.MapGet("/runtime/observations", (string? deviceId, int? limit, RuntimeQueries runtime) =>
-            ApiResults.Ok(runtime.Observations(deviceId, limit ?? 50)));
-        api.MapGet("/runtime/logs/tail", (int? lines, RuntimeQueries runtime) =>
-            ApiResults.Ok(runtime.Logs(lines ?? 200)));
+        api.MapGet("/runtime/status", async (RuntimeQueries runtime, CancellationToken cancellationToken) =>
+            ApiResults.Ok(await runtime.StatusAsync(cancellationToken)));
+        api.MapGet("/runtime/observations", async (string? deviceId, int? limit, RuntimeQueries runtime, CancellationToken cancellationToken) =>
+            ApiResults.Ok(await runtime.ObservationsAsync(deviceId, limit ?? 50, cancellationToken)));
+        api.MapGet("/runtime/logs/tail", async (int? lines, RuntimeQueries runtime, CancellationToken cancellationToken) =>
+            ApiResults.Ok(await runtime.LogsAsync(lines ?? 200, cancellationToken)));
 
         api.MapGet("/license", () => ApiResults.Ok(License()));
         api.MapGet("/settings", (HttpContext http, ConfigStore store, TokenService tokens) =>
@@ -138,7 +141,7 @@ public static class StudioEndpoints
         Enforced = false,
         Status = "stub",
         Edition = "m1-dev",
-        Message = "M1 许可证闸门为桩：没有许可证时开源 Runtime 仍可读取 YAML；Studio 商业校验尚未启用。"
+        Message = "M1 许可证闸门为桩，当前不拦截管理 API。没有许可证时 Runtime 与 Studio 都可以运行。"
     };
 
     private static UserInfo CurrentUser(HttpContext http) => new()

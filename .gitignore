@@ -51,6 +51,7 @@ Thumbs.db
 studio/web/node_modules/
 studio/web/dist/
 studio/data/config/
+studio/data/published/
 studio/data/draft/
 studio/data/revisions/
 studio/data/runtime/

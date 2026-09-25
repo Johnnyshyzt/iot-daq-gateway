@@ -10,7 +10,7 @@ internal static class ConfigPath
         if (!string.IsNullOrWhiteSpace(specified))
         {
             return FindExisting(specified)
-                ?? throw new FileNotFoundException($"Gateway YAML not found: {specified}");
+                ?? throw new FileNotFoundException($"Gateway config not found: {specified}");
         }
 
         foreach (var candidate in CandidatePaths())
@@ -40,7 +40,7 @@ internal static class ConfigPath
 
     private static string? FindExisting(string path)
     {
-        if (File.Exists(path))
+        if (Exists(path))
         {
             return Path.GetFullPath(path);
         }
@@ -54,7 +54,7 @@ internal static class ConfigPath
         while (dir is not null)
         {
             var combined = Path.Combine(dir.FullName, path);
-            if (File.Exists(combined))
+            if (Exists(combined))
             {
                 return Path.GetFullPath(combined);
             }
@@ -64,6 +64,8 @@ internal static class ConfigPath
 
         return null;
     }
+
+    private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
 
     private static IEnumerable<string> CandidatePaths()
     {
