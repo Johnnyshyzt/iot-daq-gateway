@@ -1,0 +1,89 @@
+name: release
+
+# Pushing a v* tag checks out that tag, packs the same win-x64 zip as
+# ci.yml's pack-win-x64 job, and attaches it to the GitHub Release.
+# Merging a pull request does not publish a release.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  pack-win-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.203
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Web
+        working-directory: src/Web
+        run: npm ci && npm run build
+      - name: Pack self-contained win-x64 zip
+        shell: pwsh
+        run: ./scripts/pack-win-x64.ps1
+      - name: Reject vendor FOCAS binaries
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $zips = @(Get-ChildItem -Path "artifacts/win-x64" -Filter "iot-daq-gateway-*-win-x64.zip")
+          if ($zips.Count -ne 1) {
+            throw "Expected one iot-daq-gateway-*-win-x64.zip, found $($zips.Count)."
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($zips[0].FullName)
+          try {
+            $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+            $banned = @($names | Where-Object { $_ -match '(?i)(^|/)fwlib64\.dll$' })
+            if ($banned.Count -gt 0) {
+              throw "Refusing to publish vendor FOCAS binaries: $($banned -join ', ')"
+            }
+            foreach ($required in @("Host.exe", "wwwroot/index.html", "data/seed/gateway.yaml", "install-service.bat")) {
+              $hit = @($names | Where-Object { $_.EndsWith($required) })
+              if ($hit.Count -eq 0) {
+                throw "Zip missing $required"
+              }
+            }
+          }
+          finally {
+            $archive.Dispose()
+          }
+          Write-Host "Release asset: $($zips[0].Name)"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
+          # action-gh-release overwrites an existing asset of the same name.
+          files: artifacts/win-x64/iot-daq-gateway-*-win-x64.zip
+          body: |
+            Windows x64 现场包（自包含）：`Host.exe`、`wwwroot`、`data/seed` 和安装脚本。
+
+            安装：https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/windows-install.md
+            升级与备份：https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/ops-field.md
+
+            此 zip 不含 `Fwlib64.dll`，也不含其它 FOCAS 厂商二进制。把授权的 64 位 `Fwlib64.dll` 放在 `Host.exe` 旁边。
+
+            种子配置是 `fanuc.fake`。先用 Fake 看页面、发布和 MQTT。真实 FOCAS 要把设备改成 `fanuc.focas` 并自备 `Fwlib64.dll`。本仓库没有发那科机床，不把 TCP 端口通了写成握手成功。
+
+            ---
+
+            Self-contained Windows x64 field package: `Host.exe`, `wwwroot`, `data/seed`, and the install scripts.
+
+            Install: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/windows-install.md
+            Upgrade and backup: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/ops-field.md
+
+            This zip does not include `Fwlib64.dll` or any other FOCAS vendor binary. Place a licensed 64-bit `Fwlib64.dll` next to `Host.exe`.
+
+            The seed config is `fanuc.fake`. Use Fake first for the page, publish, and MQTT. Real FOCAS means `fanuc.focas` plus your own `Fwlib64.dll`. This repository has no Fanuc machine and does not treat an open TCP port as a successful handshake.

@@ -28,7 +28,7 @@ MQTT 口令在 `service.env`，不在 YAML 里。见下文。
 1. 记下版本：日志第一行 `iot-daq-gateway …`，或安装目录 `VERSION.txt`。
 2. 管理员执行 `sc stop IotDaqGateway`。
 3. 先做下面的备份。
-4. 把新 zip 解压到临时目录。zip 里还有一层版本目录，源路径用里面直接含有 `Host.exe` 的那一层。不要先删掉 `C:\iot-daq-gateway\`，否则 `data\published`、`data\auth`、`logs`、`service.env` 和 `Fwlib64.dll` 会一起被删掉。
+4. 新 zip 从对应版本的 GitHub Release 下载（`iot-daq-gateway-<version>-win-x64.zip`，见 [windows-install.md](windows-install.md)）。还没有 Release 时，用 Actions 的 `pack-win-x64` artifact。解压到临时目录。zip 里还有一层版本目录，源路径用里面直接含有 `Host.exe` 的那一层。不要先删掉 `C:\iot-daq-gateway\`，否则 `data\published`、`data\auth`、`logs`、`service.env` 和 `Fwlib64.dll` 会一起被删掉。
 
 ```bat
 robocopy C:\temp\iot-daq-gateway-new C:\iot-daq-gateway /E /XD published draft revisions runtime auth logs /XF Fwlib64.dll service.env

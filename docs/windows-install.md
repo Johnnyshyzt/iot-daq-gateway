@@ -29,7 +29,32 @@
 #   powershell -File scripts/pack-win-x64.ps1
 ```
 
-产物：`artifacts/win-x64/iot-daq-gateway-<version>-win-x64.zip`。GitHub Actions 的 `pack-win-x64` 作业会上传同名 artifact。
+产物：`artifacts/win-x64/iot-daq-gateway-<version>-win-x64.zip`。`<version>` 来自 `Directory.Build.props` 的 `Version`。CI 的 `pack-win-x64` 与发版工作流都调用 `scripts/pack-win-x64.ps1`，zip 布局相同。
+
+## 从哪里拿 zip
+
+已有 GitHub Release 时，下载该版本的附件：
+
+https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest
+
+文件名是 `iot-daq-gateway-<version>-win-x64.zip`。标签 `v0.3.0` 对应的附件名是 `iot-daq-gateway-0.3.0-win-x64.zip`（版本号没有前缀 `v`）。
+
+还没有 Release 时，用 GitHub Actions 里 `pack-win-x64` 作业的同名 artifact，或在构建机执行上面的脚本。zip 里有 `Host.exe`、`wwwroot`、`data/seed` 和 `install-service.bat` 等安装脚本，没有 `Fwlib64.dll`。
+
+## 维护者：打一个 Release
+
+发版工作流只在推送 `v*` 标签时运行。合并 PR 不会创建 Release，也不会改 `Version`。
+
+在要发布的提交上（通常是当时的 `main`）执行：
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+`X.Y.Z` 与 `Directory.Build.props` 的 `Version` 对齐。`.github/workflows/release.yml` 会检出这个标签，在 `windows-latest` 上执行与 CI `pack-win-x64` 相同的步骤（Node 22 构建 `src/Web`，再跑 `scripts/pack-win-x64.ps1`），然后用 `GITHUB_TOKEN` 创建或更新该标签的 GitHub Release，并附上 zip。说明里会链到本文，并写明不含 `Fwlib64.dll`。同一标签上重跑工作流会更新这条 Release，并覆盖同名 zip。
+
+种子配置仍是 `fanuc.fake`。先用 Fake 看页面、发布和 MQTT。真实 `fanuc.focas` 依赖现场自备的 `Fwlib64.dll` 和机床网络。本仓库没有发那科机床，不把 TCP 端口通了写成握手成功，也不把这一步写成已经验收。
 
 ## 现场安装
 
