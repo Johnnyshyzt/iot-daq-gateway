@@ -1,11 +1,11 @@
 # M1 PRD — 可视化采集网关（可售卖版）
 
-本文是 M1 的产品范围。Edge Runtime 与 Config Studio 都在本仓库开源实现：采集在 `src/`，配置台在 [`studio/`](../../studio/README.md)。JSON Schema 与示例配置树也在这里。以后可以再拆出 `iot-daq-studio`，当前没有第二个仓库。
+本文是 M1 的产品范围。采集（Collector）、管理 API（Api）和页面（Web，shadcn-admin）都在本仓库，由 `src/Host` 一个进程跑起来。JSON Schema 与示例配置树也在这里。以后可以再拆仓，当前没有第二个仓库。
 
 ## 产品定调（已锁定）
 
 - **Open Core**：Runtime 与 Studio 都在本 monorepo，许可证 Apache-2.0
-- **Studio 部署**：当前是同机 sidecar（Studio 管配置，网关读 `published/`）。同一进程嵌入是后续，不是这一版的运行方式
+- **部署**：一个 Host 进程。页面发布 YAML 后，同一进程重载采集。采集留在能访问机床的现场机器上
 - **配置源**：文件系统为单一事实源（YAML）；DB 仅作可选缓存，不可成为唯一真相
 - **设备**：Fanuc FOCAS 做透（含 Fake）；其他品牌不进 M1
 - **北向**：仅 MQTT JSON；OPC UA 明确二期
@@ -38,17 +38,17 @@
 - OPC UA、多品牌适配器、Fleet 云端、组态大屏、长期时序库、程序写入实开
 ## 能力落在哪
 
-| 能力 | Runtime（`src/`） | Studio（`studio/`） |
+| 能力 | Collector | Api + Web |
 | --- | --- | --- |
-| YAML 手写配置运行 | ✅ 单文件或 v1 目录 | — |
+| YAML | 读 `data/published`，或 `--config` 覆盖 | 写草稿并发布 |
 | Fake + FOCAS 桩 | ✅ | 连接测试：Fake 成功，FOCAS 只探测 TCP |
 | MQTT Sink | ✅ | 编辑 Broker 与环境变量名 |
-| 可视化编辑 / 发布 | 读 `published/` 并重载 | ✅ |
+| 可视化编辑 / 发布 | 发布后进程内重载 | ✅ |
 | 点位 CSV | — | ✅；Excel 另存为 CSV |
 | 角色 | — | admin / engineer / viewer 本地桩 |
-| 运行态 | 回环 `127.0.0.1:5081` | 网关在跑时转发，否则模拟 |
+| 运行态 | 进程内状态、观测、日志 | `live`；采集关闭时为 `mock` |
 
-连接测试的 HTTP 合同是 `POST /api/v1/devices/{id}/test`。Fake 恒成功。FOCAS 的完整握手在带 `Fwlib64.dll` 的网关进程里；Studio 独立进程只探测端口。
+连接测试的 HTTP 合同是 `POST /api/v1/devices/{id}/test`。Fake 恒成功。FOCAS 的完整握手在带 `Fwlib64.dll` 的 Host 进程里；这个接口只探测端口。
 
 ## 页面树（Studio IA）
 

@@ -8,8 +8,7 @@ cd /d "%~dp0"
 
 set "SERVICE_NAME=IotDaqGateway"
 set "DISPLAY_NAME=IoT DAQ Gateway"
-set "EXE=%~dp0Gateway.Host.exe"
-set "CONFIG=%~dp0gateway.yaml"
+set "EXE=%~dp0Host.exe"
 
 echo ========================================
 echo  安装 IoT 采集网关 Windows 服务
@@ -24,12 +23,7 @@ if errorlevel 1 (
 )
 
 if not exist "%EXE%" (
-  echo [错误] 未找到 Gateway.Host.exe。请先解压完整的 win-x64 发布包。
-  exit /b 1
-)
-
-if not exist "%CONFIG%" (
-  echo [错误] 未找到 gateway.yaml。请复制示例配置并填写机床 IP 与 MQTT 地址。
+  echo [错误] 未找到 Host.exe。请先解压完整的 win-x64 发布包。
   exit /b 1
 )
 
@@ -50,13 +44,13 @@ if not errorlevel 1 (
   timeout /t 2 /nobreak >nul
 )
 
-sc create "%SERVICE_NAME%" binPath= "\"%EXE%\" --config \"%CONFIG%\"" start= auto DisplayName= "%DISPLAY_NAME%"
+sc create "%SERVICE_NAME%" binPath= "\"%EXE%\"" start= auto DisplayName= "%DISPLAY_NAME%"
 if errorlevel 1 (
   echo [错误] sc create 失败。
   exit /b 1
 )
 
-sc description "%SERVICE_NAME%" "内网 CNC 采集网关。改 gateway.yaml 中的机床 IP / MQTT 后重启本服务即可，现场不需要 .NET SDK。"
+sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://127.0.0.1:5080 发布配置，同一进程会重新加载 data\published。现场不需要 .NET SDK。"
 sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul
 sc start "%SERVICE_NAME%"
 if errorlevel 1 (
@@ -66,7 +60,8 @@ if errorlevel 1 (
 
 echo.
 echo [完成] 服务 %SERVICE_NAME% 已启动，开机将自动运行。
-echo 改配置: 编辑 gateway.yaml 后执行  sc stop %SERVICE_NAME% ^& sc start %SERVICE_NAME%
+echo 页面:   http://127.0.0.1:5080    账号 admin / admin
+echo 改配置: 在页面发布。采集读取 data\published，不必为此重启服务。
 echo 日志:   %~dp0logs\
 echo 状态:   sc query %SERVICE_NAME%
 echo 卸载:   以管理员运行 uninstall-service.bat

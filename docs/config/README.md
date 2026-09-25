@@ -1,6 +1,6 @@
 # 配置目录与 revision
 
-配置的单一事实源是 YAML 文件。Studio 通过 Management API 改草稿，校验后发布；`Gateway.Host` 只读已发布的那一棵树。数据库可以缓存，不能作为唯一副本。页面与启动方式见 [studio/README.md](../../studio/README.md) 和 [open-core.md](../product/open-core.md)。
+配置的单一事实源是 YAML 文件。Api 通过 Management API 改草稿，校验后发布；Collector 只读已发布的那一棵树。数据库可以缓存，不能作为唯一副本。启动方式见 [README](../../README.md) 和 [open-core.md](../product/open-core.md)。
 
 JSON Schema（draft 2020-12）在仓库 `schemas/`：
 
@@ -15,10 +15,10 @@ JSON Schema（draft 2020-12）在仓库 `schemas/`：
 
 ## Host 读什么
 
-两条路径：
+主路径是数据目录里的 `published/`（v1 目录）。`--config` 或 `GATEWAY_CONFIG` 可以改成下面两种形状，那是无界面覆盖：
 
-- **单文件**（默认快速开始）：`--config <file>` 或 `GATEWAY_CONFIG` 指向 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml) 这种形状。未指定时 Host 仍找这份示例，不会自动改读 `configs/examples/v1/`。
-- **v1 目录**：`--config` 指向目录，或指向其中带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。Host 读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。Studio 发布后的目录是 `studio/data/published`。
+- **单文件**：例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)。
+- **v1 目录**：目录本身，或其中带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。加载器读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。页面发布出的 `data/published` 就是这种目录。
 
 Host 不读 `draft/`。`mappings/` 里如果有文件，加载直接失败。
 
@@ -56,16 +56,16 @@ M1 点位主题只由 MqttSink 的 `topicTemplate` 生成。`mappings/` 里若�
 Studio 需要同时留下草稿和历史。工作区把多份 bundle 套在一起：
 
 ```
-studio/data/                    # STUDIO_DATA 可改掉
+data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
   seed/                         # 进 git，首次启动复制
-  draft/                        # Studio PUT 写这里
-  published/                    # Gateway.Host --config 指向这里
-    .revision                   # Studio 写下的 sha256
+  draft/                        # PUT 写这里
+  published/                    # Host 默认从这里采集
+    .revision                   # CanonicalRevision 的 sha256
   revisions/<sha256>/           # 不可变快照
   runtime/studio.log
 ```
 
-`configs/examples/v1/` 是同一套 bundle，可直接 `--config configs/examples/v1`，不经过 Studio。
+`configs/examples/v1/` 是同一套 bundle，可 `--config configs/examples/v1` 做无界面覆盖。
 
 `secrets.env`、`license.json`、以 `.` 开头的文件都不进入 Studio 的 revision。回滚配置不会回滚密钥或许可证。M1 许可证桩不读取 `license.json`。
 
@@ -93,7 +93,7 @@ studio/data/                    # STUDIO_DATA 可改掉
 
 ## Revision 算法
 
-Studio 发布时用 `Studio.Host.Config.CanonicalRevision`，不是按文件列表拼 JSON。
+发布时用 `Studio.Host.Config.CanonicalRevision`，不是按文件列表拼 JSON。
 
 1. 把草稿收成一份配置包：Gateway、按 `metadata.id` 排序的 Device、按 `deviceId` 排序的 PointSet（点位再按 `id` 排序）、MqttSink。
 2. 用 camelCase JSON 序列化，忽略 null。对象键按 Unicode 码点递归排序。数组保持排序后的顺序。
@@ -101,7 +101,7 @@ Studio 发布时用 `Studio.Host.Config.CanonicalRevision`，不是按文件列�
 4. revision 是该字节的 SHA-256，小写十六进制。
 5. `published/.revision` 的内容是 `<hex>\n`。这个文件不参与下一轮哈希。
 
-相同内容再次发布得到同一个 revision。`configs/examples/v1/.revision` 来自更早的「文件列表」草案，数值和 Studio 的 CanonicalRevision 不一定相同。网关只把该文件当作当前标签读出来；用 Studio 发布之后，文件会被写成 Studio 的 hash。
+相同内容再次发布得到同一个 revision。`configs/examples/v1/.revision` 来自更早的「文件列表」草案，数值和 CanonicalRevision 不一定相同。采集只把该文件当作当前标签读出来；从页面发布之后，文件会被写成 CanonicalRevision。
 
 ## 发布时的跨文件校验
 
@@ -113,6 +113,6 @@ JSON Schema 约束单个文档。`POST /api/v1/config/validate` 在此之上检�
 - 每个 PointSet 的 `deviceId` 能找到 Device；点位 `id` 在该文件内唯一
 - 每台 `enabled` 的设备至少有一个启用点（省略 `enabled` 视为 `true`）
 - 适配器只能是 `fanuc.fake` 或 `fanuc.focas`
-- `mappings/` 下没有文件（M1 不发布独立映射）。`Gateway.Host` 加载时会拒绝这个目录。Studio 当前的校验器还不会扫描它
+- `mappings/` 下没有文件（M1 不发布独立映射）。Collector 加载时会拒绝这个目录。Api 的校验器还不会扫描它
 
 校验失败不写入 `published/`。

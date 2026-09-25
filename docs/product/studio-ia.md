@@ -1,6 +1,6 @@
 # Studio 信息架构（M1）
 
-Config Studio 的页面在本仓库 [`studio/web`](../../studio/README.md)，与网关同机 sidecar 运行。本页冻结页面树和每页依赖的 Management API。以后若拆出 `iot-daq-studio`，页面树仍以这里为准。
+Config Studio 的页面在本仓库 [`src/Web`](../../src/Web/README.md)，由 `src/Host` 托管，和采集在同一个进程。本页冻结页面树和每页依赖的 Management API。以后若拆仓，页面树仍以这里为准。
 
 角色：`admin`、`engineer`、`viewer`。viewer 只读；engineer 可改草稿、校验、发布、回滚、连接测试；admin 在 engineer 之上管理许可证与用户。M1 允许只有一个本地 `admin`。
 
@@ -57,7 +57,7 @@ JSON 预览只在浏览器里用模板和一条样例点拼出载荷，不连 Br
 
 ### 运行态 `/runtime`
 
-观测是内存中的短窗口，不是时序库。网关在跑时，Studio 转发 `127.0.0.1:5081` 的状态、观测和 `logs/gateway-yyyyMMdd.log`。网关没启动时页面用模拟数据，并标明 `mode` 为 `mock`。设备状态取值与 `AdapterStatus` 一致：`online`、`degraded`、`offline`；禁用设备为 `disabled`。
+观测是内存中的短窗口，不是时序库。采集在同一进程里跑时，页面读它的状态、观测和 `logs/gateway-yyyyMMdd.log`，`mode` 为 `live`。采集关闭时页面用模拟数据，`mode` 为 `mock`。设备状态取值与 `AdapterStatus` 一致：`online`、`degraded`、`offline`；禁用设备为 `disabled`。
 
 ### 系统 `/settings`
 

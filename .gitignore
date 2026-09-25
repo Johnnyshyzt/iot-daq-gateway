@@ -47,7 +47,13 @@ Thumbs.db
 !.vscode/extensions.json
 *.log
 
-## Config Studio local state and frontend build output
+## Web build output and local config state
+src/Web/node_modules/
+src/Web/dist/
+data/published/
+data/draft/
+data/revisions/
+data/runtime/
 studio/web/node_modules/
 studio/web/dist/
 studio/data/config/

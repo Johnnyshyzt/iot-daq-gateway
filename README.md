@@ -22,33 +22,48 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 ```
 IotDaqGateway.sln
 global.json
-src/Gateway.Abstractions/   契约与模型
-src/Gateway.Host/           宿主、YAML、扫描循环
-src/Adapters.Fanuc/         Fake + Windows FOCAS（Fwlib64 P/Invoke）
-src/Sinks.Mqtt/             MQTTnet JSON
-tests/Gateway.Tests/        无硬件回归（缺 DLL / YAML）
-studio/                   Config Studio（M1 脚手架，独立解决方案）
+src/Shared/Abstractions/    契约与模型
+src/Collector/              Fanuc 适配器、MQTT、采集会话
+src/Api/                    管理 API（草稿 / 发布 / 回滚）
+src/Host/                   唯一进程：API + 采集 + 静态页面
+src/Web/                    shadcn-admin（React + Vite）
+data/seed/                  首次启动复制的示例配置
+tests/
 configs/examples/
-packaging/windows/        服务安装脚本与现场说明（打进 zip）
-scripts/pack-win-x64.*   自包含 win-x64 打包
+packaging/windows/
+scripts/pack-win-x64.*
 docker/
 docs/
 ```
 
 更多见 [docs/architecture.md](docs/architecture.md)。
 
-## Config Studio
+## 一个 Host
 
-M1 配置台与网关同仓，都是 Apache-2.0。代码在 [`studio/`](studio/README.md)，产品边界在 [docs/product/open-core.md](docs/product/open-core.md)。以后可以再拆出 `iot-daq-studio`；当前没有第二个仓库。
+采集、管理 API 和页面在同一个进程里。产品边界见 [docs/product/open-core.md](docs/product/open-core.md)。三个模块：
 
-Studio 写 `studio/data/published`。网关用 `--config` 指向这个目录，本机 `127.0.0.1:5081` 提供运行态和重载。一起启动：
+| 模块 | 路径 | 作用 |
+| --- | --- | --- |
+| Collector | `src/Collector` | Fanuc 适配器、MQTT、扫描与重载 |
+| Api | `src/Api` | 草稿、校验、发布、回滚 |
+| Web | `src/Web` | [shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT，见 [src/Web/README.md](src/Web/README.md)） |
+
+`src/Host` 把三者接在一起。浏览器打开 Host，改配置，发布 YAML，同一进程采集 Fanuc 并发布 MQTT。采集留在现场机器上，以便访问机床网络。
 
 ```bash
-dotnet run --project studio/src/Studio.Host
-dotnet run --project src/Gateway.Host --no-launch-profile -- --config studio/data/published
+cd src/Web && npm ci && npm run build
+dotnet run --project src/Host
 ```
 
-先起 Studio，它会从 `studio/data/seed` 生成已发布目录。页面、账号和 Fake + MQTT 联调见 [studio/README.md](studio/README.md)。只想跑网关、不打开配置台时，仍用下面的单文件示例。
+然后打开 `http://127.0.0.1:5080`，用 `admin` / `admin` 登录。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。发布和回滚会在进程内重载采集，不需要第二个网关进程。
+
+开发页面热更新：`cd src/Web && npm run dev`（`http://127.0.0.1:5173`，把 `/api` 代理到 5080）。CI 用 npm，本机也可以用 pnpm。
+
+只想不打开页面、直接跑一份单文件 YAML 时，仍可覆盖采集路径（页面发布的仍是 `data/published`，和这条路径不是同一份）：
+
+```bash
+dotnet run --project src/Host --no-launch-profile -- --config configs/examples/gateway.yaml
+```
 
 ## 环境
 
@@ -91,7 +106,7 @@ mosquitto_sub -h 127.0.0.1 -t 'daq/#' -v
 3. 启动网关：
 
 ```bash
-dotnet run --project src/Gateway.Host --no-launch-profile -- --config configs/examples/gateway.yaml
+dotnet run --project src/Host --no-launch-profile -- --config configs/examples/gateway.yaml
 ```
 
 `--config` 会从当前目录向上查找，因此即使 `dotnet run` 的工作目录是项目文件夹，仓库根下的示例路径仍然有效。
@@ -119,7 +134,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 1. 从 GitHub Actions 的 `pack-win-x64` 产物（或 `./scripts/pack-win-x64.sh` / `scripts/pack-win-x64.ps1`）取得 `iot-daq-gateway-*-win-x64.zip`
 2. 解压到例如 `C:\iot-daq-gateway\`
-3. 编辑 `gateway.yaml`；把授权的 `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录（不进 git / 不进镜像）
+3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进镜像）。打开 `http://127.0.0.1:5080` 发布配置；采集读的是同目录 `data/published`
 4. 管理员运行 `install-service.bat` → 服务 `IotDaqGateway` 开机自启
 5. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
 
@@ -142,7 +157,7 @@ docker compose -f docker/docker-compose.yml up --build
 | `mqtt.*` | broker、clientId、QoS、可选 TLS/账号 |
 | `devices[].adapter` | `fanuc.fake` 或 `fanuc.focas` |
 
-配置路径：`--config <file-or-directory>` 或环境变量 `GATEWAY_CONFIG`。文件可以是单文件 YAML，也可以是 v1 包里的 `gateway.yaml`（会连同目录一起加载）。目录则按 [docs/config/README.md](docs/config/README.md) 读取。未指定时依次尝试当前目录 `gateway.yaml`、`configs/examples/gateway.yaml`、输出目录内副本。Studio 联调指向 `studio/data/published`。
+默认采集路径是数据目录里的 `published/`（见 [docs/config/README.md](docs/config/README.md)）。`--config` 或 `GATEWAY_CONFIG` 可以改成单文件 YAML 或 v1 目录，那是无界面覆盖，不是推荐启动方式。
 
 ## FOCAS 与安全
 

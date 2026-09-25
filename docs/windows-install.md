@@ -1,6 +1,6 @@
 # Windows 内网安装（生产路径）
 
-第一期生产采集路径是 **Windows x64 采集机**：自包含 zip + 现场自备 `Fwlib64.dll` + 外置 `gateway.yaml` + Windows 服务开机自启。
+第一期生产路径是 **Windows x64 采集机上的一个 Host 进程**：自包含 zip + 现场自备 `Fwlib64.dll` + `data/published` + Windows 服务开机自启。浏览器打开本机 `http://127.0.0.1:5080` 改配置并发布。
 
 **不要把 Linux Docker 当作生产 FOCAS 路径。** Compose 镜像只用于 Fake 演示 / 附属 Mosquitto。
 
@@ -16,7 +16,7 @@
 | 包体积 | 更大（约几十 MB） | 更小 |
 | 离线内网 | 解压即可 | 还要先拿到 runtime 安装包 |
 
-不使用单文件（`PublishSingleFile=false`），以便把 `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录，供 P/Invoke 加载。
+不使用单文件（`PublishSingleFile=false`），以便把 `Fwlib64.dll` 放到与 `Host.exe` 同一目录，供 P/Invoke 加载。
 
 构建（开发机 / CI，需要 SDK **10.0.203**）：
 
@@ -32,21 +32,18 @@
 ## 现场安装
 
 1. 把 zip 解压到固定目录，例如 `C:\iot-daq-gateway\`。必须保留全部文件，不要只拷 exe。
-2. 编辑 `gateway.yaml`（包内已是 FOCAS 示例）：
-   - `devices[].options.host` / `port`：机床面板 IP，常见端口 **8193**
-   - `mqtt.host` / `port` / **唯一** `mqtt.clientId`（两台网关不要相同）
-3. 将授权的 **64 位** `Fwlib64.dll` 放到与 `Gateway.Host.exe` 同一目录。仓库和镜像从不附带该文件。缺库时进程仍运行，设备 `$status=offline`。
-4. **建议先前台验证**：双击 `run-console.bat`，看 `logs\gateway-yyyyMMdd.log` 是否打印版本号、配置路径、`Fwlib64.dll` 加载结果。
-5. 确认后 **以管理员身份** 运行 `install-service.bat`：
+2. 将授权的 **64 位** `Fwlib64.dll` 放到与 `Host.exe` 同一目录。仓库和镜像从不附带该文件。缺库时进程仍运行，`fanuc.focas` 设备 `$status=offline`。
+3. **建议先前台验证**：双击 `run-console.bat`，看 `logs\gateway-yyyyMMdd.log` 是否打印版本号。浏览器打开 `http://127.0.0.1:5080`（`admin` / `admin`），把设备改成 `fanuc.focas` 并填写机床 IP（常见端口 **8193**）和唯一的 MQTT `clientId`，然后发布。采集读的是 `data\published`。
+4. 确认后 **以管理员身份** 运行 `install-service.bat`：
    - 注册服务名 `IotDaqGateway`（显示名 IoT DAQ Gateway）
    - `start= auto`，开机自启
    - 失败后自动重启
-6. 验收：订阅 `daq/#`，看到真实 `$status=online` 以及随机床变化的 `state`（不是 Fake 的 60 秒相位）。
+5. 验收：订阅 `daq/#`，看到真实 `$status=online` 以及随机床变化的 `state`（不是 Fake 的 60 秒相位）。
 
 手动等价命令（管理员 cmd）：
 
 ```bat
-sc create IotDaqGateway binPath= "\"C:\iot-daq-gateway\Gateway.Host.exe\" --config \"C:\iot-daq-gateway\gateway.yaml\"" start= auto DisplayName= "IoT DAQ Gateway"
+sc create IotDaqGateway binPath= "\"C:\iot-daq-gateway\Host.exe\"" start= auto DisplayName= "IoT DAQ Gateway"
 sc failure IotDaqGateway reset= 86400 actions= restart/5000/restart/10000/restart/30000
 sc start IotDaqGateway
 sc query IotDaqGateway
@@ -54,7 +51,7 @@ sc query IotDaqGateway
 
 ## 改配置（不必重建）
 
-YAML 只在启动时读取一次。改机床 IP / MQTT 后：
+在页面上发布会让同一进程重新加载 `data\published`，不必为此重启服务。直接改磁盘上的 YAML 时，目录监视也会重载；仍可以重启服务：
 
 ```bat
 sc stop IotDaqGateway
@@ -63,7 +60,7 @@ sc start IotDaqGateway
 
 或「服务」管理器里重启 **IoT DAQ Gateway**。
 
-配置查找顺序：`--config`（安装脚本已传入发布目录下的 `gateway.yaml`）、环境变量 `GATEWAY_CONFIG`、进程目录 `gateway.yaml`。服务的工作目录可能是 `C:\Windows\System32`，因此安装脚本始终传绝对路径。
+默认采集路径是程序目录下的 `data\published`，不依赖服务的工作目录。`GATEWAY_CONFIG` 或 `--config` 可以改成别的文件，那不是安装脚本的默认值。包里的 `gateway.focas.yaml` 只是参考，服务不会自动读取它。
 
 ## 卸载
 

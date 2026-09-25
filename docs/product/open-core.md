@@ -1,76 +1,86 @@
 # Open Core 产品架构
 
-M1 里 **Edge Runtime** 和 **Config Studio** 都在这个仓库，许可证都是 Apache-2.0。Runtime 在 `src/`，Studio 在 [`studio/`](../../studio/README.md)。以后如果要拆成独立的 `iot-daq-studio` 仓库，可以再搬；那是后续选择，不是现在的布局。
+M1 里采集、管理 API 和页面都在这个仓库，许可证都是 Apache-2.0。现场只部署一个 Host 进程。以后如果要拆仓，可以再搬；那是后续选择，不是现在的布局。
 
 M1 已锁定的边界：
 
 | 决定 | 含义 |
 | --- | --- |
-| Open Core | Runtime 与 Studio 都在本仓库开源。可选的后续拆仓不改变当前事实源 |
-| 同机部署 | 当前是同机 sidecar：`Studio.Host` 管页面和配置 API，`Gateway.Host` 管采集。同一进程嵌入留到以后，接缝是 `MapStudioApi()` |
+| Open Core | 三个模块都在本仓库开源。可选的后续拆仓不改变当前事实源 |
+| 一个进程 | `src/Host` 在进程内运行 Api 与 Collector，并托管 `src/Web` 的静态构建。浏览器打开 Host 地址即可配置并采集 |
 | 文件为源 | 配置以 YAML 为单一事实源。数据库只能做可选缓存，不能成为唯一副本 |
 | 设备 | M1 只做透 Fanuc：`fanuc.fake` 与 `fanuc.focas`。其他品牌不进 schema |
 | 北向 | M1 只有 MQTT JSON。OPC UA 明确留到后续 |
+| 现场 | 采集必须跑在能访问机床的机器上，不是只放在云上的 API |
 
-## 运行时与 Studio
+## 三个模块，一个 Host
 
 ```
-┌─────────────────────────────────────────────┐
-│  Config Studio（studio/，本仓库）            │
-│  React（shadcn-admin）+ Studio.Host /api/v1 │
-└──────────────────┬──────────────────────────┘
-                   │ studio/data/published
-                   │ 127.0.0.1:5081 状态与重载
-┌──────────────────▼──────────────────────────┐
-│  Gateway.Host                               │
-│  Abstractions → Adapters(Fanuc) → MQTT Sink │
-│  AcquisitionWorker, change_only, health     │
-└──────────────────┬──────────────────────────┘
-                   │ MQTT JSON
-            ┌──────▼──────┐
-            │  Broker     │ → 用户 TSDB / SCADA / MES
-            └─────────────┘
+浏览器
+   │  http://127.0.0.1:5080
+   ▼
+┌──────────────────────────────────────────────┐
+│ Host                                         │
+│  Web   shadcn-admin 静态页                    │
+│  Api   /api/v1 草稿、发布、回滚               │
+│  Collector  Fanuc → MQTT                     │
+│       发布后进程内重载 data/published         │
+└────────────────────┬─────────────────────────┘
+                     │ MQTT JSON
+              ┌──────▼──────┐
+              │  Broker     │ → 用户 TSDB / SCADA / MES
+              └─────────────┘
 ```
 
-配置目录必须是同一份已发布树：
+| 模块 | 路径 |
+| --- | --- |
+| Collector | `src/Collector`（适配器、MQTT、采集会话） |
+| Api | `src/Api`（管理 API 库） |
+| Web | `src/Web`（shadcn-admin，MIT 归属见该目录 README） |
+| Host | `src/Host`（唯一可执行文件） |
 
-1. **同机 sidecar（当前）**：Studio 监听 `127.0.0.1:5080`，把发布结果写到 `studio/data/published`。网关用 `--config` 指向这个目录。发布后 Studio 调用网关回环上的 `POST /api/v1/runtime/reload`；网关也会监视该目录。运行态页面优先读 `http://127.0.0.1:5081`，网关没启动时退回模拟数据。
-2. **同进程（以后）**：`Gateway.Host` 继续跑采集，并在同一进程挂上 `MapStudioApi()` 和静态页。现在不要把它当成已经接上。
+启动：
 
-一起启动的步骤见 [studio/README.md](../../studio/README.md)。M3 的 Cloud / Fleet（远程下发多台网关）不在本期。
+```bash
+cd src/Web && npm ci && npm run build
+dotnet run --project src/Host
+```
+
+数据目录默认是仓库 `data/`（`HOST_DATA` 或 `STUDIO_DATA` 可改）。发布写入 `data/published`，同一进程立刻重载采集；目录监视只作为磁盘改动的备份。采集关掉时（`Host:Acquisition=off`）运行态退回模拟数据。`--config` 或 `GATEWAY_CONFIG` 会改采集所读的文件，那是无界面覆盖，主路径不要用。
+
+M3 的 Cloud / Fleet（远程下发多台网关）不在本期。
 
 ## 仓库里有什么
 
 | 已在本仓库 | 还没做，也不在 M1 |
 | --- | --- |
 | 采集运行时、`FakeFanucAdapter`、FOCAS 桩（无厂商二进制） | 许可证签发、安装器 |
-| Studio SPA、草稿 / 发布 / 回滚、中文页面 | 同进程嵌入 |
-| YAML 契约、JSON Schema、`configs/examples/v1/` | OPC UA、其他品牌适配器 |
-| 单文件 YAML 快速开始，以及 v1 目录加载 | Fleet 云端 |
-| 网关回环状态 API（只绑定本机） | |
+| shadcn-admin 页面、草稿 / 发布 / 回滚、中文导航 | OPC UA、其他品牌适配器 |
+| YAML 契约、JSON Schema、`configs/examples/v1/` | Fleet 云端 |
+| 一个 Host：页面、管理 API、进程内重载采集 | |
 
 点位页可以导入导出 CSV。Excel 另存为 CSV 后再导入。厂商 `Fwlib64.dll` 不入库、不进镜像。现场放置方式见 [focas.md](../focas.md)。
 
 ## 当前运行时与 v1 契约
 
-`Gateway.Host` 仍然支持单文件 YAML（`--config <file>` 或 `GATEWAY_CONFIG`）。未指定路径时默认仍是 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)，Fake + MQTT 快速开始不变。
+Host 默认采集 `data/published`。那棵树与 [configs/examples/v1/](../../configs/examples/v1/) 同一布局：加载器看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。Host 不读草稿。
 
-`--config` 也可以指向 v1 目录，或指向该目录里的 `gateway.yaml`。加载器看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。示例在 [configs/examples/v1/](../../configs/examples/v1/)。Studio 发布出的树与这套布局相同，网关读的是 `studio/data/published`，不读草稿。
+`--config` 或 `GATEWAY_CONFIG` 仍可指向单文件 YAML（例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)）或 v1 目录。这只覆盖采集来源，主路径是页面发布。
 
 字段对应关系写在 [配置目录说明](../config/README.md)。
 
 ## 配置与发布
 
 ```
-Studio 编辑草稿 (studio/data/draft)
+页面编辑草稿 (data/draft)
         │  POST /api/v1/config/validate
         ▼
    校验通过后 POST /api/v1/config/publish
-        │  Studio CanonicalRevision → revisions/<hash>
+        │  CanonicalRevision → revisions/<hash>
         ▼
-   studio/data/published   ← Gateway.Host 读取这一份
-        │  POST 127.0.0.1:5081/api/v1/runtime/reload
-        │  目录监视作为备份
+   data/published
+        │  同一进程 ICollectorControl.TryReloadAsync
+        │  目录监视作为磁盘改动的备份
         └─ POST /api/v1/config/rollback 回到某一 hash
 ```
 
@@ -84,7 +94,7 @@ Runtime 读取 YAML 并采集时不检查许可证。Studio 的 `GET /api/v1/lic
 
 ## 配置接口
 
-`Gateway.Abstractions` 里的 `IConfigStore` / `IConfigPublisher` 是草稿与发布的边界草图。M1 真正写文件的是 `Studio.Host` 的 `ConfigStore`，它还没有实现这两个接口。`Gateway.Host` 不注册它们，采集循环直接读已发布 YAML。
+`Gateway.Abstractions` 里的 `IConfigStore` / `IConfigPublisher` 是草稿与发布的边界草图。M1 真正写文件的是 Api 模块的 `ConfigStore`，它还没有实现这两个接口。Collector 不注册它们，采集循环直接读已发布 YAML。
 
 | 接口 | 职责 |
 | --- | --- |

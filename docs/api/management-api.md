@@ -1,8 +1,8 @@
 # Management API（M1 冻结草案）
 
-Config Studio 通过本 API 编辑配置并查看运行态。M1 的实现在本仓库 [`studio/`](../../studio/README.md) 的 `Studio.Host`（默认 `http://127.0.0.1:5080`）。`Gateway.Host` 另有一个只绑定本机的回环（默认 `http://127.0.0.1:5081`），提供运行态和 `POST /api/v1/runtime/reload`。Studio 在发布或回滚后调用重载；运行态查询优先转发回环，网关没启动时退回模拟数据。
+Config Studio 通过本 API 编辑配置并查看运行态。M1 的实现在 `src/Api`，由 `src/Host` 挂到 `http://127.0.0.1:5080`，并和采集在同一个进程。发布或回滚后 Api 调用 `ICollectorControl.TryReloadAsync`。采集未启动时运行态退回模拟数据。
 
-本文对齐现有 Host 的模型：`Observation`、`DeviceHealth`、`AdapterStatus`、`DaqTopics`，以及滚动日志。草稿读写的边界草图是 `IConfigStore` / `IConfigPublisher`。M1 写文件的是 `Studio.Host.ConfigStore`，它还没有实现这两个接口。字段形状以 `schemas/` 为准。
+本文对齐现有 Host 的模型：`Observation`、`DeviceHealth`、`AdapterStatus`、`DaqTopics`，以及滚动日志。草稿读写的边界草图是 `IConfigStore` / `IConfigPublisher`。M1 写文件的是 Api 的 `ConfigStore`，它还没有实现这两个接口。字段形状以 `schemas/` 为准。
 
 下面有些状态码仍是合同草案，和当前 Studio 不完全一致：发布校验失败返回 `400 validation_failed`，许可证桩不拦截请求。
 
@@ -231,7 +231,7 @@ Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未�
 
 ## 运行态
 
-运行态读的是采集进程里的状态，不是配置草稿。Studio 与网关回环使用同一份 JSON，这样页面可以直接展示。`mode` 为 `live` 表示数据来自 `Gateway.Host`；Studio 在回环不可达时改返回 `mock`。`activeRevision` 来自已发布目录的 `.revision`；单文件配置没有这个文件时为空。
+运行态读的是本进程采集会话，不是配置草稿。`mode` 为 `live` 表示数据来自 Collector；采集未启动时为 `mock`。`activeRevision` 来自已发布目录的 `.revision`；单文件配置没有这个文件时为空。
 
 ### `GET /api/v1/runtime/status`
 

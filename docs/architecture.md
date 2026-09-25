@@ -20,13 +20,13 @@ AcquisitionWorker
 
 | 项目 | 职责 |
 | --- | --- |
-| `Gateway.Abstractions` | 模型、适配器/下沉接口、`IProgramService`、主题规则 |
-| `Gateway.Host` | YAML 配置、扫描循环、change_only、组合根 |
-| `Adapters.Fanuc` | Fake 适配器 + Windows `Fwlib64.dll` FOCAS P/Invoke（库不入库） |
-| `Sinks.Mqtt` | MQTTnet JSON 发布 |
-| `studio/` | Config Studio：草稿、发布、页面。与网关同机 sidecar，见 [studio/README.md](../studio/README.md) |
+| `src/Shared/Abstractions` | 模型、适配器/下沉接口、`IProgramService`、主题规则 |
+| `src/Collector` | Fanuc 适配器、MQTT、扫描循环、change_only、可重载会话 |
+| `src/Api` | 草稿、校验、发布、回滚、运行态查询 |
+| `src/Host` | 唯一可执行文件：在一个进程里接上 Api、Collector，并托管 Web |
+| `src/Web` | shadcn-admin（React + Vite）。MIT 归属见 [src/Web/README.md](../src/Web/README.md) |
 
-`Gateway.Host` 启动时加载 `--config` 指向的单文件 YAML，或 v1 目录（`configs/examples/v1`、`studio/data/published`）。采集会话可以在不退出进程的情况下重载。本机 `127.0.0.1:5081` 提供状态、观测、日志尾和 `POST /api/v1/runtime/reload`。Studio 页面在网关未启动时使用模拟运行态。
+`dotnet run --project src/Host` 同时提供页面、`/api/v1` 和采集。发布或回滚后，Api 直接调用进程内的 `ICollectorControl.TryReloadAsync`，采集改读 `data/published`。运行态页在采集启动时为 `live`；测试或 `Host:Acquisition=off` 时退回 `mock`。`--config` / `GATEWAY_CONFIG` 只作为无界面覆盖，不是主路径。
 
 后续机型（注塑等）新增 `ISouthboundAdapter` 实现并注册 factory，无需改北向契约。产品边界见 [docs/product/open-core.md](product/open-core.md)。
 
