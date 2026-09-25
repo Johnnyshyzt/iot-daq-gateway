@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Johnnyshyzt/iot-daq-gateway/blob/main/schemas/point-set.schema.json",
-  "title": "PointSet",
-  "description": "Optional per-device override of a PointTemplate, stored as points/{metadata.deviceId}.yaml. Absent means the device uses its template unchanged. Each point replaces the template point with the same id (enabled, unit, scale, deadband). Ids outside the Fanuc catalog are rejected. This is not a second address table.",
+  "$id": "https://github.com/Johnnyshyzt/iot-daq-gateway/blob/main/schemas/point-template.schema.json",
+  "title": "PointTemplate",
+  "description": "Device-class point template stored as point-templates/{metadata.id}.yaml. Many devices reference one template. M1 templates are Fanuc only (spec.adapter fanuc), shared by fanuc.fake and fanuc.focas. Point ids come from the Fanuc catalog. Internal address is filled from that catalog.",
   "type": "object",
   "additionalProperties": false,
   "required": ["apiVersion", "kind", "metadata", "spec"],
@@ -11,30 +11,39 @@
       "const": "daq.gateway/v1"
     },
     "kind": {
-      "const": "PointSet"
+      "const": "PointTemplate"
     },
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["deviceId"],
+      "required": ["id", "displayName"],
       "properties": {
-        "deviceId": {
+        "id": {
           "type": "string",
           "minLength": 1,
           "maxLength": 64,
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
-          "description": "Must match Device.metadata.id and the file name."
+          "description": "Stable template id. Must match the file name. Devices reference it as spec.pointTemplateId."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
         }
       }
     },
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["points"],
+      "required": ["adapter", "points"],
       "properties": {
+        "adapter": {
+          "const": "fanuc",
+          "description": "Adapter family. fanuc matches both fanuc.fake and fanuc.focas. M1 has no other family."
+        },
         "points": {
           "type": "array",
-          "description": "Order is significant and is preserved in the revision hash. Publish requires at least one enabled point on each enabled device; an empty list is allowed in a draft.",
+          "description": "Catalog points enabled for this device class, with unit, scale, and deadband defaults.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -45,13 +54,13 @@
                 "minLength": 1,
                 "maxLength": 64,
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
-                "description": "Point name used in the MQTT topic. Unique within this file."
+                "description": "Fanuc catalog id: state, alarm, or program."
               },
               "address": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256,
-                "description": "Adapter-internal address, not a free-form protocol address. For fanuc.fake and fanuc.focas, Studio fills this from the Fanuc point catalog: state=cnc/statinfo, alarm=cnc/alarm, program=cnc/program. Collection uses the point id."
+                "description": "Internal catalog address. Studio fills state=cnc/statinfo, alarm=cnc/alarm, program=cnc/program. Collection uses the point id."
               },
               "dataType": {
                 "type": "string",
@@ -62,13 +71,11 @@
                 "maxLength": 32
               },
               "scale": {
-                "type": "number",
-                "description": "Applied as value * scale before publish. Omitted means 1."
+                "type": "number"
               },
               "deadband": {
                 "type": "number",
-                "minimum": 0,
-                "description": "Absolute deadband used with changeOnly. Omitted means 0."
+                "minimum": 0
               },
               "enabled": {
                 "type": "boolean",

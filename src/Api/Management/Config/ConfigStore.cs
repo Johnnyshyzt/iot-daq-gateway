@@ -65,7 +65,8 @@ public sealed partial class ConfigStore
                 CopyBundleFiles(_published, _draft);
             }
 
-            var published = ReadBundle(_published);
+            var published = ReadWorking(_published);
+            ReadWorking(_draft);
             var hash = CanonicalRevision.Compute(published);
             var revisionFile = RevisionPath(_published);
             var recorded = File.Exists(revisionFile) ? File.ReadAllText(revisionFile).Trim() : "";
@@ -97,8 +98,8 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var draft = ReadBundle(_draft);
-            var published = ReadBundle(_published);
+            var draft = ReadWorking(_draft);
+            var published = ReadWorking(_published);
             var draftHash = CanonicalRevision.Compute(draft);
             var active = CanonicalRevision.Compute(published);
             return new ConfigView
@@ -116,7 +117,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ConfigDiffer.Compare(ReadBundle(_published), ReadBundle(_draft));
+            return ConfigDiffer.Compare(ReadWorking(_published), ReadWorking(_draft));
         }
     }
 
@@ -124,7 +125,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadBundle(_draft).Devices
+            return ReadWorking(_draft).Devices
                 .OrderBy(device => device.Metadata.Id, StringComparer.Ordinal)
                 .ToList();
         }
@@ -134,7 +135,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return FindDevice(ReadBundle(_draft), id);
+            return FindDevice(ReadWorking(_draft), id);
         }
     }
 
@@ -156,8 +157,22 @@ public sealed partial class ConfigStore
             document.Spec ??= new DeviceSpec();
             document.Spec.Connection ??= new DeviceConnection();
             document.Spec.Adapter = (document.Spec.Adapter ?? "").Trim().ToLowerInvariant();
+            document.Spec.PointTemplateId = string.IsNullOrWhiteSpace(document.Spec.PointTemplateId)
+                ? null
+                : document.Spec.PointTemplateId.Trim();
 
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
+            if (FanucPointCatalog.IsFanuc(document.Spec.Adapter) && string.IsNullOrWhiteSpace(document.Spec.PointTemplateId))
+            {
+                document.Spec.PointTemplateId = ConfigDefaults.DefaultFanucTemplateId;
+            }
+
+            if (string.Equals(document.Spec.PointTemplateId, ConfigDefaults.DefaultFanucTemplateId, StringComparison.Ordinal)
+                && bundle.PointTemplates.All(template => !string.Equals(template.Metadata.Id, ConfigDefaults.DefaultFanucTemplateId, StringComparison.Ordinal)))
+            {
+                bundle.PointTemplates.Add(ConfigDefaults.FanucTemplate());
+            }
+
             var index = bundle.Devices.FindIndex(device => string.Equals(device.Metadata.Id, id, StringComparison.OrdinalIgnoreCase));
             if (index >= 0 && !string.Equals(bundle.Devices[index].Metadata.Id, id, StringComparison.Ordinal))
             {
@@ -173,11 +188,6 @@ public sealed partial class ConfigStore
                 bundle.Devices.Add(document);
             }
 
-            if (bundle.PointSets.All(set => !string.Equals(set.Metadata.DeviceId, id, StringComparison.Ordinal)))
-            {
-                bundle.PointSets.Add(ConfigDefaults.DefaultPoints(id));
-            }
-
             WriteBundle(_draft, bundle);
             AppendLogUnlocked($"草稿已更新设备 {id}");
             return document;
@@ -189,7 +199,7 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             EnsureSafeId(id);
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
             var removed = bundle.Devices.RemoveAll(device => string.Equals(device.Metadata.Id, id, StringComparison.Ordinal));
             if (removed == 0)
             {
@@ -202,11 +212,120 @@ public sealed partial class ConfigStore
         }
     }
 
+    public IReadOnlyList<PointTemplateDocument> ListPointTemplates()
+    {
+        lock (_gate)
+        {
+            return ReadWorking(_draft).PointTemplates
+                .OrderBy(template => template.Metadata.Id, StringComparer.Ordinal)
+                .ToList();
+        }
+    }
+
+    public PointTemplateDocument GetPointTemplate(string id)
+    {
+        lock (_gate)
+        {
+            return FindTemplate(ReadWorking(_draft), id);
+        }
+    }
+
+    public PointTemplateDocument UpsertPointTemplate(string id, PointTemplateDocument document)
+    {
+        lock (_gate)
+        {
+            EnsureSafeId(id);
+            document.Metadata ??= new PointTemplateMetadata();
+            if (!string.IsNullOrWhiteSpace(document.Metadata.Id)
+                && !string.Equals(document.Metadata.Id, id, StringComparison.Ordinal))
+            {
+                throw new ConfigStoreException("id_mismatch", "路径中的模板 Id 与正文不一致", StatusCodes.Status400BadRequest);
+            }
+
+            document.ApiVersion = StudioApi.Version;
+            document.Kind = "PointTemplate";
+            document.Metadata.Id = id;
+            document.Metadata.DisplayName = (document.Metadata.DisplayName ?? "").Trim();
+            document.Spec ??= new PointTemplateSpec();
+            document.Spec.Points ??= [];
+            document.Spec.Adapter = (document.Spec.Adapter ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(document.Spec.Adapter))
+            {
+                document.Spec.Adapter = FanucPointCatalog.Family;
+            }
+
+            foreach (var point in document.Spec.Points)
+            {
+                point.Id = (point.Id ?? "").Trim();
+                point.DataType = (point.DataType ?? "").Trim().ToLowerInvariant();
+                point.Address = (point.Address ?? "").Trim();
+                point.Unit ??= "";
+                if (string.Equals(document.Spec.Adapter, FanucPointCatalog.Family, StringComparison.Ordinal)
+                    || FanucPointCatalog.IsFanuc(document.Spec.Adapter))
+                {
+                    FanucPointCatalog.TryNormalize(point);
+                }
+            }
+
+            var bundle = ReadWorking(_draft);
+            var index = bundle.PointTemplates.FindIndex(template =>
+                string.Equals(template.Metadata.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0 && !string.Equals(bundle.PointTemplates[index].Metadata.Id, id, StringComparison.Ordinal))
+            {
+                throw new ConfigStoreException("id_conflict", "已存在仅大小写不同的模板 Id", StatusCodes.Status409Conflict);
+            }
+
+            if (index >= 0)
+            {
+                bundle.PointTemplates[index] = document;
+            }
+            else
+            {
+                bundle.PointTemplates.Add(document);
+            }
+
+            WriteBundle(_draft, bundle);
+            AppendLogUnlocked($"草稿已更新点位模板 {id}");
+            return document;
+        }
+    }
+
+    public void DeletePointTemplate(string id)
+    {
+        lock (_gate)
+        {
+            EnsureSafeId(id);
+            var bundle = ReadWorking(_draft);
+            var template = bundle.PointTemplates.FirstOrDefault(item =>
+                string.Equals(item.Metadata.Id, id, StringComparison.Ordinal));
+            if (template is null)
+            {
+                throw new ConfigStoreException("template_not_found", "点位模板不存在", StatusCodes.Status404NotFound);
+            }
+
+            var users = bundle.Devices
+                .Where(device => string.Equals(device.Spec.PointTemplateId, id, StringComparison.Ordinal))
+                .Select(device => device.Metadata.Id)
+                .ToList();
+            if (users.Count > 0)
+            {
+                throw new ConfigStoreException(
+                    "template_in_use",
+                    $"仍有设备在使用该模板：{string.Join("、", users)}。请先改这些设备的点位模板。",
+                    StatusCodes.Status409Conflict);
+            }
+
+            bundle.PointTemplates.Remove(template);
+            WriteBundle(_draft, bundle);
+            AppendLogUnlocked($"草稿已删除点位模板 {id}");
+        }
+    }
+
     public PointSetDocument GetPoints(string deviceId)
     {
         lock (_gate)
         {
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
             FindDevice(bundle, deviceId);
             return bundle.PointSets.FirstOrDefault(set => string.Equals(set.Metadata.DeviceId, deviceId, StringComparison.Ordinal))
                 ?? ConfigDefaults.EmptyPoints(deviceId);
@@ -218,7 +337,7 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             EnsureSafeId(deviceId);
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
             var device = FindDevice(bundle, deviceId);
             document.ApiVersion = StudioApi.Version;
             document.Kind = "PointSet";
@@ -259,7 +378,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadBundle(_draft).Mqtt;
+            return ReadWorking(_draft).Mqtt;
         }
     }
 
@@ -279,7 +398,7 @@ public sealed partial class ConfigStore
             document.Spec.Broker ??= new MqttBrokerSpec();
             document.Spec.Broker.UsernameFromEnv = BlankToNull(document.Spec.Broker.UsernameFromEnv);
             document.Spec.Broker.PasswordFromEnv = BlankToNull(document.Spec.Broker.PasswordFromEnv);
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
             bundle.Mqtt = document;
             WriteBundle(_draft, bundle);
             AppendLogUnlocked("草稿已更新 MQTT");
@@ -291,7 +410,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadBundle(_draft).Gateway;
+            return ReadWorking(_draft).Gateway;
         }
     }
 
@@ -308,7 +427,7 @@ public sealed partial class ConfigStore
             document.Metadata.SiteId = (document.Metadata.SiteId ?? "").Trim();
             document.Metadata.Name = (document.Metadata.Name ?? "").Trim();
             document.Spec.LogLevel = CanonicalLogLevel(document.Spec.LogLevel);
-            var bundle = ReadBundle(_draft);
+            var bundle = ReadWorking(_draft);
             bundle.Gateway = document;
             WriteBundle(_draft, bundle);
             AppendLogUnlocked("草稿已更新网关设置");
@@ -320,7 +439,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ConfigValidator.Validate(ReadBundle(_draft));
+            return ConfigValidator.Validate(ReadWorking(_draft));
         }
     }
 
@@ -328,7 +447,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var draft = ReadBundle(_draft);
+            var draft = ReadWorking(_draft);
             var validation = ConfigValidator.Validate(draft);
             if (!validation.Valid)
             {
@@ -339,7 +458,7 @@ public sealed partial class ConfigStore
             // so a successful publish does not leave a hand-edited address behind.
             WriteBundle(_draft, draft);
             var hash = CanonicalRevision.Compute(draft);
-            var current = CanonicalRevision.Compute(ReadBundle(_published));
+            var current = CanonicalRevision.Compute(ReadWorking(_published));
             var now = DateTimeOffset.UtcNow;
             if (hash == current)
             {
@@ -398,6 +517,13 @@ public sealed partial class ConfigStore
             }
 
             var bundle = ReadBundle(directory);
+            var migrated = PointTemplateMigration.Apply(bundle);
+            if (migrated)
+            {
+                hash = CanonicalRevision.Compute(bundle);
+                WriteBundle(SnapshotDir(hash), bundle);
+            }
+
             WriteBundle(_published, bundle);
             WriteBundle(_draft, bundle);
             File.WriteAllText(RevisionPath(_published), hash + "\n");
@@ -408,7 +534,7 @@ public sealed partial class ConfigStore
                 Revision = hash,
                 CreatedAt = now,
                 Action = "rollback",
-                Note = "回滚到该修订"
+                Note = migrated ? "回滚到该修订，并迁移为点位模板" : "回滚到该修订"
             });
             Trim(index, hash);
             WriteIndex(index);
@@ -421,7 +547,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadBundle(_published);
+            return ReadWorking(_published);
         }
     }
 
@@ -429,7 +555,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return CanonicalRevision.Compute(ReadBundle(_published));
+            return CanonicalRevision.Compute(ReadWorking(_published));
         }
     }
 
@@ -469,6 +595,18 @@ public sealed partial class ConfigStore
         return device;
     }
 
+    private static PointTemplateDocument FindTemplate(ConfigBundle bundle, string id)
+    {
+        EnsureSafeId(id);
+        var template = bundle.PointTemplates.FirstOrDefault(item => string.Equals(item.Metadata.Id, id, StringComparison.Ordinal));
+        if (template is null)
+        {
+            throw new ConfigStoreException("template_not_found", "点位模板不存在", StatusCodes.Status404NotFound);
+        }
+
+        return template;
+    }
+
     private static void EnsureSafeId(string id)
     {
         if (!ConfigValidator.IsSafeId(id))
@@ -487,12 +625,24 @@ public sealed partial class ConfigStore
         return revision.ToLowerInvariant();
     }
 
+    private ConfigBundle ReadWorking(string root)
+    {
+        var bundle = ReadBundle(root);
+        if (PointTemplateMigration.Apply(bundle))
+        {
+            WriteBundle(root, bundle);
+        }
+
+        return bundle;
+    }
+
     private ConfigBundle ReadBundle(string root)
     {
         var gateway = YamlFiles.Normalize(new ConfigBundle
         {
             Gateway = YamlFiles.Read<GatewayDocument>(GatewayPath(root)),
             Devices = ReadMany<DeviceDocument>(Path.Combine(root, "devices")),
+            PointTemplates = ReadMany<PointTemplateDocument>(Path.Combine(root, "point-templates")),
             PointSets = ReadMany<PointSetDocument>(Path.Combine(root, "points")),
             Mqtt = File.Exists(MqttPath(root))
                 ? YamlFiles.Read<MqttSinkDocument>(MqttPath(root))
@@ -520,6 +670,7 @@ public sealed partial class ConfigStore
         Directory.CreateDirectory(root);
         YamlFiles.Write(GatewayPath(root), bundle.Gateway);
         ReplaceYaml(Path.Combine(root, "devices"), bundle.Devices.Select(device => (device.Metadata.Id, device)));
+        ReplaceYaml(Path.Combine(root, "point-templates"), bundle.PointTemplates.Select(template => (template.Metadata.Id, template)));
         ReplaceYaml(Path.Combine(root, "points"), bundle.PointSets.Select(set => (set.Metadata.DeviceId, set)));
         YamlFiles.Write(MqttPath(root), bundle.Mqtt);
     }
@@ -554,6 +705,7 @@ public sealed partial class ConfigStore
         Directory.CreateDirectory(to);
         File.Copy(GatewayPath(from), GatewayPath(to), overwrite: true);
         CopyYamlDirectory(Path.Combine(from, "devices"), Path.Combine(to, "devices"));
+        CopyYamlDirectory(Path.Combine(from, "point-templates"), Path.Combine(to, "point-templates"));
         CopyYamlDirectory(Path.Combine(from, "points"), Path.Combine(to, "points"));
         Directory.CreateDirectory(Path.Combine(to, "sinks"));
         if (File.Exists(MqttPath(from)))

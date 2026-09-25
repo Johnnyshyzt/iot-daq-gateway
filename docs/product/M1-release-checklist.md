@@ -9,7 +9,7 @@
 - [x] 一个 Host 进程托管 Api、Collector 和 shadcn Web（`http://127.0.0.1:5080`）
 - [x] 本机演示登录：`admin` / `admin`，另有 `engineer` / `engineer`、`viewer` / `viewer`。页面标明只适合 localhost；现场包不把它们当作长期口令
 - [x] 设备页新建、编辑、删除 `fanuc.fake`，并做连接测试（Fake 恒成功）
-- [x] 点位表按发那科目录添加和启用（`state` / `alarm` / `program`），不手填协议地址。CSV 只接受目录中的点位 Id，并可改单位、倍率、死区、启用
+- [x] 点位模板按发那科目录添加和启用（`state` / `alarm` / `program`），设备只选择模板，不手填协议地址。CSV 只接受目录中的点位 Id，并可改单位、倍率、死区、启用
 - [x] MQTT：Broker、环境变量名、QoS、保留消息、TLS、主题模板，以及浏览器内 JSON / 主题预览
 - [x] 校验、发布、回滚；失败时页面展示中文问题列表（含路径）
 - [x] 发布写入 `data/published` 后，同一进程重载采集

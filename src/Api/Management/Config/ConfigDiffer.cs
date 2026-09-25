@@ -9,6 +9,7 @@ public static class ConfigDiffer
         var changes = new List<ConfigChange>();
         CompareGateway(changes, published.Gateway, draft.Gateway);
         CompareDevices(changes, published.Devices, draft.Devices);
+        CompareTemplates(changes, published.PointTemplates, draft.PointTemplates);
         ComparePoints(changes, published.PointSets, draft.PointSets);
         CompareMqtt(changes, published.Mqtt, draft.Mqtt);
         return new DiffView
@@ -65,6 +66,44 @@ public static class ConfigDiffer
             Field(changes, path, "地址", left.Spec.Connection.Host, right.Spec.Connection.Host);
             Field(changes, path, "端口", left.Spec.Connection.Port.ToString(System.Globalization.CultureInfo.InvariantCulture), right.Spec.Connection.Port.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Field(changes, path, "FOCAS 超时", Timeout(left.Spec.Connection.FocasTimeoutMs), Timeout(right.Spec.Connection.FocasTimeoutMs));
+            Field(changes, path, "点位模板", left.Spec.PointTemplateId, right.Spec.PointTemplateId);
+        }
+    }
+
+    private static void CompareTemplates(List<ConfigChange> changes, List<PointTemplateDocument> before, List<PointTemplateDocument> after)
+    {
+        before ??= [];
+        after ??= [];
+        var published = ById(before, template => template.Metadata.Id);
+        var draft = ById(after, template => template.Metadata.Id);
+        foreach (var id in draft.Keys.Except(published.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            changes.Add(new ConfigChange
+            {
+                Path = $"point-templates/{id}",
+                Kind = "added",
+                Summary = $"新增点位模板 {id}（{draft[id].Metadata.DisplayName}）"
+            });
+        }
+
+        foreach (var id in published.Keys.Except(draft.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            changes.Add(new ConfigChange
+            {
+                Path = $"point-templates/{id}",
+                Kind = "removed",
+                Summary = $"移除点位模板 {id}"
+            });
+        }
+
+        foreach (var id in published.Keys.Intersect(draft.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var left = published[id];
+            var right = draft[id];
+            var path = $"point-templates/{id}";
+            Field(changes, path, "显示名称", left.Metadata.DisplayName, right.Metadata.DisplayName);
+            Field(changes, path, "适配器族", left.Spec.Adapter, right.Spec.Adapter);
+            ComparePointList(changes, $"point-templates/{id}", left.Spec.Points, right.Spec.Points, "模板");
         }
     }
 
@@ -78,7 +117,7 @@ public static class ConfigDiffer
             {
                 Path = $"points/{id}",
                 Kind = "added",
-                Summary = $"新增点位集 {id}（{draft[id].Spec.Points.Count} 个点）"
+                Summary = $"新增本机覆盖 {id}（{draft[id].Spec.Points.Count} 个点）"
             });
         }
 
@@ -88,17 +127,17 @@ public static class ConfigDiffer
             {
                 Path = $"points/{id}",
                 Kind = "removed",
-                Summary = $"移除点位集 {id}"
+                Summary = $"移除本机覆盖 {id}"
             });
         }
 
         foreach (var id in published.Keys.Intersect(draft.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
-            ComparePointList(changes, id, published[id].Spec.Points, draft[id].Spec.Points);
+            ComparePointList(changes, $"points/{id}", published[id].Spec.Points, draft[id].Spec.Points, "本机覆盖");
         }
     }
 
-    private static void ComparePointList(List<ConfigChange> changes, string deviceId, List<PointDefinition> before, List<PointDefinition> after)
+    private static void ComparePointList(List<ConfigChange> changes, string scope, List<PointDefinition> before, List<PointDefinition> after, string role)
     {
         var published = ById(before, point => point.Id);
         var draft = ById(after, point => point.Id);
@@ -106,9 +145,9 @@ public static class ConfigDiffer
         {
             changes.Add(new ConfigChange
             {
-                Path = $"points/{deviceId}/{id}",
+                Path = $"{scope}/{id}",
                 Kind = "added",
-                Summary = $"设备 {deviceId} 新增点位 {id}"
+                Summary = $"{role}新增点位 {id}"
             });
         }
 
@@ -116,9 +155,9 @@ public static class ConfigDiffer
         {
             changes.Add(new ConfigChange
             {
-                Path = $"points/{deviceId}/{id}",
+                Path = $"{scope}/{id}",
                 Kind = "removed",
-                Summary = $"设备 {deviceId} 移除点位 {id}"
+                Summary = $"{role}移除点位 {id}"
             });
         }
 
@@ -126,7 +165,7 @@ public static class ConfigDiffer
         {
             var left = published[id];
             var right = draft[id];
-            var path = $"points/{deviceId}/{id}";
+            var path = $"{scope}/{id}";
             Field(changes, path, "地址", left.Address, right.Address);
             Field(changes, path, "类型", left.DataType, right.DataType);
             Field(changes, path, "单位", left.Unit, right.Unit);

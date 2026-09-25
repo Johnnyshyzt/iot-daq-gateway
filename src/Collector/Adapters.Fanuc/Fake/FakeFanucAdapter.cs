@@ -98,7 +98,8 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
         if (value is string text)
         {
             var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            return parts.Length == 0 ? null : parts;
+            // Empty means the published template enabled nothing. Null (option omitted) keeps the built-in three.
+            return parts;
         }
 
         if (value is System.Collections.IEnumerable list and not string)
@@ -113,7 +114,7 @@ public sealed class FakeFanucAdapter : ISouthboundAdapter
                 }
             }
 
-            return parts.Count == 0 ? null : parts.ToArray();
+            return parts.ToArray();
         }
 
         return null;

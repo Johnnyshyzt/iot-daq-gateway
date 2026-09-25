@@ -99,9 +99,12 @@ internal static class V1BundleLoader
                 ["displayName"] = OptionalString(metadata, "displayName") ?? id
             };
 
-            var points = EnabledPointIds(directory, id);
-            if (points.Count > 0)
+            var templateId = OptionalString(spec, "pointTemplateId");
+            var points = EnabledPointIds(directory, id, templateId);
+            if (!string.IsNullOrWhiteSpace(templateId) || points.Count > 0)
             {
+                // An explicit template with every point disabled must not fall back to the
+                // adapter's built-in three points. An empty string is that "none enabled" list.
                 options["points"] = string.Join(',', points);
             }
 
@@ -118,40 +121,100 @@ internal static class V1BundleLoader
         return devices;
     }
 
-    private static List<string> EnabledPointIds(string directory, string deviceId)
+    /// <summary>
+    /// When <paramref name="templateId"/> is set, enabled ids come from
+    /// <c>point-templates/{id}.yaml</c> with <c>points/{deviceId}.yaml</c> applied as an override.
+    /// Override rows replace the same id; a new id is appended. Without a template, the point file
+    /// alone is the legacy full table.
+    /// </summary>
+    private static List<string> EnabledPointIds(string directory, string deviceId, string? templateId)
     {
-        var file = Path.Combine(directory, "points", deviceId + ".yaml");
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            return ReadEnabledIds(Path.Combine(directory, "points", deviceId + ".yaml"), required: false);
+        }
+
+        var templateFile = Path.Combine(directory, "point-templates", templateId + ".yaml");
+        if (!File.Exists(templateFile))
+        {
+            throw new InvalidOperationException(
+                $"{directory}: device {deviceId} references missing point template '{templateId}'.");
+        }
+
+        var template = ReadMap(templateFile);
+        RequireKind(template, "PointTemplate", templateFile);
+        var points = ReadPointRows(ChildMap(template, "spec", templateFile), templateFile);
+        var overrideFile = Path.Combine(directory, "points", deviceId + ".yaml");
+        if (File.Exists(overrideFile))
+        {
+            var document = ReadMap(overrideFile);
+            RequireKind(document, "PointSet", overrideFile);
+            ApplyOverrides(points, ReadPointRows(ChildMap(document, "spec", overrideFile), overrideFile));
+        }
+
+        return points.Where(point => point.Enabled).Select(point => point.Id).ToList();
+    }
+
+    private static List<string> ReadEnabledIds(string file, bool required)
+    {
         if (!File.Exists(file))
         {
+            if (required)
+            {
+                throw new FileNotFoundException($"Gateway bundle file not found: {file}", file);
+            }
+
             return [];
         }
 
         var document = ReadMap(file);
         RequireKind(document, "PointSet", file);
-        var spec = ChildMap(document, "spec", file);
+        return ReadPointRows(ChildMap(document, "spec", file), file)
+            .Where(point => point.Enabled)
+            .Select(point => point.Id)
+            .ToList();
+    }
+
+    private static List<PointRow> ReadPointRows(Dictionary<string, object?> spec, string file)
+    {
+        var rows = new List<PointRow>();
         if (!spec.TryGetValue("points", out var raw) || raw is not System.Collections.IEnumerable list)
         {
-            return [];
+            return rows;
         }
 
-        var ids = new List<string>();
         foreach (var item in list)
         {
             var point = AsMap(item, file);
-            if (OptionalBool(point, "enabled") == false)
+            var id = OptionalString(point, "id");
+            if (string.IsNullOrWhiteSpace(id))
             {
                 continue;
             }
 
-            var id = OptionalString(point, "id");
-            if (!string.IsNullOrWhiteSpace(id))
-            {
-                ids.Add(id);
-            }
+            rows.Add(new PointRow(id, OptionalBool(point, "enabled") ?? true));
         }
 
-        return ids;
+        return rows;
     }
+
+    private static void ApplyOverrides(List<PointRow> points, List<PointRow> overrides)
+    {
+        foreach (var row in overrides)
+        {
+            var index = points.FindIndex(point => string.Equals(point.Id, row.Id, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                points[index] = new PointRow(points[index].Id, row.Enabled);
+            }
+            else
+            {
+                points.Add(row);
+            }
+        }
+    }
+
+    private sealed record PointRow(string Id, bool Enabled);
 
     private static MqttOptions LoadMqtt(string directory)
     {

@@ -65,7 +65,7 @@ M3 的 Cloud / Fleet（远程下发多台网关）不在本期。
 
 ## 当前运行时与 v1 契约
 
-Host 默认采集 `data/published`。那棵树与 [configs/examples/v1/](../../configs/examples/v1/) 同一布局：加载器看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。Host 不读草稿。
+Host 默认采集 `data/published`。那棵树与 [configs/examples/v1/](../../configs/examples/v1/) 同一布局：加载器看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`point-templates/`、可选的 `points/` 本机覆盖、`sinks/mqtt.yaml`。设备通过 `spec.pointTemplateId` 共用一份点位模板，加载时展开成该设备启用的点位 id。Host 不读草稿。
 
 `--config` 或 `GATEWAY_CONFIG` 仍可指向单文件 YAML（例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)）或 v1 目录。这只覆盖采集来源，主路径是页面发布。
 

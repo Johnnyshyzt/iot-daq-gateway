@@ -31,6 +31,7 @@ import {
   describeError,
   studioApi,
   type DeviceDocument,
+  type PointTemplateDocument,
 } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
@@ -41,6 +42,7 @@ const emptyDevice = (): DeviceDocument => ({
     adapter: 'fanuc.fake',
     enabled: true,
     intervalMs: 1000,
+    pointTemplateId: 'fanuc-standard',
     connection: { host: '127.0.0.1', port: 8193, focasTimeoutMs: 3000 },
   },
 })
@@ -49,12 +51,19 @@ export function DevicesPage() {
   const role = useAuthStore((state) => state.auth.user?.role[0])
   const writable = canWrite(role)
   const [devices, setDevices] = useState<DeviceDocument[]>([])
+  const [templates, setTemplates] = useState<PointTemplateDocument[]>([])
   const [draft, setDraft] = useState<DeviceDocument>(emptyDevice())
   const [mode, setMode] = useState<'create' | 'edit'>('create')
   const [message, setMessage] = useState('')
 
   async function reload() {
-    setDevices(await studioApi<DeviceDocument[]>('/api/v1/config/devices'))
+    const [deviceItems, templateItems] = await Promise.all([
+      studioApi<DeviceDocument[]>('/api/v1/config/devices'),
+      studioApi<PointTemplateDocument[]>('/api/v1/config/point-templates'),
+    ])
+    setDevices(deviceItems)
+    setTemplates(templateItems)
+    return templateItems
   }
 
   useEffect(() => {
@@ -87,6 +96,10 @@ export function DevicesPage() {
     }
     if (!draft.metadata.displayName.trim()) {
       setMessage('请填写显示名')
+      return
+    }
+    if (!draft.spec.pointTemplateId) {
+      setMessage('请选择点位模板。一类模板给多台同类设备用，不必每台重填点位。')
       return
     }
     const body: DeviceDocument = {
@@ -128,7 +141,7 @@ export function DevicesPage() {
   return (
     <PageShell
       title='设备'
-      description='Fanuc 设备只支持 fanuc.fake 与 fanuc.focas。保存写入草稿，发布后网关才会加载。fanuc.focas 的连接测试走真实握手，不会因为 TCP 端口通了就显示成功。'
+      description='Fanuc 设备只支持 fanuc.fake 与 fanuc.focas。每台选择一个点位模板：一类模板给多台同类设备用，不是每台各写一张地址表。保存写入草稿，发布后网关才会加载。fanuc.focas 的连接测试走真实握手，不会因为 TCP 端口通了就显示成功。'
       actions={
         <Button
           variant='outline'
@@ -168,7 +181,12 @@ export function DevicesPage() {
                       <div className='font-medium'>{device.metadata.displayName}</div>
                       <div className='text-xs text-muted-foreground'>{device.metadata.id}</div>
                     </TableCell>
-                    <TableCell>{device.spec.adapter}</TableCell>
+                    <TableCell>
+                      <div>{device.spec.adapter}</div>
+                      <div className='text-xs text-muted-foreground'>
+                        {templateName(templates, device.spec.pointTemplateId)}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={device.spec.enabled ? 'default' : 'secondary'}>
                         {device.spec.enabled ? '启用' : '禁用'}
@@ -242,6 +260,30 @@ export function DevicesPage() {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label='点位模板'>
+              <Select
+                value={draft.spec.pointTemplateId || undefined}
+                disabled={!writable || templates.length === 0}
+                onValueChange={(pointTemplateId) =>
+                  setDraft({ ...draft, spec: { ...draft.spec, pointTemplateId } })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={templates.length === 0 ? '还没有模板' : '选择模板'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.metadata.id} value={template.metadata.id}>
+                      {(template.metadata.displayName || template.metadata.id) +
+                        `（${template.metadata.id}）`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <p className='text-xs text-muted-foreground'>
+              一类模板给多台同类设备用。点位在「点位模板」页维护，这里只选择用哪一份。
+            </p>
             <Field label='主机'>
               <Input
                 value={draft.spec.connection.host}
@@ -321,6 +363,12 @@ export function DevicesPage() {
       </div>
     </PageShell>
   )
+}
+
+function templateName(templates: PointTemplateDocument[], id: string | null | undefined) {
+  if (!id) return '未选模板'
+  const template = templates.find((item) => item.metadata.id === id)
+  return template?.metadata.displayName || id
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

@@ -8,7 +8,8 @@ JSON Schema（draft 2020-12）在仓库 `schemas/`：
 | --- | --- | --- |
 | [gateway.schema.json](../../schemas/gateway.schema.json) | `Gateway` | `gateway.yaml` |
 | [device.schema.json](../../schemas/device.schema.json) | `Device` | `devices/{metadata.id}.yaml` |
-| [point-set.schema.json](../../schemas/point-set.schema.json) | `PointSet` | `points/{metadata.deviceId}.yaml` |
+| [point-template.schema.json](../../schemas/point-template.schema.json) | `PointTemplate` | `point-templates/{metadata.id}.yaml` |
+| [point-set.schema.json](../../schemas/point-set.schema.json) | `PointSet` | `points/{metadata.deviceId}.yaml`（可选的本机覆盖） |
 | [mqtt-sink.schema.json](../../schemas/mqtt-sink.schema.json) | `MqttSink` | `sinks/mqtt.yaml` |
 
 `apiVersion` 固定为 `daq.gateway/v1`。一份可运行的示例包在 [configs/examples/v1/](../../configs/examples/v1/)。
@@ -18,7 +19,7 @@ JSON Schema（draft 2020-12）在仓库 `schemas/`：
 主路径是数据目录里的 `published/`（v1 目录）。`--config` 或 `GATEWAY_CONFIG` 可以改成下面两种形状，那是无界面覆盖：
 
 - **单文件**：例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)。
-- **v1 目录**：目录本身，或其中带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。加载器读取同目录的 `devices/`、`points/`、`sinks/mqtt.yaml`。页面发布出的 `data/published` 就是这种目录。
+- **v1 目录**：目录本身，或其中带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。加载器读取同目录的 `devices/`、`point-templates/`、可选的 `points/`、`sinks/mqtt.yaml`。页面发布出的 `data/published` 就是这种目录。
 
 Host 不读 `draft/`。`mappings/` 里如果有文件，加载直接失败。
 
@@ -29,8 +30,10 @@ Host 不读 `draft/`。`mappings/` 里如果有文件，加载直接失败。
 ```
 gateway.yaml
 devices/
-  cnc-01.yaml
-points/
+  cnc-01.yaml             # spec.pointTemplateId 指向模板
+point-templates/
+  fanuc-standard.yaml     # 一类设备一份；多台机床共用
+points/                   # 可缺省。仅当某台和模板不一致时放本机覆盖
   cnc-01.yaml
 sinks/
   mqtt.yaml
@@ -49,7 +52,18 @@ M1 点位主题只由 MqttSink 的 `topicTemplate` 生成。`mappings/` 里若�
 | `alarm` | `cnc/alarm` | 报警号；正常为 `0` |
 | `program` | `cnc/program` | `O0001` 形式 |
 
-示例 PointSet 把这三点标成 `dataType: string`。v1 加载会把启用的点位 id 交给 Fake 适配器。`state` / `alarm` / `program` 仍按相位生成，其中 `alarm` 在采集模型里仍是整数。没有点表文件时，Fake 继续只发内置的三个点。目录以外的 id 不能通过 Studio 发布。
+点位按设备类放在 `PointTemplate` 里，不按每台设备各写一张地址表。内置模板 `fanuc-standard`（显示名「Fanuc 标准三态」）启用 `state`、`alarm`、`program`，`spec.adapter` 为 `fanuc`。`fanuc.fake` 与 `fanuc.focas` 都可以引用它。设备上的 `spec.pointTemplateId` 指向这份模板。
+
+`points/{deviceId}.yaml` 是可选的本机覆盖，不是第二张地址表。合并规则：
+
+- 没有该文件时，有效点位就是模板。
+- 覆盖里的同名点替换模板上的启用、单位、倍率和死区。地址和数据类型仍由发那科目录填写。
+- 覆盖不能新增目录以外的 id。目录里有、模板里没有的 id 可以追加（一台机床多开一个目录点）。
+- 覆盖里没写到的模板点保持模板原样。要关掉某个点，必须写 `enabled: false`。
+
+发布时校验把模板和覆盖展开成每台设备的有效点位。采集加载已发布目录时做同样的展开，把启用的点位 id 交给适配器。北向主题仍然按设备 id 发布。旧的「每台一份完整 PointSet、设备上没有 `pointTemplateId`」会在 Studio 读取时迁到默认发那科模板上：与模板相同的点表删掉，有差异的留下覆盖。没有模板、也没有点表文件时，Fake 仍只发内置的三个点。
+
+`alarm` 在采集模型里仍是整数。目录以外的 id 不能通过 Studio 发布。
 
 ## 工作区（草稿 / 发布 / 回滚）
 
@@ -85,7 +99,7 @@ data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
 | `devices[].enabled` | `spec.enabled` |
 | `devices[].options.host` / `port` | `spec.connection.host` / `port` |
 | `devices[].options.timeoutMs` | `spec.connection.focasTimeoutMs`。FOCAS 调用按秒向上取整，与 [focas.md](../focas.md) 一致 |
-| （适配器内置的 state/alarm/program） | `points/{deviceId}.yaml` |
+| （适配器内置的 state/alarm/program） | `point-templates/{id}.yaml`，设备用 `spec.pointTemplateId` 引用；`points/{deviceId}.yaml` 只作本机覆盖 |
 
 设备上的 `intervalMs` 覆盖网关的 `defaultIntervalMs`。采集循环只有一个周期，取已启用设备里最小的间隔，并且不低于 100 毫秒。没有启用设备时用 `defaultIntervalMs`（同样不低于 100 毫秒）。
 
@@ -95,7 +109,7 @@ data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
 
 发布时用 `Studio.Host.Config.CanonicalRevision`，不是按文件列表拼 JSON。
 
-1. 把草稿收成一份配置包：Gateway、按 `metadata.id` 排序的 Device、按 `deviceId` 排序的 PointSet（点位再按 `id` 排序）、MqttSink。
+1. 把草稿收成一份配置包：Gateway、按 `metadata.id` 排序的 Device、按 `metadata.id` 排序的 PointTemplate（点位再按 `id` 排序）、按 `deviceId` 排序的 PointSet 覆盖（点位再按 `id` 排序）、MqttSink。
 2. 用 camelCase JSON 序列化，忽略 null。对象键按 Unicode 码点递归排序。数组保持排序后的顺序。
 3. 紧凑 JSON，UTF-8，不做 `\u` 转义，末尾不加换行。
 4. revision 是该字节的 SHA-256，小写十六进制。
@@ -108,10 +122,11 @@ data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
 JSON Schema 约束单个文档。`POST /api/v1/config/validate` 在此之上检查：
 
 - 恰好一份 Gateway、恰好一份 MqttSink
-- 文件名与身份一致：`devices/{metadata.id}.yaml`、`points/{metadata.deviceId}.yaml`、`sinks/mqtt.yaml`
+- 文件名与身份一致：`devices/{metadata.id}.yaml`、`point-templates/{metadata.id}.yaml`、`points/{metadata.deviceId}.yaml`、`sinks/mqtt.yaml`
 - `kind` 与路径匹配
-- 每个 PointSet 的 `deviceId` 能找到 Device；点位 `id` 在该文件内唯一
-- 每台 `enabled` 的设备至少有一个启用点（省略 `enabled` 视为 `true`）
+- 发那科设备必须引用已有的点位模板，且模板适配器族为 `fanuc`
+- 每个 PointSet 覆盖的 `deviceId` 能找到 Device；点位 `id` 在该文件内唯一，且必须在发那科目录中
+- 每台 `enabled` 的设备展开后至少有一个启用点（省略 `enabled` 视为 `true`）
 - 适配器只能是 `fanuc.fake` 或 `fanuc.focas`
 - `mappings/` 下没有文件（M1 不发布独立映射）。Collector 加载时会拒绝这个目录。Api 的校验器还不会扫描它
 

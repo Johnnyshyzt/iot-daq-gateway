@@ -97,6 +97,7 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
   "draftRevision": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "gateway": {},
   "devices": [],
+  "pointTemplates": [],
   "pointSets": [],
   "mqtt": {}
 }
@@ -122,18 +123,35 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
 | `GET` | `/api/v1/config/devices` | `{ "items": [ Device, ... ] }` |
 | `GET` | `/api/v1/config/devices/{id}` | 一份 Device |
 | `PUT` | `/api/v1/config/devices/{id}` | 写入 `draft/devices/{id}.yaml` |
-| `DELETE` | `/api/v1/config/devices/{id}` | 删除该设备草稿及其 `points/{id}.yaml` |
+| `DELETE` | `/api/v1/config/devices/{id}` | 删除该设备草稿及其本机覆盖 `points/{id}.yaml`。不删除点位模板 |
+
+设备正文含 `spec.pointTemplateId`。新建发那科设备时若省略，服务端写入内置模板 `fanuc-standard`。`fanuc.fake` 与 `fanuc.focas` 都引用适配器族为 `fanuc` 的模板。
 
 `PUT` 时路径 `{id}` 必须等于 `metadata.id`，否则 `409 conflict`。`DELETE` 对已不存在的 id 返回 `404 not_found`。
 
-### 点位
+### 点位模板
+
+一类模板给多台同类设备用。M1 只有发那科模板（`spec.adapter: fanuc`）。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `GET` | `/api/v1/config/points/{deviceId}` | PointSet |
+| `GET` | `/api/v1/config/point-templates` | 草稿中的 PointTemplate 列表 |
+| `GET` | `/api/v1/config/point-templates/{id}` | 一份 PointTemplate |
+| `PUT` | `/api/v1/config/point-templates/{id}` | 写入 `draft/point-templates/{id}.yaml` |
+| `DELETE` | `/api/v1/config/point-templates/{id}` | 删除模板。仍被设备引用时 `409 template_in_use` |
+
+点位 Id 必须在发那科目录（`state`、`alarm`、`program`）中。已知 Id 的 `address` 由目录填写。校验失败的中文原因包括：模板不存在、适配器族与设备不一致、模板或覆盖里出现目录以外的 Id。
+
+### 本机覆盖（可选）
+
+大多数设备没有这份文件。它只在某一台和模板不一致时使用（关掉一个点、改倍率等）。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/config/points/{deviceId}` | 本机覆盖 PointSet。没有覆盖时点列表为空 |
 | `PUT` | `/api/v1/config/points/{deviceId}` | 写入 `draft/points/{deviceId}.yaml` |
 
-路径必须等于 `metadata.deviceId`。设备可以尚未发布；点表可以先于发布单独保存。发布校验会要求 `deviceId` 能对上设备。`fanuc.fake` / `fanuc.focas` 的点位 Id 必须在发那科目录（`state`、`alarm`、`program`）中，否则校验失败且发布被拒绝。已知 Id 的 `address` 由目录填写（`cnc/statinfo`、`cnc/alarm`、`cnc/program`），用户不必手填协议地址。`PUT` 会把已知 Id 的地址规范成目录值；未知 Id 可以留在草稿里，但过不了校验。
+路径必须等于 `metadata.deviceId`。同名点替换模板上的启用、单位、倍率和死区；不能新增目录以外的 Id。未出现在覆盖里的模板点保持原样。页面以模板为主，M1 不把按设备编辑点表当作主流程。
 
 ### 点位目录
 

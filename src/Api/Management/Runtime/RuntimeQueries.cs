@@ -156,9 +156,11 @@ public sealed class RuntimeQueries
                 continue;
             }
 
-            var points = published.PointSets
-                .FirstOrDefault(set => string.Equals(set.Metadata.DeviceId, device.Metadata.Id, StringComparison.Ordinal))
-                ?.Spec.Points ?? [];
+            var template = published.PointTemplates.FirstOrDefault(item =>
+                string.Equals(item.Metadata.Id, device.Spec.PointTemplateId, StringComparison.Ordinal));
+            var overrides = published.PointSets.FirstOrDefault(set =>
+                string.Equals(set.Metadata.DeviceId, device.Metadata.Id, StringComparison.Ordinal));
+            var points = PointExpansion.EffectivePoints(template, overrides);
             foreach (var point in points.Where(point => point.Enabled))
             {
                 rows.Add(new ObservationView

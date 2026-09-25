@@ -1,0 +1,31 @@
+# One Fanuc class. fanuc.fake and fanuc.focas devices both reference this template.
+# Addresses are catalog conventions. Collection uses the point id.
+apiVersion: daq.gateway/v1
+kind: PointTemplate
+metadata:
+  id: fanuc-standard
+  displayName: Fanuc 标准三态
+spec:
+  adapter: fanuc
+  points:
+    - id: state
+      address: cnc/statinfo
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: alarm
+      address: cnc/alarm
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: program
+      address: cnc/program
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
