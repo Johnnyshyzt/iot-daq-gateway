@@ -7,7 +7,7 @@ public static partial class ConfigValidator
 {
     private static readonly string[] LogLevels = ["Trace", "Debug", "Information", "Warning", "Error", "Critical"];
     private static readonly string[] Adapters = ["fanuc.fake", "fanuc.focas"];
-    private static readonly string[] DataTypes = ["string", "number", "bool", "int", "float"];
+    private static readonly string[] DataTypes = ["string", "number", "bool", "int", "int32", "int64", "float", "double"];
 
     public static ValidationResult Validate(ConfigBundle bundle)
     {
@@ -146,7 +146,7 @@ public static partial class ConfigValidator
 
                 if (!DataTypes.Contains(point.DataType, StringComparer.Ordinal))
                 {
-                    Error(issues, $"{pointPath}.dataType", "数据类型必须是 string、number、bool、int 或 float");
+                    Error(issues, $"{pointPath}.dataType", "数据类型必须是 string、bool、int32、int64、float、double、int 或 number");
                 }
 
                 if (!double.IsFinite(point.Scale))
@@ -160,20 +160,21 @@ public static partial class ConfigValidator
                 }
             }
 
-            if (set.Spec.Points.Count == 0)
-            {
-                Warning(issues, path, "该设备还没有点位");
-            }
         }
 
         foreach (var device in bundle.Devices)
         {
-            if (pointDevices.Contains(device.Metadata.Id))
+            var set = bundle.PointSets.FirstOrDefault(item =>
+                string.Equals(item.Metadata.DeviceId, device.Metadata.Id, StringComparison.OrdinalIgnoreCase));
+            var enabledPoints = set?.Spec.Points.Count(point => point.Enabled) ?? 0;
+            if (device.Spec.Enabled && enabledPoints == 0)
             {
-                continue;
+                Error(issues, $"points/{device.Metadata.Id}", "启用的设备至少需要一个启用的点位");
             }
-
-            Warning(issues, $"points/{device.Metadata.Id}", "设备还没有点位集");
+            else if (set is null || set.Spec.Points.Count == 0)
+            {
+                Warning(issues, $"points/{device.Metadata.Id}", "该设备还没有点位");
+            }
         }
 
         ValidateMqtt(bundle.Mqtt, issues);

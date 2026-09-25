@@ -3,6 +3,7 @@ using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Configuration;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
+using Gateway.Abstractions.Topics;
 using Gateway.Host.Configuration;
 using Gateway.Host.Logging;
 using Microsoft.Extensions.Hosting;
@@ -191,7 +192,8 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                     adapter = device.Adapter,
                     status = "disabled",
                     lastSeen = (DateTimeOffset?)null,
-                    message = "设备已禁用"
+                    message = "设备已禁用",
+                    statusTopic = StatusTopic(config, device.Id)
                 };
             }
 
@@ -205,7 +207,8 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                     adapter = device.Adapter,
                     status = "offline",
                     lastSeen = (DateTimeOffset?)null,
-                    message = "尚未完成首轮扫描"
+                    message = "尚未完成首轮扫描",
+                    statusTopic = StatusTopic(config, device.Id)
                 };
             }
 
@@ -217,7 +220,8 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                 adapter = device.Adapter,
                 status = item.Status.ToString().ToLowerInvariant(),
                 lastSeen = (DateTimeOffset?)item.Timestamp,
-                message = item.Message ?? ""
+                message = item.Message ?? "",
+                statusTopic = StatusTopic(config, device.Id)
             };
         }).ToList();
 
@@ -238,9 +242,11 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     {
         limit = Math.Clamp(limit, 1, MaxObservations);
         List<Observation> snapshot;
+        GatewayConfiguration config;
         lock (_stateLock)
         {
             snapshot = _observations.ToList();
+            config = _session?.Config ?? _holder.Current;
         }
 
         IEnumerable<Observation> rows = snapshot;
@@ -259,7 +265,8 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                 value = FormatValue(item.Value),
                 quality = item.Quality,
                 unit = item.Unit,
-                timestamp = item.Timestamp
+                timestamp = item.Timestamp,
+                topic = DaqTopics.PointTopic(config.Mqtt.TopicTemplate, config.Gateway.Site, item.DeviceId, item.Point)
             })
             .ToList();
 
@@ -382,6 +389,9 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             }
         }
     }
+
+    private static string StatusTopic(GatewayConfiguration config, string deviceId) =>
+        DaqTopics.StatusTopic(config.Mqtt.StatusTopic, config.Gateway.Site, deviceId);
 
     private static string? OptionText(IReadOnlyDictionary<string, object?> options, string key)
     {

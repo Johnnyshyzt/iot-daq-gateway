@@ -1,6 +1,6 @@
 # M1 PRD — 可视化采集网关（可售卖版）
 
-本文是 M1 的产品范围。采集（Collector）、管理 API（Api）和页面（Web，shadcn-admin）都在本仓库，由 `src/Host` 一个进程跑起来。JSON Schema 与示例配置树也在这里。以后可以再拆仓，当前没有第二个仓库。
+本文是 M1 的产品范围。采集（Collector）、管理 API（Api）和页面（Web，shadcn-admin）都在本仓库，由 `src/Host` 一个进程跑起来。JSON Schema 与示例配置树也在这里。以后可以再拆仓，当前没有第二个仓库。还没做完的售卖项见 [M1-release-checklist.md](M1-release-checklist.md)。
 
 ## 产品定调（已锁定）
 

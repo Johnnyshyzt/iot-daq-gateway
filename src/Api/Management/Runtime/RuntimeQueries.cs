@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
 using Gateway.Abstractions.Contracts;
+using Gateway.Abstractions.Topics;
 using Studio.Contracts;
 using Studio.Host.Config;
 
@@ -84,7 +85,7 @@ public sealed class RuntimeQueries
         var now = DateTimeOffset.UtcNow;
         var devices = published.Devices
             .OrderBy(device => device.Metadata.Id, StringComparer.Ordinal)
-            .Select(device => ToHealth(device, now))
+            .Select(device => ToHealth(device, now, published))
             .ToList();
 
         return new RuntimeStatus
@@ -165,6 +166,12 @@ public sealed class RuntimeQueries
                     Value = Sample(point, state, alarm),
                     Quality = quality,
                     Unit = point.Unit,
+                    Topic = TopicOrEmpty(
+                        () => DaqTopics.PointTopic(
+                            published.Mqtt.Spec.TopicTemplate,
+                            published.Gateway.Metadata.SiteId,
+                            device.Metadata.Id,
+                            point.Id)),
                     Timestamp = now
                 });
             }
@@ -252,7 +259,7 @@ public sealed class RuntimeQueries
             .ToList();
     }
 
-    private static DeviceHealthView ToHealth(DeviceDocument device, DateTimeOffset now)
+    private static DeviceHealthView ToHealth(DeviceDocument device, DateTimeOffset now, ConfigBundle published)
     {
         var status = !device.Spec.Enabled
             ? "disabled"
@@ -273,8 +280,25 @@ public sealed class RuntimeQueries
             Adapter = device.Spec.Adapter,
             Status = status,
             LastSeen = status == "online" ? now : null,
-            Message = message
+            Message = message,
+            StatusTopic = TopicOrEmpty(
+                () => DaqTopics.StatusTopic(
+                    published.Mqtt.Spec.StatusTopic,
+                    published.Gateway.Metadata.SiteId,
+                    device.Metadata.Id))
         };
+    }
+
+    private static string TopicOrEmpty(Func<string> expand)
+    {
+        try
+        {
+            return expand();
+        }
+        catch (ArgumentException)
+        {
+            return "";
+        }
     }
 
     private static string Sample(PointDefinition point, string state, string alarm)

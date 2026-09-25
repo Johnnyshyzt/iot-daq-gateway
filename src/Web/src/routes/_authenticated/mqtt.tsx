@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { MqttPage } from '@/features/daq/mqtt'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/mqtt')({
-  component: MqttPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/sinks/mqtt' })
+  },
 })

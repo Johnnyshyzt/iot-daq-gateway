@@ -78,6 +78,21 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Contains(revisions, item => item.Revision == initial && item.Action == "rollback");
     }
 
+    [Fact]
+    public void Enabled_device_without_points_fails_validation()
+    {
+        var store = new ConfigStore(_directory);
+        store.EnsureInitialized();
+        var points = store.GetPoints("cnc-01");
+        points.Spec.Points.Clear();
+        store.UpsertPoints("cnc-01", points);
+
+        var result = store.Validate();
+
+        Assert.False(result.Valid);
+        Assert.Contains(result.Issues, issue => issue.Severity == "error" && issue.Message.Contains("启用的点位", StringComparison.Ordinal));
+    }
+
     public void Dispose()
     {
         Directory.Delete(_directory, recursive: true);

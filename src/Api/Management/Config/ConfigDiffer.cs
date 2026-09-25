@@ -145,9 +145,10 @@ public static class ConfigDiffer
         Field(changes, path, "Client Id", before.Spec.Broker.ClientId, after.Spec.Broker.ClientId);
         Field(changes, path, "用户名环境变量", before.Spec.Broker.UsernameFromEnv, after.Spec.Broker.UsernameFromEnv);
         Field(changes, path, "密码环境变量", before.Spec.Broker.PasswordFromEnv, after.Spec.Broker.PasswordFromEnv);
+        Field(changes, path, "TLS", YesNo(before.Spec.Broker.Tls), YesNo(after.Spec.Broker.Tls));
         Field(changes, path, "主题模板", before.Spec.TopicTemplate, after.Spec.TopicTemplate);
         Field(changes, path, "QoS", before.Spec.Qos.ToString(System.Globalization.CultureInfo.InvariantCulture), after.Spec.Qos.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Field(changes, path, "Retain", YesNo(before.Spec.Retain), YesNo(after.Spec.Retain));
+        Field(changes, path, "保留消息", YesNo(before.Spec.Retain), YesNo(after.Spec.Retain));
         Field(changes, path, "状态主题", before.Spec.StatusTopic, after.Spec.StatusTopic);
     }
 

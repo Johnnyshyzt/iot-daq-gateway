@@ -61,7 +61,11 @@ public sealed class MqttObservationSink : INorthboundSink
 
     public async Task PublishObservationAsync(Observation observation, CancellationToken cancellationToken)
     {
-        var topic = DaqTopics.Point(_config.Gateway.Site, observation.DeviceId, observation.Point);
+        var topic = DaqTopics.PointTopic(
+            _config.Mqtt.TopicTemplate,
+            _config.Gateway.Site,
+            observation.DeviceId,
+            observation.Point);
         var payload = new ObservationEnvelope
         {
             GatewayId = _config.Gateway.Id,
@@ -79,7 +83,10 @@ public sealed class MqttObservationSink : INorthboundSink
 
     public async Task PublishStatusAsync(DeviceHealth health, CancellationToken cancellationToken)
     {
-        var topic = DaqTopics.Status(_config.Gateway.Site, health.DeviceId);
+        var topic = DaqTopics.StatusTopic(
+            _config.Mqtt.StatusTopic,
+            _config.Gateway.Site,
+            health.DeviceId);
         var payload = new StatusEnvelope
         {
             GatewayId = _config.Gateway.Id,
@@ -119,6 +126,7 @@ public sealed class MqttObservationSink : INorthboundSink
             .WithTopic(topic)
             .WithPayload(Encoding.UTF8.GetBytes(json))
             .WithQualityOfServiceLevel(_qos)
+            .WithRetainFlag(_config.Mqtt.Retain)
             .Build();
 
         await _client.PublishAsync(message, cancellationToken).ConfigureAwait(false);

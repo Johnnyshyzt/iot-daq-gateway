@@ -18,6 +18,7 @@ import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSinksMqttRouteImport } from './routes/_authenticated/sinks/mqtt'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -63,6 +64,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
+  id: '/sinks/mqtt',
+  path: '/sinks/mqtt',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/publish': typeof AuthenticatedPublishRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/publish'
     | '/runtime'
     | '/settings'
+    | '/sinks/mqtt'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/runtime'
     | '/settings'
     | '/'
+    | '/sinks/mqtt'
   id:
     | '__root__'
     | '/_authenticated'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
     | '/_authenticated/'
+    | '/_authenticated/sinks/mqtt'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -200,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sinks/mqtt': {
+      id: '/_authenticated/sinks/mqtt'
+      path: '/sinks/mqtt'
+      fullPath: '/sinks/mqtt'
+      preLoaderRoute: typeof AuthenticatedSinksMqttRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -211,6 +230,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedSinksMqttRoute: typeof AuthenticatedSinksMqttRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -221,6 +241,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedSinksMqttRoute: AuthenticatedSinksMqttRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

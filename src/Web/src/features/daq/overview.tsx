@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { studioApi, type ConfigView, type RuntimeStatus } from '@/lib/studio-api'
+import { describeError, studioApi, type ConfigView, type RuntimeStatus } from '@/lib/studio-api'
 import { PageShell } from './page-shell'
 
 export function OverviewPage() {
@@ -31,7 +31,7 @@ export function OverviewPage() {
           setError('')
         }
       } catch (err) {
-        if (!stop) setError(err instanceof Error ? err.message : '加载失败')
+        if (!stop) setError(describeError(err))
       }
     }
     void load()
@@ -59,22 +59,26 @@ export function OverviewPage() {
       <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
         <Card>
           <CardHeader>
-            <CardDescription>站点</CardDescription>
-            <CardTitle>{status?.name || config?.draft.gateway.metadata.name || '—'}</CardTitle>
+            <CardDescription>网关健康</CardDescription>
+            <CardTitle>{status?.mode === 'live' ? '本机采集' : status ? '模拟' : '…'}</CardTitle>
           </CardHeader>
-          <CardContent className='text-sm text-muted-foreground'>
-            {status?.siteId || config?.draft.gateway.metadata.siteId}
+          <CardContent className='space-y-1 text-sm text-muted-foreground'>
+            <div>{status?.name || config?.draft.gateway.metadata.name || '—'}</div>
+            <div>{status?.siteId || config?.draft.gateway.metadata.siteId}</div>
+            <Badge variant={status?.mode === 'live' ? 'default' : 'secondary'}>
+              {status?.state || '…'} · {status?.mode || '…'}
+            </Badge>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>运行态</CardDescription>
-            <CardTitle>{status?.mode === 'live' ? '本机采集' : '模拟'}</CardTitle>
+            <CardDescription>已发布修订</CardDescription>
+            <CardTitle className='truncate text-base'>
+              {(status?.activeRevision || config?.activeRevision || '—').slice(0, 12)}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Badge variant={status?.mode === 'live' ? 'default' : 'secondary'}>
-              {status?.mode || '…'}
-            </Badge>
+          <CardContent className='text-sm text-muted-foreground'>
+            {config?.dirty ? '草稿尚未发布' : '草稿已与发布对齐'}
           </CardContent>
         </Card>
         <Card>
@@ -84,22 +88,36 @@ export function OverviewPage() {
               {online} / {status?.devices.length ?? 0}
             </CardTitle>
           </CardHeader>
-          <CardContent className='text-sm text-muted-foreground'>
-            {config?.dirty ? '草稿尚未发布' : '草稿已与发布对齐'}
-          </CardContent>
+          <CardContent className='text-sm text-muted-foreground'>启用设备里状态为在线的数量</CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>当前修订</CardDescription>
-            <CardTitle className='truncate text-base'>
-              {(status?.activeRevision || config?.activeRevision || '—').slice(0, 12)}
-            </CardTitle>
+            <CardDescription>最近错误</CardDescription>
+            <CardTitle>{status?.recentErrors.length ?? 0}</CardTitle>
           </CardHeader>
           <CardContent className='text-sm text-muted-foreground'>
-            完整哈希在发布页
+            {(status?.recentErrors.length ?? 0) === 0 ? '暂无' : '见下方列表'}
           </CardContent>
         </Card>
       </div>
+      <Card className='mt-4'>
+        <CardHeader>
+          <CardTitle>最近错误</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(status?.recentErrors.length ?? 0) === 0 ? (
+            <p className='text-sm text-muted-foreground'>最近没有错误。</p>
+          ) : (
+            <ul className='space-y-1 text-sm'>
+              {status?.recentErrors.map((line, index) => (
+                <li key={`${index}-${line}`} className='font-mono text-xs break-all'>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </PageShell>
   )
 }

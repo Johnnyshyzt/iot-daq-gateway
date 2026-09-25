@@ -171,4 +171,6 @@ public sealed class MqttBrokerSpec
     public string? UsernameFromEnv { get; set; }
 
     public string? PasswordFromEnv { get; set; }
+
+    public bool Tls { get; set; }
 }
