@@ -13,7 +13,7 @@ M1 已锁定的边界：
 | 北向 | M1 只有 MQTT JSON。OPC UA 明确留到后续 |
 | 现场 | 采集必须跑在能访问机床的机器上，不是只放在云上的 API |
 
-无自有发那科机床时，销售和试点按 [pilot-acceptance.md](pilot-acceptance.md)：出发前走通 Fake，FOCAS 真机留到客户现场，第一次联调单列实施人天。约 10 分钟演示见 [fake-demo-script.md](fake-demo-script.md)。商业边界见 [pricing-one-pager.md](pricing-one-pager.md)，价格数字不在本文。
+无自有发那科机床时，销售和试点按 [pilot-acceptance.md](pilot-acceptance.md)：出发前走通 Fake，FOCAS 真机留到客户现场，第一次联调单列实施人天。约 10 分钟演示见 [fake-demo-script.md](fake-demo-script.md)。商业边界见 [pricing-one-pager.md](pricing-one-pager.md)，价格数字不在本文。试点合同附件、销售一页和安全口径见 [pilot-contract-appendix.md](pilot-contract-appendix.md)、[sales-one-pager.md](sales-one-pager.md)、[security-narrative.md](security-narrative.md)。
 
 ## 三个模块，一个 Host
 

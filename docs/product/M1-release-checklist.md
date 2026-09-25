@@ -23,7 +23,7 @@
 - [ ] 真机 FOCAS：在 Windows x64 采集机旁路放置现场 `Fwlib64.dll`，确认 `fanuc.focas` 能采到 `state` / `alarm` / `program`。本仓库没有机床，此项未在真机上验收。记录表见 [pilot-acceptance.md](pilot-acceptance.md)
 - [x] 设备测试：`POST /api/v1/devices/{id}/test` 对 `fanuc.focas` 走与采集相同的 `cnc_allclibhndl3`。缺库、位数不对、连接失败返回中文原因；无 `Fwlib64.dll` 时明确失败且进程不崩。不把 TCP 通断当成握手成功
 - [x] 现场包把 Studio 静态页、`data/seed` 和 Windows 服务自启放在同一台采集机上（zip 内有 `Host.exe`、`wwwroot`、`data/seed`、`install-service.bat`）。DLL 不进仓库、不进 zip
-- [x] 发版：推送 `v*` 标签后，用与 CI `pack-win-x64` 相同的脚本把 `iot-daq-gateway-<version>-win-x64.zip` 挂到 GitHub Release（不含 `Fwlib64.dll`）。`git tag vX.Y.Z && git push origin vX.Y.Z`。合并 PR 不会自动打标签。下一版标签是 `v0.4.0`（`Version` 已改为 `0.4.0`）
+- [x] 发版：推送 `v*` 标签后，用与 CI `pack-win-x64` 相同的脚本把 `iot-daq-gateway-<version>-win-x64.zip` 挂到 GitHub Release（不含 `Fwlib64.dll`）。`git tag vX.Y.Z && git push origin vX.Y.Z`。合并 PR 不会自动打标签。当前 Host 包标签是 `v0.4.0`。
 - [x] 密钥：MQTT 密码只走环境变量。`service.env` 由 `install-service.bat` 注入服务的 `MQTT_USER` / `MQTT_PASSWORD`（与 YAML 的 `usernameFromEnv` / `passwordFromEnv` 同名）
 - [x] 账号：本机演示仍可用 `admin` / `admin` 等桩账号，页面标明只限 localhost。现场包生成一次性引导密码，首次登录必须修改。角色仍是本地 admin / engineer / viewer
 - [x] 运维：升级时保留 `data/published`、备份与恢复、日志位置、磁盘写满时的已知行为，见 [ops-field.md](../ops-field.md)、[field-fault-guide.md](../field-fault-guide.md)、[pilot-acceptance.md](pilot-acceptance.md)
@@ -37,4 +37,4 @@
 - [ ] 真正拦截请求的许可证服务
 - [ ] Excel 直接导入、历史曲线、程序下发
 
-销售材料不挡本清单：约 10 分钟 Fake 演示见 [fake-demo-script.md](fake-demo-script.md)，商业边界见 [pricing-one-pager.md](pricing-one-pager.md)。价格数字不写在仓库里。
+销售材料不挡本清单：约 10 分钟 Fake 演示见 [fake-demo-script.md](fake-demo-script.md)，商业边界见 [pricing-one-pager.md](pricing-one-pager.md)。试点合同附件、销售一页和安全口径见 [pilot-contract-appendix.md](pilot-contract-appendix.md)、[sales-one-pager.md](sales-one-pager.md)、[security-narrative.md](security-narrative.md)。价格数字不写在仓库里。
