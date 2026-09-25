@@ -73,18 +73,12 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
         Assert.Equal("cnc-09", saved.Metadata.Id);
 
         var points = await Read<PointSetDocument>(await client.GetAsync("/api/v1/config/points/cnc-09"));
-        Assert.Contains(points.Spec.Points, point => point.Id == "state");
-        points.Spec.Points.Add(new PointDefinition
-        {
-            Id = "spindle",
-            Address = "cnc/spindle",
-            DataType = "int",
-            Unit = "rpm",
-            Scale = 1,
-            Deadband = 5,
-            Enabled = true
-        });
-        await Read<PointSetDocument>(await client.PutAsJsonAsync("/api/v1/config/points/cnc-09", points, Json));
+        var statePoint = Assert.Single(points.Spec.Points, point => point.Id == "state");
+        statePoint.Address = "typed-by-hand";
+        statePoint.Unit = "mode";
+        var savedPoints = await Read<PointSetDocument>(await client.PutAsJsonAsync("/api/v1/config/points/cnc-09", points, Json));
+        Assert.Equal("cnc/statinfo", Assert.Single(savedPoints.Spec.Points, point => point.Id == "state").Address);
+        Assert.Equal("mode", Assert.Single(savedPoints.Spec.Points, point => point.Id == "state").Unit);
 
         var mqtt = await Read<MqttSinkDocument>(await client.GetAsync("/api/v1/config/sinks/mqtt"));
         mqtt.Spec.Broker.ClientId = "studio-api";
@@ -113,7 +107,7 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
         Assert.Contains(status.Devices, item => item.Id == "cnc-09" && item.Status == "online");
 
         var observations = await Read<ObservationList>(await client.GetAsync("/api/v1/runtime/observations?deviceId=cnc-09&limit=20"));
-        Assert.Contains(observations.Observations, item => item.Point == "spindle");
+        Assert.Contains(observations.Observations, item => item.Point == "state" && item.Unit == "mode");
 
         var rolled = await Read<RollbackResult>(await client.PostAsJsonAsync(
             "/api/v1/config/rollback",
@@ -260,6 +254,62 @@ public sealed class StudioApiTests : IClassFixture<StudioApiFactory>
             {
                 Directory.Delete(directory, recursive: true);
             }
+        }
+    }
+
+    [Fact]
+    public async Task Fanuc_catalog_lists_the_three_points_and_rejects_other_adapters()
+    {
+        using var client = _factory.CreateClient();
+        await Authorize(client, "engineer", "engineer");
+
+        var catalog = await Read<PointCatalogDocument>(await client.GetAsync("/api/v1/catalog/points?adapter=fanuc.focas"));
+        Assert.Equal(["state", "alarm", "program"], catalog.Points.Select(point => point.Id).ToArray());
+        Assert.Equal("cnc/statinfo", Assert.Single(catalog.Points, point => point.Id == "state").Address);
+        Assert.Equal("cnc/alarm", Assert.Single(catalog.Points, point => point.Id == "alarm").Address);
+        Assert.Equal("cnc/program", Assert.Single(catalog.Points, point => point.Id == "program").Address);
+        Assert.Contains("不是通用 PLC 地址", catalog.Message, StringComparison.Ordinal);
+
+        var missing = await client.GetAsync("/api/v1/catalog/points?adapter=modbus");
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        var error = await missing.Content.ReadFromJsonAsync<ApiError>(Json);
+        Assert.Equal("catalog_unsupported", error!.Code);
+        Assert.Contains("发那科", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Validate_rejects_unknown_fanuc_point_id()
+    {
+        using var client = _factory.CreateClient();
+        await Authorize(client, "engineer", "engineer");
+        var points = await Read<PointSetDocument>(await client.GetAsync("/api/v1/config/points/cnc-01"));
+        var original = JsonSerializer.Deserialize<PointSetDocument>(JsonSerializer.Serialize(points, Json), Json);
+        Assert.NotNull(original);
+        try
+        {
+            points.Spec.Points.Add(new PointDefinition
+            {
+                Id = "spindle",
+                Address = "cnc/spindle",
+                DataType = "string",
+                Enabled = true
+            });
+            await Read<PointSetDocument>(await client.PutAsJsonAsync("/api/v1/config/points/cnc-01", points, Json));
+
+            var validation = await Read<ValidationResult>(await client.PostAsync("/api/v1/config/validate", content: null));
+            Assert.False(validation.Valid);
+            Assert.Contains(
+                validation.Issues,
+                issue => issue.Severity == "error"
+                    && issue.Message.Contains("spindle", StringComparison.Ordinal)
+                    && issue.Message.Contains("目录", StringComparison.Ordinal));
+
+            var publish = await client.PostAsJsonAsync("/api/v1/config/publish", new PublishRequest { Note = "bad point" }, Json);
+            Assert.Equal(HttpStatusCode.BadRequest, publish.StatusCode);
+        }
+        finally
+        {
+            await client.PutAsJsonAsync("/api/v1/config/points/cnc-01", original, Json);
         }
     }
 

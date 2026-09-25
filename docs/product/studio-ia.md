@@ -41,9 +41,9 @@ Studio
 
 ### 点位 `/points`
 
-表格式编辑，可按 `deviceId` 过滤。保存粒度是整份 PointSet：`PUT /api/v1/config/points/{deviceId}`。M1 示例点与现有 Fake / FOCAS 桩一致：`state`（`cnc/statinfo`）、`alarm`（`cnc/alarm`）、`program`（`cnc/program`）。
+表格式编辑，可按 `deviceId` 过滤。保存粒度是整份 PointSet：`PUT /api/v1/config/points/{deviceId}`。M1 只有发那科目录：`state`、`alarm`、`program`（`fanuc.fake` 与 `fanuc.focas` 共用，`GET /api/v1/catalog/points?adapter=`）。页面从目录添加或开关启用，不提供通用地址栏。YAML 里的 `address`（`cnc/statinfo`、`cnc/alarm`、`cnc/program`）由目录填写，采集按点位 id。
 
-CSV 导入导出在点位页完成。导入结果必须变成符合 `point-set.schema.json` 的文档再写入草稿，不能另存一套表。Excel 先另存为 CSV。
+CSV 导入导出在点位页完成。导入只接受目录中的点位 Id，地址列不当成协议地址。结果必须变成符合 `point-set.schema.json` 的文档再写入草稿。Excel 先另存为 CSV。其他品牌还没有目录。
 
 ### 北向 MQTT `/sinks/mqtt`
 

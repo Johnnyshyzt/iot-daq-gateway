@@ -12,7 +12,7 @@
 
 - [ ] **0:00 登录。** `admin` / `admin`。说：这是 localhost 演示账号，现场 zip 会改成一次性引导密码。
 - [ ] **0:30 设备。** 打开设备页，保留或新建一台 `fanuc.fake`（Id 用字母开头，例如 `cnc-01`）。连接测试应出现「Fake 适配器握手成功（未连接真实机床）」。说：测试成功只说明桩在，没有机床。
-- [ ] **2:00 点位。** 打开该设备的点位，确认有 `state`、`alarm`、`program`（地址分别是 `cnc/statinfo`、`cnc/alarm`、`cnc/program`）。说：点表在页面里改，Excel 先另存 CSV 再导入。不要打开 YAML。
+- [ ] **2:00 点位。** 打开该设备的点位，确认有 `state`、`alarm`、`program`。说：这是发那科适配器目录里的三个点，不是手填的 PLC 地址。可改启用、单位、倍率和死区。Excel 先另存 CSV 再导入，Id 必须在目录里。不要打开 YAML。
 - [ ] **4:00 MQTT 页。** Broker 地址指向刚才那个订阅端，`clientId` 在这台机器上唯一。主题模板保持 `daq/{site}/{deviceId}/{point}`，状态主题保持 `daq/{site}/{deviceId}/$status`。需要账号时只填变量名 `MQTT_USER` / `MQTT_PASSWORD`，口令放在进程环境或现场的 `service.env`，不写进页面。无 Broker 则跳过订阅，仍把地址留成演示默认值。
 - [ ] **6:00 校验、发布。** 打开发布页。先校验：有「错误」就不发布，按路径改。通过后发布。说：草稿在 `data/draft`，采集只读 `data/published`。同一进程马上重载，不用手写 YAML，也不用为此重启。
 - [ ] **7:30 运行态。** `mode` 为 `live`，这台 Fake 设备 online。`state` 大约每 20 秒一档，在 `IDLE`、`RUNNING`、`ALARM` 之间转，`program` 为 `O0001`。说：这是时钟相位，不是机床状态。

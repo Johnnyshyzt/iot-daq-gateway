@@ -51,7 +51,7 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256,
-                "description": "Southbound address. Fanuc samples use cnc/statinfo, cnc/alarm, and cnc/program."
+                "description": "Adapter-internal address, not a free-form protocol address. For fanuc.fake and fanuc.focas, Studio fills this from the Fanuc point catalog: state=cnc/statinfo, alarm=cnc/alarm, program=cnc/program. Collection uses the point id."
               },
               "dataType": {
                 "type": "string",

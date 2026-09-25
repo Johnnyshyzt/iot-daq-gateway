@@ -138,6 +138,26 @@ export type DeviceDocument = {
   }
 }
 
+export type PointCatalogEntry = {
+  id: string
+  dataType: string
+  description: string
+  scale: number
+  deadband: number
+  address: string
+}
+
+export type PointCatalogDocument = {
+  adapter: string
+  scope: string
+  message: string
+  points: PointCatalogEntry[]
+}
+
+export function isFanucAdapter(adapter: string | undefined) {
+  return adapter === 'fanuc.fake' || adapter === 'fanuc.focas'
+}
+
 export type PointDefinition = {
   id: string
   address: string

@@ -125,11 +125,24 @@ public static partial class ConfigValidator
                 Error(issues, path, "点位文档的 apiVersion 或 kind 不正确");
             }
 
+            var device = bundle.Devices.First(item =>
+                string.Equals(item.Metadata.Id, deviceId, StringComparison.OrdinalIgnoreCase));
+            var fanuc = FanucPointCatalog.IsFanuc(device.Spec.Adapter);
             var pointIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var point in set.Spec.Points)
             {
+                point.Id = (point.Id ?? "").Trim();
+                var known = fanuc && FanucPointCatalog.TryNormalize(point);
                 var pointId = point.Id ?? "";
                 var pointPath = $"{path}/{pointId}";
+                if (fanuc && !known)
+                {
+                    Error(
+                        issues,
+                        pointPath,
+                        $"点位 Id「{pointId}」不在发那科适配器目录中。只能使用 {FanucPointCatalog.IdList}。这些点由适配器采集，不是可以手填的协议地址。");
+                }
+
                 if (!SafeId().IsMatch(pointId))
                 {
                     Error(issues, pointPath, "点位 Id 只能包含字母、数字、下划线和连字符");
@@ -139,7 +152,7 @@ public static partial class ConfigValidator
                     Error(issues, pointPath, "点位 Id 重复");
                 }
 
-                if (string.IsNullOrWhiteSpace(point.Address))
+                if (!fanuc && string.IsNullOrWhiteSpace(point.Address))
                 {
                     Error(issues, $"{pointPath}.address", "请填写点位地址");
                 }

@@ -23,6 +23,8 @@
 
 ## 采集点位（与 Fake 相同）
 
+Studio 点位页从同一目录添加这三项（`fanuc.fake` 与 `fanuc.focas`），不提供通用地址栏。校验和发布会拒绝目录以外的点位 Id。YAML 里的 `cnc/statinfo`、`cnc/alarm`、`cnc/program` 是适配器内部约定，采集按点位 id。
+
 | 点位 | 来源 | 取值 |
 | --- | --- | --- |
 | `state` | `cnc_statinfo`（16i/0i/30i 的 `ODBST`） | `IDLE` / `RUNNING` / `ALARM` |

@@ -66,12 +66,7 @@ public static class ConfigDefaults
         Metadata = new PointSetMetadata { DeviceId = deviceId },
         Spec = new PointSetSpec
         {
-            Points =
-            [
-                Point("state", "cnc/statinfo"),
-                Point("alarm", "cnc/alarm"),
-                Point("program", "cnc/program")
-            ]
+            Points = FanucPointCatalog.DefaultPoints()
         }
     };
 
@@ -105,14 +100,4 @@ public static class ConfigDefaults
         }
     };
 
-    private static PointDefinition Point(string id, string address) => new()
-    {
-        Id = id,
-        Address = address,
-        DataType = "string",
-        Unit = "",
-        Scale = 1,
-        Deadband = 0,
-        Enabled = true
-    };
 }

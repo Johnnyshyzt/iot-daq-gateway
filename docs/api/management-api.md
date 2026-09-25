@@ -133,7 +133,14 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
 | `GET` | `/api/v1/config/points/{deviceId}` | PointSet |
 | `PUT` | `/api/v1/config/points/{deviceId}` | 写入 `draft/points/{deviceId}.yaml` |
 
-路径必须等于 `metadata.deviceId`。设备可以尚未发布；点表可以先于发布单独保存。发布校验会要求 `deviceId` 能对上设备。
+路径必须等于 `metadata.deviceId`。设备可以尚未发布；点表可以先于发布单独保存。发布校验会要求 `deviceId` 能对上设备。`fanuc.fake` / `fanuc.focas` 的点位 Id 必须在发那科目录（`state`、`alarm`、`program`）中，否则校验失败且发布被拒绝。已知 Id 的 `address` 由目录填写（`cnc/statinfo`、`cnc/alarm`、`cnc/program`），用户不必手填协议地址。`PUT` 会把已知 Id 的地址规范成目录值；未知 Id 可以留在草稿里，但过不了校验。
+
+### 点位目录
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/catalog/points?adapter=fanuc.fake` | 发那科目录。`fanuc.focas` 返回同一份 |
+| `GET` | `/api/v1/catalog/points?adapter=` 其他值 | `404 catalog_unsupported`。M1 没有别的品牌目录 |
 
 ### MQTT
 

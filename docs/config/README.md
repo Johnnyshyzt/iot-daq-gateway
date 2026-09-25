@@ -41,15 +41,15 @@ secrets.env.example       # 只作示例，不参与 hash
 
 M1 点位主题只由 MqttSink 的 `topicTemplate` 生成。`mappings/` 里若有文件，校验失败（`unsupported`），发布被拒绝，这些文件也不进入 hash。独立映射表要等合同增加 kind 之后再启用。
 
-点位地址与现有 Fake / FOCAS 桩一致，见 [focas.md](../focas.md)：
+发那科设备（`fanuc.fake` / `fanuc.focas`）的点位来自适配器目录，不是手填的协议地址。Studio 校验和发布只接受下面三个 id，并把 `address` 写成目录里的内部约定。采集按点位 id，不按地址栏。见 [focas.md](../focas.md)：
 
-| 点位 id | address | 运行时含义 |
+| 点位 id | 内部 address（目录填写） | 运行时含义 |
 | --- | --- | --- |
 | `state` | `cnc/statinfo` | `IDLE` / `RUNNING` / `ALARM` |
 | `alarm` | `cnc/alarm` | 报警号；正常为 `0` |
 | `program` | `cnc/program` | `O0001` 形式 |
 
-示例 PointSet 把这三点标成 `dataType: string`。v1 加载会把启用的点位 id 交给 Fake 适配器。`state` / `alarm` / `program` 仍按相位生成，其中 `alarm` 在采集模型里仍是整数；其它点位值为 `0`。没有点表文件时，Fake 继续只发内置的三个点。
+示例 PointSet 把这三点标成 `dataType: string`。v1 加载会把启用的点位 id 交给 Fake 适配器。`state` / `alarm` / `program` 仍按相位生成，其中 `alarm` 在采集模型里仍是整数。没有点表文件时，Fake 继续只发内置的三个点。目录以外的 id 不能通过 Studio 发布。
 
 ## 工作区（草稿 / 发布 / 回滚）
 

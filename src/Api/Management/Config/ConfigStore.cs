@@ -219,19 +219,24 @@ public sealed partial class ConfigStore
         {
             EnsureSafeId(deviceId);
             var bundle = ReadBundle(_draft);
-            FindDevice(bundle, deviceId);
+            var device = FindDevice(bundle, deviceId);
             document.ApiVersion = StudioApi.Version;
             document.Kind = "PointSet";
             document.Metadata ??= new PointSetMetadata();
             document.Metadata.DeviceId = deviceId;
             document.Spec ??= new PointSetSpec();
             document.Spec.Points ??= [];
+            var fanuc = FanucPointCatalog.IsFanuc(device.Spec.Adapter);
             foreach (var point in document.Spec.Points)
             {
                 point.Id = (point.Id ?? "").Trim();
                 point.DataType = (point.DataType ?? "").Trim().ToLowerInvariant();
                 point.Address = (point.Address ?? "").Trim();
                 point.Unit ??= "";
+                if (fanuc)
+                {
+                    FanucPointCatalog.TryNormalize(point);
+                }
             }
 
             var index = bundle.PointSets.FindIndex(set => string.Equals(set.Metadata.DeviceId, deviceId, StringComparison.Ordinal));
@@ -330,6 +335,9 @@ public sealed partial class ConfigStore
                 return new PublishOutcome { Issues = validation.Issues };
             }
 
+            // Fanuc catalog ids get a fixed internal address. Persist that into the draft
+            // so a successful publish does not leave a hand-edited address behind.
+            WriteBundle(_draft, draft);
             var hash = CanonicalRevision.Compute(draft);
             var current = CanonicalRevision.Compute(ReadBundle(_published));
             var now = DateTimeOffset.UtcNow;

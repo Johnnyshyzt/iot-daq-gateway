@@ -63,6 +63,48 @@ public sealed class V1BundleTests
     }
 
     [Fact]
+    public async Task Fake_without_point_list_emits_the_three_standard_points()
+    {
+        var adapter = new FakeFanucAdapter(
+            "cnc-01",
+            new Dictionary<string, object?>(),
+            NullLogger<FakeFanucAdapter>.Instance);
+        await adapter.ConnectAsync(CancellationToken.None);
+        var observations = await adapter.CollectAsync(CancellationToken.None);
+
+        Assert.Equal(["state", "alarm", "program"], observations.Select(item => item.Point).ToArray());
+        var state = observations.Single(item => item.Point == "state").Value?.ToString();
+        Assert.True(state is "IDLE" or "RUNNING" or "ALARM", state);
+        Assert.Equal("O0001", observations.Single(item => item.Point == "program").Value);
+    }
+
+    [Fact]
+    public async Task Address_typos_are_ignored_when_the_point_ids_are_the_catalog_ids()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "examples", "v1");
+        var directory = Directory.CreateTempSubdirectory("v1-address").FullName;
+        CopyDirectory(source, directory);
+        var pointsPath = Path.Combine(directory, "points", "cnc-01.yaml");
+        var yaml = File.ReadAllText(pointsPath)
+            .Replace("cnc/statinfo", "D100", StringComparison.Ordinal)
+            .Replace("cnc/alarm", "D101", StringComparison.Ordinal)
+            .Replace("cnc/program", "D102", StringComparison.Ordinal);
+        File.WriteAllText(pointsPath, yaml);
+
+        var loaded = V1BundleLoader.Load(directory);
+        var device = Assert.Single(loaded.Configuration.Devices);
+        Assert.Equal("state,alarm,program", device.Options["points"]?.ToString());
+
+        var adapter = new FakeFanucAdapter(device.Id, device.Options, NullLogger<FakeFanucAdapter>.Instance);
+        await adapter.ConnectAsync(CancellationToken.None);
+        var observations = await adapter.CollectAsync(CancellationToken.None);
+        Assert.Equal(["state", "alarm", "program"], observations.Select(item => item.Point).ToArray());
+        var state = observations.Single(item => item.Point == "state").Value?.ToString();
+        Assert.True(state is "IDLE" or "RUNNING" or "ALARM", state);
+        Assert.Equal("O0001", observations.Single(item => item.Point == "program").Value);
+    }
+
+    [Fact]
     public async Task Fake_adapter_emits_configured_points()
     {
         var adapter = new FakeFanucAdapter(

@@ -13,7 +13,7 @@
 | 测试成功，原文「Fake 适配器握手成功（未连接真实机床）」 | 设备是 `fanuc.fake` | 这是销售/开发桩。`state` 按大约 60 秒相位变化 |
 | 日志反复 `MQTT connect failed … Retry in 5s`，并有 `MQTT not connected; drop publish` | Broker 拒绝或连不上。采集继续，当次 MQTT 被丢掉 | 核对已发布的地址、端口、`clientId`，以及 `service.env` 里的 `MQTT_USER` / `MQTT_PASSWORD`。改文件后要管理员重跑 `install-service.bat`。直到日志出现 `MQTT connected to` |
 | 两台网关轮流掉线，日志 `MQTT disconnected` | `clientId` 相同 | 每台用不同的 `clientId`，发布后再看 |
-| 发布页「错误 · 路径：中文说明」，提示「草稿未通过校验，未发布」 | 草稿不合法。`data\published` 不会被这次发布改掉 | 按路径改草稿。常见：至少一台设备、设备地址、启用设备至少一个启用点位、Broker 地址、Client Id、主题模板含 `{deviceId}` 和 `{point}`、适配器只能是 `fanuc.fake` 或 `fanuc.focas`、Id 重复。`警告` 不挡发布 |
+| 发布页「错误 · 路径：中文说明」，提示「草稿未通过校验，未发布」 | 草稿不合法。`data\published` 不会被这次发布改掉 | 按路径改草稿。常见：至少一台设备、设备地址、启用设备至少一个启用点位、点位 Id 不在发那科目录（只能是 `state`、`alarm`、`program`）、Broker 地址、Client Id、主题模板含 `{deviceId}` 和 `{point}`、适配器只能是 `fanuc.fake` 或 `fanuc.focas`、Id 重复。`警告` 不挡发布 |
 | 发布或保存变成「服务器内部错误」 | 不是校验失败。磁盘满时写 YAML 会走到这里 | 见 [ops-field.md](ops-field.md) |
 | 点了发布但角色是 viewer | 「当前角色无权修改配置」 | 用 `engineer` 或 `admin` |
 | 现场包用 `admin` / `admin` 登不上 | 现场模式不接受演示口令。一次性密码在 `data\auth\bootstrap-password.txt`，登录后必须改密（至少 8 位）。三个角色仍是本机账号 | 打开该文件登录并改密。三个账号都改完后文件会删除。忘记密码：停服务，删 `data\auth`，再启动，会重新生成引导文件；`data\published` 还在 |
