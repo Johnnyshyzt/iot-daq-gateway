@@ -382,7 +382,7 @@ export function PointsPage() {
         </div>
       }
     >
-      <div className='grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]'>
+      <div className='grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]'>
         <Card className='gap-0 overflow-hidden py-0'>
           <div className='border-b px-4 py-3'>
             <CardTitle className='text-base'>模板</CardTitle>
@@ -434,11 +434,11 @@ export function PointsPage() {
         </Card>
 
         <div className='grid min-w-0 gap-4'>
-          <Card>
+          <Card className='min-w-0'>
             <CardHeader>
               <CardTitle>模板点表</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className='min-w-0'>
               {!templateId ? (
                 <div className='grid gap-3'>
                   <p className='text-sm text-muted-foreground'>
@@ -492,7 +492,7 @@ export function PointsPage() {
                           return (
                             <TableRow key={`${point.id}-${index}`}>
                               <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
-                              <TableCell className='max-w-64 text-sm text-muted-foreground'>
+                              <TableCell className='max-w-64 whitespace-normal text-sm text-muted-foreground'>
                                 {!catalog
                                   ? '正在读取发那科点位目录…'
                                   : entry
@@ -566,7 +566,7 @@ export function PointsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className='min-w-0'>
             <CardHeader>
               <CardTitle>使用此模板的设备</CardTitle>
             </CardHeader>
