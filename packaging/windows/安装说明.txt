@@ -25,5 +25,5 @@ IoT 采集网关 — Windows x64 现场包
 包里的 gateway.focas.yaml 只是参考，服务不会自动加载它。
 日志：本目录 logs\gateway-yyyyMMdd.log（保留约 14 天）。
 
-真机验收需要现场机床和授权 DLL：订阅 daq/# ，看设备 $status 变为 online。
-本仓库不能代替这一步。
+本机可先用 fanuc.fake 验收：订阅 daq/# ，$status=online，state 按大约 60 秒相位变化。
+真机验收需要现场机床和客户自备的 64 位 Fwlib64.dll。缺库时设备 offline，进程不退出。本包没有真机验收记录。

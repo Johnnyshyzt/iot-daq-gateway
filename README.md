@@ -139,7 +139,7 @@ docker compose -f docker/docker-compose.yml up --build
 5. 管理员运行 `install-service.bat` → 注入服务环境并让 `IotDaqGateway` 开机自启
 6. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
 
-卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。
+卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。升级与备份见 [docs/ops-field.md](docs/ops-field.md)，故障对照见 [docs/field-fault-guide.md](docs/field-fault-guide.md)，无自有机床时的试点验收见 [docs/product/pilot-acceptance.md](docs/product/pilot-acceptance.md)。Fake 演示见 [docs/product/fake-demo-script.md](docs/product/fake-demo-script.md)，商业边界见 [docs/product/pricing-one-pager.md](docs/product/pricing-one-pager.md)。
 
 **不要把 Linux Docker 当作生产 FOCAS 路径。**
 
