@@ -17,7 +17,7 @@ M1 已锁定的边界：
 ```
 ┌─────────────────────────────────────────────┐
 │  Config Studio（studio/，本仓库）            │
-│  Vue SPA + Studio.Host /api/v1              │
+│  React（shadcn-admin）+ Studio.Host /api/v1 │
 └──────────────────┬──────────────────────────┘
                    │ studio/data/published
                    │ 127.0.0.1:5081 状态与重载

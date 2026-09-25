@@ -27,7 +27,7 @@ MQTT 密码只写环境变量名（`passwordFromEnv`），不把明文密码写�
 studio/Studio.sln
 studio/src/Studio.Contracts/   文档和 API 模型
 studio/src/Studio.Host/       ASP.NET Core 管理 API，可选用静态页托管前端
-studio/web/                   Vue 3 + Vite
+studio/web/                   React + Vite + shadcn-admin 壳
 studio/tests/Studio.Tests/    草稿、发布、回滚
 ```
 
@@ -57,6 +57,8 @@ dotnet run --project studio/src/Studio.Host
 
 ## 运行页面
 
+前端是 React + Vite，界面壳来自 [shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT，见 [studio/web/README.md](web/README.md)）。导航和表单是中文。CI 用 npm；本机也可以用 pnpm。
+
 开发时前端单独起，把 `/api` 代理到 5080：
 
 ```bash
@@ -78,7 +80,7 @@ dotnet run --project studio/src/Studio.Host
 
 然后打开 `http://127.0.0.1:5080`。`npm run build` 之后如果 Host 已经在跑，需要重启一次才能看到新页面。
 
-页面（中文）：概览、设备、点位、北向 MQTT、发布、运行态、系统。点位支持 CSV 导入导出；Excel 请另存为 CSV。
+页面：概览、设备、点位、北向 MQTT、发布、运行态、系统。点位支持 CSV 导入导出；Excel 请另存为 CSV。
 
 ## 和 Gateway.Host 一起跑
 
