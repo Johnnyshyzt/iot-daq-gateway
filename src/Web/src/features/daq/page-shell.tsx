@@ -10,11 +10,15 @@ export function PageShell({
   description,
   actions,
   children,
+  fluid,
+  className,
 }: {
   title: string
   description?: string
   actions?: React.ReactNode
   children: React.ReactNode
+  fluid?: boolean
+  className?: string
 }) {
   return (
     <>
@@ -24,7 +28,7 @@ export function PageShell({
         <ConfigDrawer />
         <ProfileDropdown />
       </Header>
-      <Main>
+      <Main fluid={fluid} className={className}>
         <div className='mb-4 flex flex-wrap items-end justify-between gap-3'>
           <div>
             <h1 className='text-2xl font-bold tracking-tight'>{title}</h1>

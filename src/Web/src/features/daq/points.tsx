@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -349,6 +350,8 @@ export function PointsPage() {
     <PageShell
       title='点位模板'
       description={description}
+      fluid
+      className='py-4'
       actions={
         <div className='flex flex-wrap gap-2'>
           <Button variant='outline' onClick={exportCsv} disabled={!templateId}>
@@ -382,13 +385,25 @@ export function PointsPage() {
         </div>
       }
     >
-      <div className='grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]'>
+      <div className='grid w-full min-w-0 items-start gap-3 lg:grid-cols-[14rem_minmax(0,1fr)]'>
         <Card className='gap-0 overflow-hidden py-0'>
-          <div className='border-b px-4 py-3'>
-            <CardTitle className='text-base'>模板</CardTitle>
+          <div className='flex items-center justify-between gap-2 border-b px-2 py-1.5'>
+            <CardTitle className='text-sm'>模板</CardTitle>
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='size-7'
+              aria-label='新建模板'
+              title='新建模板'
+              disabled={!writable || !catalog}
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus />
+            </Button>
           </div>
-          <ScrollArea className='h-64 lg:h-[min(36rem,calc(100vh-14rem))]'>
-            <nav aria-label='点位模板' className='grid gap-4 p-2'>
+          <ScrollArea className='h-64 lg:h-[min(36rem,calc(100vh-12rem))]'>
+            <nav aria-label='点位模板' className='grid gap-2 p-1.5'>
               {groups.length === 0 ? (
                 <p className='px-2 py-3 text-sm text-muted-foreground'>还没有点位模板。</p>
               ) : (
@@ -422,23 +437,14 @@ export function PointsPage() {
               )}
             </nav>
           </ScrollArea>
-          <div className='border-t p-3'>
-            <Button
-              className='w-full'
-              disabled={!writable || !catalog}
-              onClick={() => setCreateOpen(true)}
-            >
-              新建模板
-            </Button>
-          </div>
         </Card>
 
-        <div className='grid min-w-0 gap-4'>
-          <Card className='min-w-0'>
-            <CardHeader>
+        <div className='grid min-w-0 gap-3'>
+          <Card className='min-w-0 gap-4 py-4'>
+            <CardHeader className='px-4'>
               <CardTitle>模板点表</CardTitle>
             </CardHeader>
-            <CardContent className='min-w-0'>
+            <CardContent className='min-w-0 px-4'>
               {!templateId ? (
                 <div className='grid gap-3'>
                   <p className='text-sm text-muted-foreground'>
@@ -449,7 +455,7 @@ export function PointsPage() {
                   {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
                 </div>
               ) : (
-                <div className='grid gap-4'>
+                <div className='grid gap-3'>
                   <div className='grid max-w-md gap-1.5'>
                     <Label htmlFor='template-display-name'>显示名称</Label>
                     <Input
@@ -566,11 +572,11 @@ export function PointsPage() {
             </CardContent>
           </Card>
 
-          <Card className='min-w-0'>
-            <CardHeader>
+          <Card className='min-w-0 gap-4 py-4'>
+            <CardHeader className='px-4'>
               <CardTitle>使用此模板的设备</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className='px-4'>
               {!templateId ? (
                 <p className='text-sm text-muted-foreground'>选择模板后，这里列出引用它的设备。设备页只选择模板，不重填点位。</p>
               ) : users.length === 0 ? (
