@@ -56,6 +56,20 @@ public static class StudioEndpoints
             return Results.NoContent();
         }).RequireWriter();
 
+        api.MapGet("/catalog/points", (string? adapter) =>
+        {
+            var kind = (adapter ?? "").Trim().ToLowerInvariant();
+            if (!FanucPointCatalog.IsFanuc(kind))
+            {
+                return ApiResults.Error(
+                    StatusCodes.Status404NotFound,
+                    "catalog_unsupported",
+                    "M1 只提供发那科适配器点位目录（fanuc.fake、fanuc.focas）。其他品牌还没有目录，不能按通用地址编辑。");
+            }
+
+            return ApiResults.Ok(FanucPointCatalog.Describe(kind));
+        });
+
         api.MapGet("/config/points/{deviceId}", (string deviceId, ConfigStore store) => ApiResults.Ok(store.GetPoints(deviceId)));
         api.MapPut("/config/points/{deviceId}", (string deviceId, PointSetDocument body, ConfigStore store) =>
             ApiResults.Ok(store.UpsertPoints(deviceId, body))).RequireWriter();
