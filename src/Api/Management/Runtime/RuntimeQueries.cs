@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Topics;
@@ -19,19 +20,22 @@ public sealed class RuntimeQueries
     private readonly ILogger<RuntimeQueries> _logger;
     private readonly ICollectorControl? _collector;
     private readonly IFocasConnectProbe _focas;
+    private readonly IDeviceConnectionTester? _tester;
 
     public RuntimeQueries(
         ConfigStore store,
         IConfiguration configuration,
         ILogger<RuntimeQueries> logger,
         IEnumerable<ICollectorControl> collectors,
-        IFocasConnectProbe focas)
+        IFocasConnectProbe focas,
+        IEnumerable<IDeviceConnectionTester> testers)
     {
         _store = store;
         _configuration = configuration;
         _logger = logger;
         _collector = collectors.FirstOrDefault();
         _focas = focas;
+        _tester = testers.FirstOrDefault();
     }
 
     public async Task<RuntimeStatus> StatusAsync(CancellationToken cancellationToken)
@@ -189,40 +193,99 @@ public sealed class RuntimeQueries
         Lines = _store.ReadLogTail(lines).ToList()
     };
 
-    public async Task<DeviceTestResult> TestDeviceAsync(string id, CancellationToken cancellationToken)
+    public Task<DeviceTestResult> TestDeviceAsync(string id, CancellationToken cancellationToken)
     {
-        var device = _store.GetDevice(id);
-        if (string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal)
-            || device.Spec.Adapter.EndsWith(".sim", StringComparison.Ordinal))
+        return TestCoreAsync(_store.GetDevice(id), cancellationToken);
+    }
+
+    public Task<DeviceTestResult> TestUnsavedAsync(DeviceDocument? device, CancellationToken cancellationToken)
+    {
+        if (device?.Spec is null || string.IsNullOrWhiteSpace(device.Spec.Adapter))
+        {
+            return Task.FromResult(new DeviceTestResult
+            {
+                Ok = false,
+                Message = "请选择适配器后再测试连接。"
+            });
+        }
+
+        device.Metadata ??= new DeviceMetadata();
+        device.Spec.Connection ??= new DeviceConnection();
+        return TestCoreAsync(device, cancellationToken);
+    }
+
+    private async Task<DeviceTestResult> TestCoreAsync(DeviceDocument device, CancellationToken cancellationToken)
+    {
+        var id = string.IsNullOrWhiteSpace(device.Metadata?.Id) ? "unsaved" : device.Metadata.Id;
+        var adapter = device.Spec.Adapter ?? "";
+        if (string.Equals(adapter, "fanuc.fake", StringComparison.Ordinal)
+            || adapter.EndsWith(".sim", StringComparison.Ordinal))
         {
             var fake = new DeviceTestResult
             {
                 DeviceId = id,
                 Ok = true,
-                Adapter = device.Spec.Adapter,
-                Message = string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal)
+                Handshake = true,
+                Adapter = adapter,
+                SdkStatus = "none",
+                Message = string.Equals(adapter, "fanuc.fake", StringComparison.Ordinal)
                     ? "Fake 适配器握手成功（未连接真实机床）"
                     : "模拟器握手成功（未连接真实机床）",
-                LatencyMs = 1
+                LatencyMs = 1,
+                HandshakeMs = 1
             };
-            _store.AppendLog($"设备 {id} 连接测试成功：{device.Spec.Adapter}");
+            _store.AppendLog($"设备 {id} 连接测试成功：{adapter}");
             return fake;
         }
 
-        if (!string.Equals(device.Spec.Adapter, "fanuc.focas", StringComparison.Ordinal))
+        if (string.Equals(adapter, "fanuc.focas", StringComparison.Ordinal))
+        {
+            return ProbeFocas(device, id, cancellationToken);
+        }
+
+        if (_tester is null || !_tester.CanTest(adapter))
         {
             return new DeviceTestResult
             {
                 DeviceId = id,
                 Ok = false,
-                Adapter = device.Spec.Adapter,
-                Message = "该适配器的真实驱动在第二阶段实现，当前请使用模拟器。"
+                Adapter = adapter,
+                Message = "该适配器没有连接测试。"
             };
         }
 
+        var report = await _tester.TestAsync(ToRequest(device), cancellationToken).ConfigureAwait(false);
+        _store.AppendLog(report.Ok
+            ? $"设备 {id} 连接测试成功：{adapter}"
+            : $"设备 {id} 连接测试失败：{adapter} {report.Error}");
+        return new DeviceTestResult
+        {
+            DeviceId = id,
+            Ok = report.Ok,
+            Reachable = report.Reachable,
+            Handshake = report.Handshake,
+            Adapter = adapter,
+            Message = report.Message,
+            Error = report.Error,
+            SdkStatus = report.SdkStatus,
+            LatencyMs = report.LatencyMs,
+            ReachableMs = report.ReachableMs,
+            HandshakeMs = report.HandshakeMs,
+            Samples = report.Samples.Select(sample => new DeviceTestSample
+            {
+                Point = sample.Point,
+                Value = sample.Value,
+                Quality = sample.Quality,
+                Unit = sample.Unit
+            }).ToList()
+        };
+    }
+
+    private DeviceTestResult ProbeFocas(DeviceDocument device, string id, CancellationToken cancellationToken)
+    {
         var host = device.Spec.Connection.Host;
         var port = device.Spec.Connection.Port;
-        var timeoutMs = device.Spec.Connection.FocasTimeoutMs ?? 3000;
+        var timeoutMs = device.Spec.Connection.FocasTimeoutMs ?? device.Spec.Connection.TimeoutMs ?? 3000;
         var watch = Stopwatch.StartNew();
         FocasConnectProbeResult result;
         try
@@ -233,7 +296,8 @@ public sealed class RuntimeQueries
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             watch.Stop();
-            var crashed = new DeviceTestResult
+            _store.AppendLog($"设备 {id} FOCAS 握手异常");
+            return new DeviceTestResult
             {
                 DeviceId = id,
                 Ok = false,
@@ -241,8 +305,6 @@ public sealed class RuntimeQueries
                 LatencyMs = (int)watch.ElapsedMilliseconds,
                 Message = $"FOCAS 握手失败，进程仍在运行：{ex.Message}"
             };
-            _store.AppendLog($"设备 {id} FOCAS 握手异常");
-            return crashed;
         }
 
         watch.Stop();
@@ -253,9 +315,41 @@ public sealed class RuntimeQueries
         {
             DeviceId = id,
             Ok = result.Ok,
+            Handshake = result.Ok,
             Adapter = device.Spec.Adapter,
+            SdkStatus = result.Message.Contains("未找到", StringComparison.Ordinal) ? "missing" : null,
             LatencyMs = (int)watch.ElapsedMilliseconds,
+            HandshakeMs = (int)watch.ElapsedMilliseconds,
             Message = result.Message
+        };
+    }
+
+    private static DeviceConnectionRequest ToRequest(DeviceDocument device)
+    {
+        var connection = device.Spec.Connection ?? new DeviceConnection();
+        var options = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (connection.Parameters is not null)
+        {
+            foreach (var pair in connection.Parameters)
+            {
+                options[pair.Key] = pair.Value;
+            }
+        }
+
+        options["host"] = connection.Host;
+        options["port"] = connection.Port.ToString(CultureInfo.InvariantCulture);
+        options["timeoutMs"] = (connection.TimeoutMs ?? connection.FocasTimeoutMs ?? 3000).ToString(CultureInfo.InvariantCulture);
+        options["path"] = connection.Path;
+        options["namespace"] = connection.Namespace;
+        options["username"] = connection.Username;
+        options["password"] = connection.Password;
+        return new DeviceConnectionRequest
+        {
+            DeviceId = device.Metadata?.Id ?? "",
+            Adapter = device.Spec.Adapter,
+            BrandId = device.Spec.BrandId,
+            ControllerModelId = device.Spec.ControllerModelId,
+            Options = options
         };
     }
 

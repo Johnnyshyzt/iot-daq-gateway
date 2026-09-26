@@ -82,9 +82,9 @@ public static partial class ConfigValidator
             {
                 Error(issues, $"{path}.adapter", $"适配器「{device.Spec.Adapter}」不在目录中。请选择该品牌的模拟器或已登记的协议驱动。");
             }
-            else if (knownAdapter.Phase > 1)
+            else if (knownAdapter.Kind == "stub")
             {
-                Warning(issues, $"{path}.adapter", $"适配器「{device.Spec.Adapter}」的真实驱动在第二阶段实现，发布后设备会保持离线。请先用模拟器。");
+                Warning(issues, $"{path}.adapter", $"适配器「{device.Spec.Adapter}」还是占位实现，发布后设备会保持离线。请先用模拟器。");
             }
 
             var adapterBrand = catalog.BrandOfAdapter(device.Spec.Adapter);

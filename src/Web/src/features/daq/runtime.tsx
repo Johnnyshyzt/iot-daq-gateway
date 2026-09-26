@@ -161,6 +161,6 @@ function statusLabel(status: string) {
   if (status === 'online') return '在线'
   if (status === 'offline') return '离线'
   if (status === 'disabled') return '禁用'
-  if (status === 'degraded') return '降级'
+  if (status === 'degraded') return '异常'
   return status
 }

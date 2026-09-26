@@ -3,7 +3,7 @@ namespace Adapters.Fanuc.Focas;
 /// <summary>
 /// Live <c>Fwlib64.dll</c> calls. Missing/unloadable libraries become FOCAS error codes, never process crashes.
 /// </summary>
-internal sealed class NativeFocasLibrary : IFocasLibrary
+internal sealed class NativeFocasLibrary : IFocasLibrary, IFocasSignals
 {
     public static NativeFocasLibrary Instance { get; } = new();
 
@@ -144,6 +144,84 @@ internal sealed class NativeFocasLibrary : IFocasLibrary
             return FocasReturn.Func;
         }
     }
+
+    public FocasSignalSnapshot Read(ushort handle, in FocasStatInfo status)
+    {
+        _ = status;
+        var snapshot = new FocasSignalSnapshot();
+        try
+        {
+            if (FocasNative.ReadActualSpindle(handle, out var spindle) == FocasReturn.Ok)
+            {
+                snapshot = snapshot with { HasSpindle = true, Spindle = spindle.Data };
+            }
+        }
+        catch (Exception ex) when (IsOptional(ex))
+        {
+        }
+
+        try
+        {
+            if (FocasNative.ReadActualFeed(handle, out var feed) == FocasReturn.Ok)
+            {
+                snapshot = snapshot with { HasFeed = true, Feed = feed.Data };
+            }
+        }
+        catch (Exception ex) when (IsOptional(ex))
+        {
+        }
+
+        try
+        {
+            var axes = new FocasNative.OdbAxis();
+            if (FocasNative.ReadAbsolute(handle, ref axes) == FocasReturn.Ok)
+            {
+                snapshot = snapshot with
+                {
+                    HasAxes = true,
+                    AxisX = axes.Data0 / 1000d,
+                    AxisY = axes.Data1 / 1000d,
+                    AxisZ = axes.Data2 / 1000d
+                };
+            }
+        }
+        catch (Exception ex) when (IsOptional(ex))
+        {
+        }
+
+        try
+        {
+            if (FocasNative.ReadSystemInfo(handle, out var info) == FocasReturn.Ok)
+            {
+                snapshot = snapshot with
+                {
+                    HasSystem = true,
+                    SystemType = FocasNative.DescribeSystem(info),
+                    SoftwareVersion = FocasNative.DescribeVersion(info),
+                    AxisCount = info.MaxAxis
+                };
+            }
+        }
+        catch (Exception ex) when (IsOptional(ex))
+        {
+        }
+
+        try
+        {
+            if (FocasNative.ReadProgramNumber(handle, out var program) == FocasReturn.Ok)
+            {
+                snapshot = snapshot with { HasMainProgram = true, MainProgram = program.MData };
+            }
+        }
+        catch (Exception ex) when (IsOptional(ex))
+        {
+        }
+
+        return snapshot;
+    }
+
+    private static bool IsOptional(Exception ex) =>
+        ex is EntryPointNotFoundException or DllNotFoundException or BadImageFormatException;
 
     private static bool IsLoadFailure(Exception ex) =>
         ex is DllNotFoundException or BadImageFormatException;

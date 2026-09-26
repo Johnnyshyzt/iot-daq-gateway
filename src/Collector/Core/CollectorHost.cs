@@ -32,6 +32,12 @@ public static class CollectorHost
         return services;
     }
 
+    public static IServiceCollection AddDriverServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IDeviceConnectionTester, CncConnectionTester>();
+        return services;
+    }
+
     public static IServiceCollection AddCollector(this IServiceCollection services)
     {
         services.AddSingleton(sp => new GatewayConfigHolder(sp.GetRequiredService<IRuntimeConfigSource>().Load().Configuration));

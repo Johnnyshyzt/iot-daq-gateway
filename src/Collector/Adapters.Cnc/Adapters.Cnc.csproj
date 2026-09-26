@@ -1,12 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Adapters.Cnc</RootNamespace>
-    <Description>Brand simulators and phase-2 protocol stubs. No vendor SDK binaries.</Description>
+    <Description>CNC protocol drivers and brand simulators. No vendor SDK binaries.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gateway.Tests" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\Shared\Catalog\Cnc.Catalog.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Client" />
   </ItemGroup>
 </Project>

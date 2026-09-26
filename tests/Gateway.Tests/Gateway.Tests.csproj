@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Collector\Adapters.Fanuc\Adapters.Fanuc.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Adapters.Cnc\Adapters.Cnc.csproj" />
     <ProjectReference Include="..\..\src\Shared\Abstractions\Gateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Collector\Core\Collector.csproj" />
     <ProjectReference Include="..\..\src\Collector\Sinks.Mqtt\Sinks.Mqtt.csproj" />

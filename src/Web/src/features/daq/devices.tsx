@@ -27,11 +27,15 @@ import {
   canWrite,
   describeError,
   standardTemplateId,
+  sdkStatusLabel,
   studioApi,
   type CatalogAdapter,
   type CatalogOverview,
+  type CatalogParameter,
   type DeviceDocument,
+  type DeviceTestResult,
   type PointTemplateDocument,
+  type RuntimeStatus,
 } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
@@ -49,7 +53,17 @@ const emptyDevice = (): DeviceDocument => ({
     pointTemplateId: 'fanuc-catalog',
     workshop: '',
     line: '',
-    connection: { host: '127.0.0.1', port: 8193, timeoutMs: 3000, focasTimeoutMs: 3000, path: '', namespace: '' },
+    connection: {
+      host: '127.0.0.1',
+      port: 8193,
+      timeoutMs: 3000,
+      focasTimeoutMs: 3000,
+      path: '',
+      namespace: '',
+      username: '',
+      password: '',
+      parameters: {},
+    },
   },
 })
 
@@ -63,16 +77,21 @@ export function DevicesPage() {
   const [draft, setDraft] = useState<DeviceDocument>(emptyDevice())
   const [mode, setMode] = useState<'create' | 'edit'>('create')
   const [message, setMessage] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<DeviceTestResult | null>(null)
+  const [runtime, setRuntime] = useState<RuntimeStatus | null>(null)
 
   async function reload() {
-    const [deviceItems, templateItems, overview] = await Promise.all([
+    const [deviceItems, templateItems, overview, status] = await Promise.all([
       studioApi<DeviceDocument[]>('/api/v1/config/devices'),
       studioApi<PointTemplateDocument[]>('/api/v1/config/point-templates'),
       studioApi<CatalogOverview>('/api/v1/catalog/brands'),
+      studioApi<RuntimeStatus>('/api/v1/runtime/status').catch(() => null),
     ])
     setDevices(deviceItems)
     setTemplates(templateItems)
     setCatalog(overview)
+    setRuntime(status)
     return { templateItems, overview }
   }
 
@@ -109,17 +128,20 @@ export function DevicesPage() {
   }
 
   function applyAdapter(current: DeviceDocument, next: CatalogAdapter, nextBrand: string, templateId: string) {
-    const connection = { ...current.spec.connection }
+    const connection = { ...current.spec.connection, parameters: { ...(current.spec.connection.parameters ?? {}) } }
     for (const param of next.parameters) {
+      const fallback = param.default == null ? '' : String(param.default)
       if (param.name === 'host' && param.default != null) connection.host = String(param.default)
-      if (param.name === 'port' && param.default != null) connection.port = Number(param.default)
-      if (param.name === 'timeoutMs' && param.default != null) {
+      else if (param.name === 'port' && param.default != null) connection.port = Number(param.default)
+      else if (param.name === 'timeoutMs' && param.default != null) {
         const timeout = Number(param.default)
         connection.timeoutMs = timeout
         connection.focasTimeoutMs = timeout
-      }
-      if (param.name === 'path') connection.path = param.default == null ? '' : String(param.default)
-      if (param.name === 'namespace') connection.namespace = param.default == null ? '' : String(param.default)
+      } else if (param.name === 'path') connection.path = fallback
+      else if (param.name === 'namespace') connection.namespace = fallback
+      else if (param.name === 'username') connection.username = fallback
+      else if (param.name === 'password') connection.password = ''
+      else connection.parameters[param.name] = fallback
     }
     return {
       ...current,
@@ -179,6 +201,9 @@ export function DevicesPage() {
           ...draft.spec.connection,
           path: draft.spec.connection.path?.trim() || null,
           namespace: draft.spec.connection.namespace?.trim() || null,
+          username: draft.spec.connection.username?.trim() || null,
+          password: draft.spec.connection.password || null,
+          parameters: draft.spec.connection.parameters ?? {},
         },
       },
     }
@@ -203,13 +228,70 @@ export function DevicesPage() {
     toast.success('设备已从草稿删除')
   }
 
-  async function test(id: string) {
-    const result = await studioApi<{ ok: boolean; message: string }>(
-      `/api/v1/devices/${encodeURIComponent(id)}/test`,
-      { method: 'POST' }
-    )
+  async function testSaved(id: string) {
+    const result = await studioApi<DeviceTestResult>(`/api/v1/devices/${encodeURIComponent(id)}/test`, {
+      method: 'POST',
+    })
+    setTestResult(result)
     setMessage(result.message)
     toast[result.ok ? 'success' : 'error'](result.message)
+  }
+
+  async function testDraft() {
+    setTesting(true)
+    try {
+      const result = await studioApi<DeviceTestResult>('/api/v1/devices/test', {
+        method: 'POST',
+        body: JSON.stringify(draft),
+      })
+      setTestResult(result)
+      setMessage(result.message)
+      toast[result.ok ? 'success' : 'error'](result.message)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function collection(id: string, enabled: boolean) {
+    const result = await studioApi<{ enabled: boolean; reloaded: boolean }>(
+      `/api/v1/devices/${encodeURIComponent(id)}/collection`,
+      { method: 'POST', body: JSON.stringify({ enabled }) }
+    )
+    await reload()
+    const text = result.reloaded
+      ? enabled
+        ? '已启动采集'
+        : '已停止采集'
+      : '草稿已更新。这台设备还没发布，采集不会启动。'
+    setMessage(text)
+    toast.success(text)
+  }
+
+  function parameterValue(param: CatalogParameter) {
+    const connection = draft.spec.connection
+    if (param.name === 'host') return connection.host
+    if (param.name === 'port') return String(connection.port)
+    if (param.name === 'timeoutMs') return String(connection.timeoutMs ?? connection.focasTimeoutMs ?? 3000)
+    if (param.name === 'path') return connection.path ?? ''
+    if (param.name === 'namespace') return connection.namespace ?? ''
+    if (param.name === 'username') return connection.username ?? ''
+    if (param.name === 'password') return connection.password ?? ''
+    return connection.parameters?.[param.name] ?? ''
+  }
+
+  function setParameter(param: CatalogParameter, raw: string) {
+    if (param.name === 'host') setConnection({ host: raw })
+    else if (param.name === 'port') setConnection({ port: Number(raw) })
+    else if (param.name === 'timeoutMs') {
+      const timeout = Number(raw)
+      setConnection({ timeoutMs: timeout, focasTimeoutMs: timeout })
+    } else if (param.name === 'path') setConnection({ path: raw })
+    else if (param.name === 'namespace') setConnection({ namespace: raw })
+    else if (param.name === 'username') setConnection({ username: raw })
+    else if (param.name === 'password') setConnection({ password: raw })
+    else {
+      setConnection({ parameters: { ...(draft.spec.connection.parameters ?? {}), [param.name]: raw } })
+    }
   }
 
   function setConnection(patch: Partial<DeviceDocument['spec']['connection']>) {
@@ -218,8 +300,6 @@ export function DevicesPage() {
       spec: { ...draft.spec, connection: { ...draft.spec.connection, ...patch } },
     })
   }
-
-  const timeoutValue = draft.spec.connection.timeoutMs ?? draft.spec.connection.focasTimeoutMs ?? 3000
 
   return (
     <PageShell
@@ -242,7 +322,7 @@ export function DevicesPage() {
                 <TableRow>
                   <TableHead>名称</TableHead>
                   <TableHead>品牌 / 适配器</TableHead>
-                  <TableHead>状态</TableHead>
+                  <TableHead>驱动 / 状态</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -271,9 +351,7 @@ export function DevicesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={device.spec.enabled ? 'default' : 'secondary'}>
-                          {device.spec.enabled ? '启用' : '禁用'}
-                        </Badge>
+                        <DeviceStatus device={device} runtime={runtime} />
                       </TableCell>
                       <TableCell className='space-x-2 text-end'>
                         <Button size='sm' variant='outline' onClick={() => select(device)}>
@@ -290,9 +368,17 @@ export function DevicesPage() {
                           size='sm'
                           variant='outline'
                           disabled={!writable}
-                          onClick={() => void test(device.metadata.id).catch(fail)}
+                          onClick={() => void testSaved(device.metadata.id).catch(fail)}
                         >
                           测试
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={!writable}
+                          onClick={() => void collection(device.metadata.id, !device.spec.enabled).catch(fail)}
+                        >
+                          {device.spec.enabled ? '停止采集' : '启动采集'}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -391,10 +477,12 @@ export function DevicesPage() {
                 </SelectContent>
               </Select>
             </Field>
-            {adapter && adapter.phase > 1 ? (
+            {adapter?.kind === 'stub' ? (
               <p className='text-xs text-muted-foreground'>
-                {adapter.note || '真实协议驱动在第二阶段实现。发布后这台设备会保持离线，请先用模拟器。'}
+                {adapter.note || '该适配器还是占位实现。发布后这台设备会保持离线，请先用模拟器。'}
               </p>
+            ) : adapter?.note ? (
+              <p className='text-xs text-muted-foreground'>{adapter.note}</p>
             ) : null}
             <Field label='点位模板'>
               <Select
@@ -417,58 +505,17 @@ export function DevicesPage() {
               </Select>
             </Field>
             <p className='text-xs text-muted-foreground'>只列出当前品牌的模板。一类模板给多台同类设备用。</p>
-            {adapter?.parameters.some((param) => param.name === 'host') ? (
-              <Field label='主机'>
+            {(adapter?.parameters ?? []).map((param) => (
+              <Field key={param.name} label={param.label || param.name}>
                 <Input
-                  value={draft.spec.connection.host}
+                  type={param.type === 'secret' ? 'password' : param.type === 'int' ? 'number' : 'text'}
+                  value={parameterValue(param)}
                   disabled={!writable}
-                  onChange={(event) => setConnection({ host: event.target.value })}
+                  autoComplete={param.type === 'secret' ? 'new-password' : undefined}
+                  onChange={(event) => setParameter(param, event.target.value)}
                 />
               </Field>
-            ) : null}
-            <div className='grid grid-cols-2 gap-3'>
-              {adapter?.parameters.some((param) => param.name === 'port') ? (
-                <Field label='端口'>
-                  <Input
-                    type='number'
-                    value={draft.spec.connection.port}
-                    disabled={!writable}
-                    onChange={(event) => setConnection({ port: Number(event.target.value) })}
-                  />
-                </Field>
-              ) : null}
-              {adapter?.parameters.some((param) => param.name === 'timeoutMs') ? (
-                <Field label='超时 ms'>
-                  <Input
-                    type='number'
-                    value={timeoutValue}
-                    disabled={!writable}
-                    onChange={(event) => {
-                      const timeout = Number(event.target.value)
-                      setConnection({ timeoutMs: timeout, focasTimeoutMs: timeout })
-                    }}
-                  />
-                </Field>
-              ) : null}
-            </div>
-            {adapter?.parameters.some((param) => param.name === 'path') ? (
-              <Field label='路径'>
-                <Input
-                  value={draft.spec.connection.path ?? ''}
-                  disabled={!writable}
-                  onChange={(event) => setConnection({ path: event.target.value })}
-                />
-              </Field>
-            ) : null}
-            {adapter?.parameters.some((param) => param.name === 'namespace') ? (
-              <Field label='命名空间'>
-                <Input
-                  value={draft.spec.connection.namespace ?? ''}
-                  disabled={!writable}
-                  onChange={(event) => setConnection({ namespace: event.target.value })}
-                />
-              </Field>
-            ) : null}
+            ))}
             <div className='grid grid-cols-2 gap-3'>
               <Field label='车间'>
                 <Input
@@ -505,9 +552,12 @@ export function DevicesPage() {
                 onCheckedChange={(enabled) => setDraft({ ...draft, spec: { ...draft.spec, enabled } })}
               />
             </div>
-            <div className='flex gap-2'>
+            <div className='flex flex-wrap gap-2'>
               <Button disabled={!writable} onClick={() => void save().catch(fail)}>
                 保存草稿
+              </Button>
+              <Button variant='outline' disabled={!writable || testing} onClick={() => void testDraft().catch(fail)}>
+                {testing ? '正在测试…' : '测试连接'}
               </Button>
               <Button
                 variant='destructive'
@@ -517,6 +567,7 @@ export function DevicesPage() {
                 删除
               </Button>
             </div>
+            {testResult ? <TestPanel result={testResult} /> : null}
             {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
           </CardContent>
         </Card>
@@ -529,6 +580,66 @@ function templateName(templates: PointTemplateDocument[], id: string | null | un
   if (!id) return '未选模板'
   const template = templates.find((item) => item.metadata.id === id)
   return template?.metadata.displayName || id
+}
+
+function DeviceStatus({ device, runtime }: { device: DeviceDocument; runtime: RuntimeStatus | null }) {
+  const health = runtime?.devices.find((item) => item.id === device.metadata.id)
+  const text = health?.message || (device.spec.enabled ? '草稿已启用' : '草稿已禁用')
+  const missing = text.includes('SDK 未安装') || text.includes('未找到 Fwlib64')
+  const failed = health?.status === 'offline' || health?.status === 'degraded' || missing
+  return (
+    <div className='max-w-56'>
+      <Badge variant={device.spec.enabled && !failed ? 'default' : 'secondary'}>
+        {health ? healthLabel(health.status) : device.spec.enabled ? '启用' : '禁用'}
+      </Badge>
+      <div className={missing || failed ? 'mt-1 text-xs text-destructive' : 'mt-1 text-xs text-muted-foreground'}>
+        {text}
+      </div>
+    </div>
+  )
+}
+
+function healthLabel(status: string) {
+  if (status === 'online') return '在线'
+  if (status === 'offline') return '离线'
+  if (status === 'disabled') return '已停止'
+  if (status === 'degraded') return '异常'
+  return status
+}
+
+function TestPanel({ result }: { result: DeviceTestResult }) {
+  return (
+    <div className='grid gap-2 rounded-md border p-3 text-sm'>
+      <div className='font-medium'>{result.ok ? '连接测试通过' : '连接测试未通过'}</div>
+      <div>网络：{result.reachable ? `可达（${result.reachableMs} ms）` : '不可达'}</div>
+      <div>协议握手：{result.handshake ? `成功（${result.handshakeMs} ms）` : '未完成'}</div>
+      <div>总耗时：{result.latencyMs} ms</div>
+      <div>SDK：{sdkStatusLabel(result.sdkStatus)}</div>
+      <p className='text-muted-foreground'>{result.message}</p>
+      {result.error ? <p className='text-xs text-destructive'>{result.error}</p> : null}
+      {result.samples.length > 0 ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>数据项</TableHead>
+              <TableHead>值</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.samples.map((sample) => (
+              <TableRow key={sample.point}>
+                <TableCell className='font-mono text-xs'>{sample.point}</TableCell>
+                <TableCell>
+                  {sample.value ?? '—'}
+                  {sample.unit ? ` ${sample.unit}` : ''}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : null}
+    </div>
+  )
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

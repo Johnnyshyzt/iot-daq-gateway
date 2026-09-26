@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gateway.Abstractions.Configuration;
 using Gateway.Abstractions.Contracts;
 using Studio.Contracts;
@@ -38,17 +39,33 @@ public static class BundleRuntime
             }
 
             var connection = device.Spec.Connection ?? new DeviceConnection();
-            var options = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            var options = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            if (connection.Parameters is not null)
             {
-                ["host"] = string.IsNullOrWhiteSpace(connection.Host) ? "127.0.0.1" : connection.Host,
-                ["port"] = connection.Port,
-                ["timeoutMs"] = connection.TimeoutMs ?? connection.FocasTimeoutMs ?? 3000,
-                ["displayName"] = device.Metadata.DisplayName,
-                ["path"] = connection.Path,
-                ["namespace"] = connection.Namespace,
-                ["brandId"] = device.Spec.BrandId,
-                ["controllerModelId"] = device.Spec.ControllerModelId
-            };
+                foreach (var pair in connection.Parameters)
+                {
+                    if (!string.IsNullOrWhiteSpace(pair.Key))
+                    {
+                        options[pair.Key] = pair.Value;
+                    }
+                }
+            }
+
+            options["host"] = string.IsNullOrWhiteSpace(connection.Host) ? "127.0.0.1" : connection.Host;
+            options["port"] = connection.Port;
+            options["timeoutMs"] = connection.TimeoutMs ?? connection.FocasTimeoutMs ?? 3000;
+            options["displayName"] = device.Metadata.DisplayName;
+            options["path"] = connection.Path;
+            options["namespace"] = connection.Namespace;
+            options["username"] = connection.Username;
+            options["password"] = connection.Password;
+            options["brandId"] = device.Spec.BrandId;
+            options["controllerModelId"] = device.Spec.ControllerModelId;
+            var addresses = AddressMap(bundle, device);
+            if (addresses is not null)
+            {
+                options["addresses"] = addresses;
+            }
             var points = EnabledPointIds(bundle, device);
             if (points is not null)
             {
@@ -143,6 +160,41 @@ public static class BundleRuntime
         }
 
         return string.Join(',', rows.Where(row => row.Enabled).Select(row => row.Id));
+    }
+
+    private static string? AddressMap(ConfigBundle bundle, DeviceDocument device)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        void Take(IEnumerable<PointDefinition> points)
+        {
+            foreach (var point in points)
+            {
+                if (!string.IsNullOrWhiteSpace(point.Id) && !string.IsNullOrWhiteSpace(point.Address))
+                {
+                    map[point.Id] = point.Address;
+                }
+            }
+        }
+
+        var templateId = device.Spec.PointTemplateId;
+        if (!string.IsNullOrWhiteSpace(templateId))
+        {
+            var template = bundle.PointTemplates.FirstOrDefault(item =>
+                string.Equals(item.Metadata.Id, templateId, StringComparison.OrdinalIgnoreCase));
+            if (template is not null)
+            {
+                Take(template.Spec.Points.Where(point => point.Enabled));
+            }
+        }
+
+        var overrides = bundle.PointSets.FirstOrDefault(set =>
+            string.Equals(set.Metadata.DeviceId, device.Metadata.Id, StringComparison.OrdinalIgnoreCase));
+        if (overrides is not null)
+        {
+            Take(overrides.Spec.Points.Where(point => point.Enabled));
+        }
+
+        return map.Count == 0 ? null : JsonSerializer.Serialize(map);
     }
 
     private static string? ResolveEnv(string? variable)
