@@ -49,6 +49,10 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<AlarmRow> Alarms => Set<AlarmRow>();
 
+    public DbSet<StateTransitionRow> StateTransitions => Set<StateTransitionRow>();
+
+    public DbSet<AppSettingRow> AppSettings => Set<AppSettingRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -79,8 +83,24 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
         modelBuilder.Entity<SampleLatestRow>().ToTable("sample_latest").HasKey(row => new { row.DeviceId, row.PointId });
         modelBuilder.Entity<SampleHistoryRow>().ToTable("sample_history").HasKey(row => row.Id);
-        modelBuilder.Entity<SampleHistoryRow>().HasIndex(row => new { row.DeviceId, row.PointId, row.TimestampUnixMs });
+        modelBuilder.Entity<SampleHistoryRow>().HasIndex(row => new { row.DeviceId, row.PointId, row.TimestampUnixMs })
+            .HasDatabaseName("ix_sample_history_device_point_time");
+        modelBuilder.Entity<SampleHistoryRow>().HasIndex(row => row.TimestampUnixMs)
+            .HasDatabaseName("ix_sample_history_time");
+        modelBuilder.Entity<SampleHistoryRow>().HasIndex(row => new { row.DeviceId, row.TimestampUnixMs })
+            .HasDatabaseName("ix_sample_history_device_time");
         modelBuilder.Entity<AlarmRow>().ToTable("alarms").HasKey(row => row.Id);
-        modelBuilder.Entity<AlarmRow>().HasIndex(row => new { row.DeviceId, row.RaisedUnixMs });
+        modelBuilder.Entity<AlarmRow>().HasIndex(row => new { row.DeviceId, row.RaisedUnixMs })
+            .HasDatabaseName("ix_alarms_device_raised");
+        modelBuilder.Entity<AlarmRow>().HasIndex(row => new { row.Active, row.RaisedUnixMs })
+            .HasDatabaseName("ix_alarms_active_raised");
+        modelBuilder.Entity<AlarmRow>().HasIndex(row => new { row.DeviceId, row.Code })
+            .HasDatabaseName("ix_alarms_device_code");
+        modelBuilder.Entity<StateTransitionRow>().ToTable("state_transitions").HasKey(row => row.Id);
+        modelBuilder.Entity<StateTransitionRow>().HasIndex(row => new { row.DeviceId, row.StartedUnixMs })
+            .HasDatabaseName("ix_state_device_started");
+        modelBuilder.Entity<StateTransitionRow>().HasIndex(row => row.EndedUnixMs)
+            .HasDatabaseName("ix_state_ended");
+        modelBuilder.Entity<AppSettingRow>().ToTable("app_settings").HasKey(row => row.Key);
     }
 }

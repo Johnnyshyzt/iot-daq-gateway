@@ -3,6 +3,7 @@ using System.Text.Json;
 using Cnc.Catalog;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
+using IotDaq.Persistence.Visualization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Studio.Contracts;
@@ -16,25 +17,39 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed class GatewayPersistence : ISampleWriter
 {
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private readonly object _gate = new();
     private readonly DbContextOptions<GatewayDbContext> _options;
     private readonly bool _sqlite;
+    private readonly int _configuredRetention;
+    private event Action? SamplesWritten;
 
     private GatewayPersistence(DbContextOptions<GatewayDbContext> options, bool sqlite, string provider, int historyRetentionDays)
     {
         _options = options;
         _sqlite = sqlite;
         Provider = provider;
-        HistoryRetentionDays = historyRetentionDays;
+        _configuredRetention = historyRetentionDays;
     }
 
     public string Provider { get; }
 
-    public int HistoryRetentionDays { get; }
+    public int HistoryRetentionDays
+    {
+        get
+        {
+            var stored = TryReadSetting("historyRetentionDays");
+            if (int.TryParse(stored, NumberStyles.Integer, CultureInfo.InvariantCulture, out var days))
+            {
+                return Math.Clamp(days, 1, 3650);
+            }
+
+            return _configuredRetention;
+        }
+    }
 
     public static GatewayPersistence Open(string dataDirectory, IConfiguration? configuration)
     {
@@ -86,18 +101,33 @@ public sealed class GatewayPersistence : ISampleWriter
                 db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
             }
 
-            var info = db.SchemaInfo.FirstOrDefault(row => row.Id == 1);
-            if (info is null)
-            {
-                db.SchemaInfo.Add(new SchemaInfoRow { Id = 1, Version = SchemaVersion, Provider = Provider });
-                db.SaveChanges();
-            }
-
             if (_sqlite)
             {
                 RepairRevisionIdentity(db);
             }
 
+            SchemaUpgrade.Apply(db, _sqlite);
+            var info = db.SchemaInfo.FirstOrDefault(row => row.Id == 1);
+            if (info is null)
+            {
+                db.SchemaInfo.Add(new SchemaInfoRow { Id = 1, Version = SchemaVersion, Provider = Provider });
+            }
+            else if (info.Version != SchemaVersion)
+            {
+                info.Version = SchemaVersion;
+                info.Provider = Provider;
+            }
+
+            if (!db.AppSettings.Any(row => row.Key == "historyRetentionDays"))
+            {
+                db.AppSettings.Add(new AppSettingRow
+                {
+                    Key = "historyRetentionDays",
+                    Value = _configuredRetention.ToString(CultureInfo.InvariantCulture)
+                });
+            }
+
+            db.SaveChanges();
             SeedCatalog(db);
         }
     }
@@ -374,43 +404,78 @@ public sealed class GatewayPersistence : ISampleWriter
         lock (_gate)
         {
             using var db = CreateContext();
-            foreach (var observation in observations)
-            {
-                var text = FormatValue(observation.Value);
-                var numeric = ToNumber(observation.Value);
-                var when = observation.Timestamp.ToUnixTimeMilliseconds();
-                var latest = db.SampleLatest.FirstOrDefault(row =>
-                    row.DeviceId == observation.DeviceId && row.PointId == observation.Point);
-                if (latest is null)
-                {
-                    latest = new SampleLatestRow
-                    {
-                        DeviceId = observation.DeviceId,
-                        PointId = observation.Point
-                    };
-                    db.SampleLatest.Add(latest);
-                }
+            db.ChangeTracker.AutoDetectChangesEnabled = false;
+            var deviceIds = observations.Select(observation => observation.DeviceId).Distinct(StringComparer.Ordinal).ToList();
+            var ingest = SampleIngest.Load(db, deviceIds);
+            ingest.Apply(observations);
+            ingest.Attach(db);
+            db.ChangeTracker.DetectChanges();
+            db.SaveChanges();
+        }
 
-                latest.ValueText = text;
-                latest.NumericValue = numeric;
-                latest.Quality = observation.Quality;
-                latest.Unit = observation.Unit;
-                latest.TimestampUnixMs = when;
-                db.SampleHistory.Add(new SampleHistoryRow
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    DeviceId = observation.DeviceId,
-                    PointId = observation.Point,
-                    ValueText = text,
-                    NumericValue = numeric,
-                    Quality = observation.Quality,
-                    Unit = observation.Unit,
-                    TimestampUnixMs = when
-                });
-                RecordAlarm(db, observation, text, when);
+        NotifySamples();
+    }
+
+    public void NoteStatus(string deviceId, string status, DateTimeOffset timestamp)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return;
+        }
+
+        EnsureReady();
+        var changed = false;
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var ingest = SampleIngest.Load(db, [deviceId]);
+            changed = ingest.ApplyStatus(deviceId, status, timestamp);
+            if (changed)
+            {
+                ingest.Attach(db);
+                db.SaveChanges();
+            }
+        }
+
+        if (changed)
+        {
+            NotifySamples();
+        }
+    }
+
+    public IDisposable SubscribeSamples(Action callback)
+    {
+        SamplesWritten += callback;
+        return new Subscription(() => SamplesWritten -= callback);
+    }
+
+    public IReadOnlyList<SampleView> Latest(IReadOnlyCollection<string> deviceIds, IReadOnlyCollection<string> pointIds)
+    {
+        EnsureReady();
+        if (deviceIds.Count == 0)
+        {
+            return [];
+        }
+
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var query = db.SampleLatest.AsNoTracking().Where(row => deviceIds.Contains(row.DeviceId));
+            if (pointIds.Count > 0)
+            {
+                query = query.Where(row => pointIds.Contains(row.PointId));
             }
 
-            db.SaveChanges();
+            return query.Select(row => new SampleView
+            {
+                DeviceId = row.DeviceId,
+                PointId = row.PointId,
+                Value = row.ValueText,
+                NumericValue = row.NumericValue,
+                Quality = row.Quality,
+                Unit = row.Unit,
+                TimestampUnixMs = row.TimestampUnixMs
+            }).ToList();
         }
     }
 
@@ -490,16 +555,204 @@ public sealed class GatewayPersistence : ISampleWriter
                 query = query.Where(row => row.DeviceId == deviceId);
             }
 
-            return query.OrderByDescending(row => row.RaisedUnixMs).Take(limit).Select(row => new AlarmView
+            return ProjectAlarms(query.OrderByDescending(row => row.RaisedUnixMs).Take(limit), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        }
+    }
+
+    public IReadOnlyList<AlarmView> QueryAlarms(
+        string? deviceId,
+        bool? active,
+        bool? acknowledged,
+        string? code,
+        long? fromUnixMs,
+        long? toUnixMs,
+        int limit)
+    {
+        EnsureReady();
+        limit = Math.Clamp(limit, 1, 2000);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var query = db.Alarms.AsNoTracking().AsQueryable();
+            if (!string.IsNullOrWhiteSpace(deviceId))
             {
-                Id = row.Id,
-                DeviceId = row.DeviceId,
-                PointId = row.PointId,
-                Message = row.Message,
-                Severity = row.Severity,
-                Active = row.Active,
-                RaisedUnixMs = row.RaisedUnixMs
-            }).ToList();
+                query = query.Where(row => row.DeviceId == deviceId);
+            }
+
+            if (active is not null)
+            {
+                query = query.Where(row => row.Active == active.Value);
+            }
+
+            if (acknowledged is not null)
+            {
+                query = query.Where(row => row.Acknowledged == acknowledged.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(code))
+            {
+                query = query.Where(row => row.Code == code);
+            }
+
+            if (fromUnixMs is not null)
+            {
+                query = query.Where(row => row.RaisedUnixMs >= fromUnixMs.Value);
+            }
+
+            if (toUnixMs is not null)
+            {
+                query = query.Where(row => row.RaisedUnixMs <= toUnixMs.Value);
+            }
+
+            return ProjectAlarms(query.OrderByDescending(row => row.RaisedUnixMs).Take(limit), now);
+        }
+    }
+
+    public AlarmView? AcknowledgeAlarm(string id, string user, long whenUnixMs)
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var row = db.Alarms.FirstOrDefault(item => item.Id == id);
+            if (row is null)
+            {
+                return null;
+            }
+
+            row.Acknowledged = true;
+            row.AcknowledgedBy = user;
+            row.AcknowledgedUnixMs = whenUnixMs;
+            db.SaveChanges();
+            return ProjectAlarms([row], DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())[0];
+        }
+    }
+
+    public IReadOnlyList<StateSegment> Transitions(IReadOnlyCollection<string> deviceIds, long fromUnixMs, long toUnixMs)
+    {
+        EnsureReady();
+        if (deviceIds.Count == 0)
+        {
+            return [];
+        }
+
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.StateTransitions.AsNoTracking()
+                .Where(row => deviceIds.Contains(row.DeviceId)
+                    && row.StartedUnixMs <= toUnixMs
+                    && (row.EndedUnixMs == null || row.EndedUnixMs >= fromUnixMs))
+                .OrderBy(row => row.StartedUnixMs)
+                .Select(row => new StateSegment(row.DeviceId, row.State, row.StartedUnixMs, row.EndedUnixMs))
+                .ToList();
+        }
+    }
+
+    public IReadOnlyList<SeriesPoint> AggregateSeries(
+        IReadOnlyCollection<string> deviceIds,
+        IReadOnlyCollection<string> pointIds,
+        long fromUnixMs,
+        long toUnixMs,
+        long bucketMs)
+    {
+        EnsureReady();
+        if (deviceIds.Count == 0 || pointIds.Count == 0 || toUnixMs < fromUnixMs)
+        {
+            return [];
+        }
+
+        bucketMs = bucketMs <= 0 ? SeriesAggregation.ChooseBucket(fromUnixMs, toUnixMs, 0) : bucketMs;
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var query = db.SampleHistory.AsNoTracking()
+                .Where(row => deviceIds.Contains(row.DeviceId)
+                    && pointIds.Contains(row.PointId)
+                    && row.TimestampUnixMs >= fromUnixMs
+                    && row.TimestampUnixMs <= toUnixMs
+                    && row.NumericValue != null);
+            var bucket = bucketMs;
+            return query
+                .GroupBy(row => new
+                {
+                    row.DeviceId,
+                    row.PointId,
+                    Bucket = row.TimestampUnixMs / bucket
+                })
+                .Select(group => new SeriesPoint
+                {
+                    DeviceId = group.Key.DeviceId,
+                    PointId = group.Key.PointId,
+                    TimestampUnixMs = group.Key.Bucket * bucket,
+                    Avg = group.Average(row => row.NumericValue) ?? 0,
+                    Min = group.Min(row => row.NumericValue) ?? 0,
+                    Max = group.Max(row => row.NumericValue) ?? 0,
+                    Count = group.Count()
+                })
+                .OrderBy(point => point.TimestampUnixMs)
+                .ToList();
+        }
+    }
+
+    public IReadOnlyList<PartSample> PartSamples(IReadOnlyCollection<string> deviceIds, long fromUnixMs, long toUnixMs, long bucketMs)
+    {
+        EnsureReady();
+        if (deviceIds.Count == 0 || toUnixMs < fromUnixMs)
+        {
+            return [];
+        }
+
+        bucketMs = Math.Max(1000, bucketMs);
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var bucket = bucketMs;
+            return db.SampleHistory.AsNoTracking()
+                .Where(row => deviceIds.Contains(row.DeviceId)
+                    && row.PointId == "partCount"
+                    && row.NumericValue != null
+                    && row.TimestampUnixMs >= fromUnixMs
+                    && row.TimestampUnixMs <= toUnixMs)
+                .GroupBy(row => new { row.DeviceId, Bucket = row.TimestampUnixMs / bucket })
+                .Select(group => new PartSample(
+                    group.Key.DeviceId,
+                    group.Max(row => row.TimestampUnixMs),
+                    group.OrderByDescending(row => row.TimestampUnixMs).Select(row => row.NumericValue).FirstOrDefault() ?? 0))
+                .ToList();
+        }
+    }
+
+    public string? GetSetting(string key) => TryReadSetting(key);
+
+    public void SetSetting(string key, string value)
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var row = db.AppSettings.FirstOrDefault(item => item.Key == key);
+            if (row is null)
+            {
+                db.AppSettings.Add(new AppSettingRow { Key = key, Value = value });
+            }
+            else
+            {
+                row.Value = value;
+            }
+
+            db.SaveChanges();
+        }
+    }
+
+    public bool HasHistory()
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.SampleHistory.Any() || db.StateTransitions.Any();
         }
     }
 
@@ -512,8 +765,48 @@ public sealed class GatewayPersistence : ISampleWriter
             using var db = CreateContext();
             var samples = db.SampleHistory.Where(row => row.TimestampUnixMs < unix).ExecuteDelete();
             var alarms = db.Alarms.Where(row => row.RaisedUnixMs < unix && !row.Active).ExecuteDelete();
-            return samples + alarms;
+            var states = db.StateTransitions.Where(row => row.EndedUnixMs != null && row.EndedUnixMs < unix).ExecuteDelete();
+            return samples + alarms + states;
         }
+    }
+
+    private static List<AlarmView> ProjectAlarms(IEnumerable<AlarmRow> rows, long nowUnixMs) =>
+        rows.Select(row => new AlarmView
+        {
+            Id = row.Id,
+            DeviceId = row.DeviceId,
+            PointId = row.PointId,
+            Code = row.Code,
+            Message = row.Message,
+            Severity = row.Severity,
+            Active = row.Active,
+            RaisedUnixMs = row.RaisedUnixMs,
+            ClearedUnixMs = row.ClearedUnixMs,
+            DurationMs = AlarmLogic.Duration(row.RaisedUnixMs, row.ClearedUnixMs, nowUnixMs, row.Active),
+            Acknowledged = row.Acknowledged,
+            AcknowledgedBy = row.AcknowledgedBy,
+            AcknowledgedUnixMs = row.AcknowledgedUnixMs
+        }).ToList();
+
+    private string? TryReadSetting(string key)
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.AppSettings.AsNoTracking().Where(row => row.Key == key).Select(row => row.Value).FirstOrDefault();
+        }
+    }
+
+    private void NotifySamples()
+    {
+        var handler = SamplesWritten;
+        handler?.Invoke();
+    }
+
+    private sealed class Subscription(Action dispose) : IDisposable
+    {
+        public void Dispose() => dispose();
     }
 
     public void SyncUsers(string accountsPath)
@@ -874,69 +1167,6 @@ public sealed class GatewayPersistence : ISampleWriter
         }
     }
 
-    private static void RecordAlarm(GatewayDbContext db, Observation observation, string? text, long when)
-    {
-        if (!IsAlarm(observation, text))
-        {
-            var open = db.Alarms.Where(row =>
-                row.DeviceId == observation.DeviceId && row.PointId == observation.Point && row.Active).ToList();
-            foreach (var row in open)
-            {
-                row.Active = false;
-            }
-
-            return;
-        }
-
-        var message = text ?? "";
-        var current = db.Alarms.FirstOrDefault(row =>
-            row.DeviceId == observation.DeviceId && row.PointId == observation.Point && row.Active);
-        if (current is not null && string.Equals(current.Message, message, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (current is not null)
-        {
-            current.Active = false;
-        }
-
-        db.Alarms.Add(new AlarmRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            DeviceId = observation.DeviceId,
-            PointId = observation.Point,
-            Message = message,
-            Severity = string.Equals(observation.Point, "estop", StringComparison.OrdinalIgnoreCase) ? "estop" : "alarm",
-            Active = true,
-            RaisedUnixMs = when
-        });
-    }
-
-    private static bool IsAlarm(Observation observation, string? text)
-    {
-        var point = observation.Point ?? "";
-        if (string.Equals(point, "state", StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Equals(text, "ALARM", StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (string.Equals(point, "estop", StringComparison.OrdinalIgnoreCase))
-        {
-            return text is "1" or "true" or "True" or "急停";
-        }
-
-        if (point.Contains("alarm", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(point, "alarmNumber", StringComparison.OrdinalIgnoreCase)
-            || point.EndsWith("_warningNumber", StringComparison.Ordinal))
-        {
-            return !string.IsNullOrWhiteSpace(text)
-                && text is not ("0" or "none" or "正常" or "OK" or "false" or "False");
-        }
-
-        return false;
-    }
-
     private static AdapterRow ToAdapterRow(CatalogAdapter adapter) => new()
     {
         Id = adapter.Id,
@@ -959,30 +1189,6 @@ public sealed class GatewayPersistence : ISampleWriter
         DisplayName = row.DisplayName,
         Note = row.Note,
         Parameters = JsonSerializer.Deserialize<List<CatalogParameter>>(row.ParametersJson, Json) ?? []
-    };
-
-    private static string? FormatValue(object? value) => value switch
-    {
-        null => null,
-        string text => text,
-        bool flag => flag ? "true" : "false",
-        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-        _ => value.ToString()
-    };
-
-    private static double? ToNumber(object? value) => value switch
-    {
-        null => null,
-        bool => null,
-        string => null,
-        byte number => number,
-        short number => number,
-        int number => number,
-        long number => number,
-        float number => number,
-        double number => number,
-        decimal number => (double)number,
-        _ => null
     };
 
     private static bool IsPostgres(string provider) =>
@@ -1115,6 +1321,8 @@ public sealed class AlarmView
 
     public string PointId { get; set; } = "";
 
+    public string Code { get; set; } = "";
+
     public string Message { get; set; } = "";
 
     public string Severity { get; set; } = "";
@@ -1122,4 +1330,14 @@ public sealed class AlarmView
     public bool Active { get; set; }
 
     public long RaisedUnixMs { get; set; }
+
+    public long? ClearedUnixMs { get; set; }
+
+    public long? DurationMs { get; set; }
+
+    public bool Acknowledged { get; set; }
+
+    public string? AcknowledgedBy { get; set; }
+
+    public long? AcknowledgedUnixMs { get; set; }
 }

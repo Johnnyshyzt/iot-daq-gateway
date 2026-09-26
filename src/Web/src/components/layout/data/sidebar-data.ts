@@ -1,9 +1,12 @@
 import {
   Activity,
+  Bell,
   BookOpen,
   Command,
   Gauge,
   LayoutDashboard,
+  LineChart,
+  PieChart,
   Radio,
   KeyRound,
   Settings,
@@ -30,7 +33,10 @@ export const sidebarData: SidebarData = {
     {
       title: '采集',
       items: [
-        { title: '概览', url: '/', icon: LayoutDashboard },
+        { title: '总览', url: '/', icon: LayoutDashboard },
+        { title: '历史曲线', url: '/history', icon: LineChart },
+        { title: '报警', url: '/alarms', icon: Bell },
+        { title: '稼动率', url: '/utilization', icon: PieChart },
         { title: '设备', url: '/devices', icon: Cpu },
         { title: '点位模板', url: '/points', icon: Activity },
         { title: '品牌目录', url: '/catalog', icon: BookOpen },

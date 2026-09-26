@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet } from '@tanstack/react-router'
+import { Outlet, useRouterState } from '@tanstack/react-router'
 import { getCookie } from '@/lib/cookies'
 import { studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -18,6 +18,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
   const user = useAuthStore((state) => state.auth.user)
   const token = useAuthStore((state) => state.auth.accessToken)
+  const kiosk = useRouterState({ select: (state) => state.location.pathname === '/board' })
 
   useEffect(() => {
     if (!token || user) return
@@ -36,6 +37,10 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
       }
     })
   }, [token, user])
+
+  if (kiosk) {
+    return <div className='dark min-h-svh bg-[#061018]'>{children ?? <Outlet />}</div>
+  }
 
   return (
     <SearchProvider>

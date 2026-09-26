@@ -4,6 +4,7 @@ using Studio.Contracts;
 using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Runtime;
+using Studio.Host.Visualization;
 
 namespace Studio.Host.Endpoints;
 
@@ -115,8 +116,25 @@ public static class StudioEndpoints
                 samples = store.Database.History(deviceId, names, start, end, bucketMs ?? 0)
             });
         });
-        api.MapGet("/alarms", (string? deviceId, int? limit, GatewayPersistence database) =>
-            ApiResults.Ok(new { alarms = database.ListAlarms(deviceId, limit ?? 100) }));
+        api.MapGet("/alarms", (
+            string? deviceId,
+            int? limit,
+            string? active,
+            string? acknowledged,
+            string? code,
+            string? from,
+            string? to,
+            GatewayPersistence database) =>
+        {
+            bool? activeFlag = active is "true" or "1" ? true : active is "false" or "0" ? false : null;
+            bool? ackFlag = acknowledged is "true" or "1" ? true : acknowledged is "false" or "0" ? false : null;
+            long? fromMs = long.TryParse(from, out var parsedFrom) ? parsedFrom : null;
+            long? toMs = long.TryParse(to, out var parsedTo) ? parsedTo : null;
+            return ApiResults.Ok(new
+            {
+                alarms = database.QueryAlarms(deviceId, activeFlag, ackFlag, code, fromMs, toMs, limit ?? 100)
+            });
+        });
 
         api.MapGet("/config/export", (string? format, string? slot, ConfigStore store) =>
         {
@@ -243,6 +261,8 @@ public static class StudioEndpoints
             store.UpsertGateway(gateway);
             return ApiResults.Ok(gateway);
         }).RequireWriter();
+
+        VisualizationEndpoints.Map(api);
     }
 
     private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts)

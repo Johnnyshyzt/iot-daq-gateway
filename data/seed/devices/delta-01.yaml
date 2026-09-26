@@ -1,0 +1,17 @@
+apiVersion: daq.gateway/v1
+kind: Device
+metadata:
+  id: delta-01
+  displayName: 台达 01
+spec:
+  adapter: delta.sim
+  brandId: delta
+  enabled: true
+  intervalMs: 1000
+  pointTemplateId: delta-viz
+  workshop: 一车间
+  line: 加工线
+  connection:
+    host: 127.0.0.1
+    port: 8193
+    timeoutMs: 3000

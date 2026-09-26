@@ -8,4 +8,12 @@ namespace Gateway.Abstractions.Contracts;
 public interface ISampleWriter
 {
     void Write(IReadOnlyList<Observation> observations);
+
+    /// <summary>
+    /// Records a connection-level state such as offline. The default does nothing
+    /// so existing writers keep compiling.
+    /// </summary>
+    void NoteStatus(string deviceId, string status, DateTimeOffset timestamp)
+    {
+    }
 }

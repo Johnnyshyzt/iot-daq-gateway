@@ -1,0 +1,17 @@
+apiVersion: daq.gateway/v1
+kind: Device
+metadata:
+  id: jdsoft-01
+  displayName: 精雕 01
+spec:
+  adapter: jdsoft.sim
+  brandId: jdsoft
+  enabled: true
+  intervalMs: 1000
+  pointTemplateId: jdsoft-viz
+  workshop: 二车间
+  line: 镗铣线
+  connection:
+    host: 127.0.0.1
+    port: 8193
+    timeoutMs: 3000

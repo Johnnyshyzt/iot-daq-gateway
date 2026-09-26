@@ -1,0 +1,17 @@
+apiVersion: daq.gateway/v1
+kind: Device
+metadata:
+  id: knd-01
+  displayName: 凯恩帝 01
+spec:
+  adapter: knd.sim
+  brandId: knd
+  enabled: true
+  intervalMs: 1000
+  pointTemplateId: knd-viz
+  workshop: 二车间
+  line: 模具线
+  connection:
+    host: 127.0.0.1
+    port: 8193
+    timeoutMs: 3000

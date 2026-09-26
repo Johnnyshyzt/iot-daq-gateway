@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { ChangePasswordForm } from '@/features/auth/change-password-form'
 import { canWrite, describeError, roleLabel, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { VizSettingsCard } from '@/features/viz/viz-settings'
 import { PageShell } from './page-shell'
 
 type SettingsView = {
@@ -134,6 +135,7 @@ export function SettingsPage() {
             ) : null}
           </CardContent>
         </Card>
+        <VizSettingsCard />
         <Card className='lg:col-span-2'>
           <CardHeader>
             <CardTitle>修改密码</CardTitle>

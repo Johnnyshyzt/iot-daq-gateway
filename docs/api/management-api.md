@@ -163,7 +163,7 @@ Runtime 读取数据库里的已发布配置并采集时不看许可证。Manage
 | `GET` | `/api/v1/catalog/items` | 标准数据项 |
 | `GET` | `/api/v1/devices/{id}/latest` | 该设备最新采样 |
 | `GET` | `/api/v1/samples/history?deviceId=&items=&from=&to=&bucketMs=` | 历史。`from` / `to` 为 Unix 毫秒或 ISO。`bucketMs` 大于 0 时按桶取最后一条 |
-| `GET` | `/api/v1/alarms?deviceId=&limit=` | 报警 |
+| `GET` | `/api/v1/alarms?deviceId=&limit=&active=&acknowledged=&code=&from=&to=` | 报警。`active` / `acknowledged` 为 `true`/`1` 或 `false`/`0` |
 | `GET` | `/api/v1/config/export?format=yaml\|json&slot=draft\|published` | 导出 |
 | `POST` | `/api/v1/config/import?format=yaml\|json` | 把正文导入草稿 |
 
@@ -332,6 +332,26 @@ MQTT 上的 JSON 另含 `gatewayId`、`site`，时间字段名为 `ts`，主题�
 ```
 
 日志目录可由 `GATEWAY_LOG_DIR` 覆盖，与 Host 现有文件日志一致。
+
+## 可视化
+
+计算在服务端。字段、状态归一、班次和聚合桶见 [visualization.md](../visualization.md)。`from` / `to` 为 Unix 毫秒或可解析的时间。读接口 viewer 可用。`POST /alarms/{id}/ack` 和 `PUT /viz/settings` 需要 engineer 或 admin。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/dashboard/overview` | 车间 / 产线卡片、五种状态计数、今日稼动率、今日产量、活动报警数 |
+| `GET` | `/api/v1/live/stream` | SSE。事件名 `overview`，数据与总览相同。Bearer 放在 `fetch` 头里 |
+| `GET` | `/api/v1/devices/{id}/detail` | 单机：状态条、仪表点、程序、轴、件数、报警、事件、连接。未知设备 `404` |
+| `GET` | `/api/v1/samples/series?devices=&points=&from=&to=&bucketMs=` | 最多 8 台、8 个点。每桶 `avg` / `min` / `max` / `count`。`bucketMs` 省略时按跨度选择 |
+| `GET` | `/api/v1/samples/series.csv` | 同一查询的 UTF-8 CSV（带 BOM） |
+| `GET` | `/api/v1/alarms/stats?deviceId=&from=&to=&top=` | 按设备和代码的 Top，默认 10，最大 50 |
+| `GET` | `/api/v1/alarms.csv` | 最多 2000 条报警 CSV |
+| `POST` | `/api/v1/alarms/{id}/ack` | 确认。不清除报警。未知 id 为 `404` |
+| `GET` | `/api/v1/utilization?deviceId=&from=&to=` | `shifts`、`days`、`lines`。稼动率 = 运行 / 计划时间 |
+| `GET` | `/api/v1/utilization.csv?view=shift\|day\|line` | 上表之一的 CSV。默认 `shift` |
+| `GET` | `/api/v1/utilization.xls?view=shift\|day\|line` | SpreadsheetML，用 Excel 打开 |
+| `GET` | `/api/v1/viz/settings` | `historyRetentionDays`、`timeZone`、`shifts` |
+| `PUT` | `/api/v1/viz/settings` | 保存。班次重叠或计划时间超出班次长度时 `400 invalid_settings` |
 
 ### `POST /api/v1/runtime/reload`
 
