@@ -12,15 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAlarmsRouteImport } from './routes/_authenticated/alarms'
+import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/live'
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
 import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated/points'
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
+import { Route as AuthenticatedMonitorDeviceIdRouteImport } from './routes/_authenticated/monitor.$deviceId'
 import { Route as AuthenticatedSinksMqttRouteImport } from './routes/_authenticated/sinks/mqtt'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -37,6 +42,16 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAlarmsRoute = AuthenticatedAlarmsRouteImport.update({
+  id: '/alarms',
+  path: '/alarms',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBoardRoute = AuthenticatedBoardRouteImport.update({
+  id: '/board',
+  path: '/board',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
@@ -45,6 +60,11 @@ const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
@@ -77,10 +97,22 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUtilizationRoute =
+  AuthenticatedUtilizationRouteImport.update({
+    id: '/utilization',
+    path: '/utilization',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAccountPasswordRoute =
   AuthenticatedAccountPasswordRouteImport.update({
     id: '/account/password',
     path: '/account/password',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMonitorDeviceIdRoute =
+  AuthenticatedMonitorDeviceIdRouteImport.update({
+    id: '/monitor/$deviceId',
+    path: '/monitor/$deviceId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
@@ -92,45 +124,60 @@ const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof authSignInRoute
+  '/alarms': typeof AuthenticatedAlarmsRoute
+  '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/history': typeof AuthenticatedHistoryRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
+  '/alarms': typeof AuthenticatedAlarmsRoute
+  '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/history': typeof AuthenticatedHistoryRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/utilization': typeof AuthenticatedUtilizationRoute
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
+  '/_authenticated/alarms': typeof AuthenticatedAlarmsRoute
+  '/_authenticated/board': typeof AuthenticatedBoardRoute
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
   '/_authenticated/points': typeof AuthenticatedPointsRoute
   '/_authenticated/publish': typeof AuthenticatedPublishRoute
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/_authenticated/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/_authenticated/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
 }
 export interface FileRouteTypes {
@@ -138,44 +185,59 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/alarms'
+    | '/board'
     | '/catalog'
     | '/devices'
+    | '/history'
     | '/live'
     | '/mqtt'
     | '/points'
     | '/publish'
     | '/runtime'
     | '/settings'
+    | '/utilization'
     | '/account/password'
+    | '/monitor/$deviceId'
     | '/sinks/mqtt'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
+    | '/alarms'
+    | '/board'
     | '/catalog'
     | '/devices'
+    | '/history'
     | '/live'
     | '/mqtt'
     | '/points'
     | '/publish'
     | '/runtime'
     | '/settings'
+    | '/utilization'
     | '/'
     | '/account/password'
+    | '/monitor/$deviceId'
     | '/sinks/mqtt'
   id:
     | '__root__'
     | '/_authenticated'
     | '/(auth)/sign-in'
+    | '/_authenticated/alarms'
+    | '/_authenticated/board'
     | '/_authenticated/catalog'
     | '/_authenticated/devices'
+    | '/_authenticated/history'
     | '/_authenticated/live'
     | '/_authenticated/mqtt'
     | '/_authenticated/points'
     | '/_authenticated/publish'
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
+    | '/_authenticated/utilization'
     | '/_authenticated/'
     | '/_authenticated/account/password'
+    | '/_authenticated/monitor/$deviceId'
     | '/_authenticated/sinks/mqtt'
   fileRoutesById: FileRoutesById
 }
@@ -207,6 +269,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/alarms': {
+      id: '/_authenticated/alarms'
+      path: '/alarms'
+      fullPath: '/alarms'
+      preLoaderRoute: typeof AuthenticatedAlarmsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/board': {
+      id: '/_authenticated/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof AuthenticatedBoardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/catalog': {
       id: '/_authenticated/catalog'
       path: '/catalog'
@@ -219,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/devices'
       fullPath: '/devices'
       preLoaderRoute: typeof AuthenticatedDevicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/live': {
@@ -263,11 +346,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/utilization': {
+      id: '/_authenticated/utilization'
+      path: '/utilization'
+      fullPath: '/utilization'
+      preLoaderRoute: typeof AuthenticatedUtilizationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/account/password': {
       id: '/_authenticated/account/password'
       path: '/account/password'
       fullPath: '/account/password'
       preLoaderRoute: typeof AuthenticatedAccountPasswordRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/monitor/$deviceId': {
+      id: '/_authenticated/monitor/$deviceId'
+      path: '/monitor/$deviceId'
+      fullPath: '/monitor/$deviceId'
+      preLoaderRoute: typeof AuthenticatedMonitorDeviceIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/sinks/mqtt': {
@@ -281,30 +378,40 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAlarmsRoute: typeof AuthenticatedAlarmsRoute
+  AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
   AuthenticatedPointsRoute: typeof AuthenticatedPointsRoute
   AuthenticatedPublishRoute: typeof AuthenticatedPublishRoute
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
+  AuthenticatedMonitorDeviceIdRoute: typeof AuthenticatedMonitorDeviceIdRoute
   AuthenticatedSinksMqttRoute: typeof AuthenticatedSinksMqttRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAlarmsRoute: AuthenticatedAlarmsRoute,
+  AuthenticatedBoardRoute: AuthenticatedBoardRoute,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
   AuthenticatedPointsRoute: AuthenticatedPointsRoute,
   AuthenticatedPublishRoute: AuthenticatedPublishRoute,
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,
+  AuthenticatedMonitorDeviceIdRoute: AuthenticatedMonitorDeviceIdRoute,
   AuthenticatedSinksMqttRoute: AuthenticatedSinksMqttRoute,
 }
 

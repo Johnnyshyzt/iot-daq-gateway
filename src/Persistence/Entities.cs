@@ -320,6 +320,8 @@ public sealed class AlarmRow
 
     public string PointId { get; set; } = "";
 
+    public string Code { get; set; } = "";
+
     public string Message { get; set; } = "";
 
     public string Severity { get; set; } = "alarm";
@@ -327,4 +329,36 @@ public sealed class AlarmRow
     public bool Active { get; set; }
 
     public long RaisedUnixMs { get; set; }
+
+    public long? ClearedUnixMs { get; set; }
+
+    public long? DurationMs { get; set; }
+
+    public bool Acknowledged { get; set; }
+
+    public string? AcknowledgedBy { get; set; }
+
+    public long? AcknowledgedUnixMs { get; set; }
+}
+
+public sealed class StateTransitionRow
+{
+    public string Id { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public string State { get; set; } = "";
+
+    public string RawValue { get; set; } = "";
+
+    public long StartedUnixMs { get; set; }
+
+    public long? EndedUnixMs { get; set; }
+}
+
+public sealed class AppSettingRow
+{
+    public string Key { get; set; } = "";
+
+    public string Value { get; set; } = "";
 }

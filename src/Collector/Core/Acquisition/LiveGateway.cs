@@ -347,6 +347,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
 
             var health = await adapter.GetHealthAsync(cancellationToken).ConfigureAwait(false);
             Remember(health);
+            NoteSampleStatus(health);
             await session.Sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -365,6 +366,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                 Timestamp = DateTimeOffset.UtcNow
             };
             Remember(health);
+            NoteSampleStatus(health);
             try
             {
                 await session.Sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
@@ -392,6 +394,21 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             while (_observations.Count > MaxObservations)
             {
                 _observations.Dequeue();
+            }
+        }
+    }
+
+    private void NoteSampleStatus(DeviceHealth health)
+    {
+        foreach (var writer in _samples)
+        {
+            try
+            {
+                writer.NoteStatus(health.DeviceId, health.Status.ToString(), health.Timestamp);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogDebug(ex, "Failed to record status for {DeviceId}", health.DeviceId);
             }
         }
     }

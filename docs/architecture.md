@@ -29,7 +29,7 @@ AcquisitionWorker
 | `src/Host` | 唯一可执行文件：Api、Collector、Web、数据库 |
 | `src/Web` | shadcn-admin（React + Vite）。MIT 归属见 [src/Web/README.md](../src/Web/README.md) |
 
-数据库、保留策略和切换 PostgreSQL 见 [database.md](database.md)。目录来源和同义词规则见 [catalog/README.md](catalog/README.md)。
+数据库、保留策略和切换 PostgreSQL 见 [database.md](database.md)。目录来源和同义词规则见 [catalog/README.md](catalog/README.md)。总览、历史曲线、报警和稼动率见 [visualization.md](visualization.md)。
 
 `fanuc.fake` 与 `fanuc.focas` 保持原行为。每个品牌另有 `{brand}.sim`，只产出该品牌目录中的点。真实协议类（OPC UA、MTConnect、LSV2、FTP 等）在 `Adapters.Cnc` 里是不连接、不附带厂商 SDK 的桩，发布时给出警告，设备保持离线。
 

@@ -15,6 +15,7 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 - **Windows 现场包：** 自包含 `win-x64` zip（`Host.exe`、`wwwroot`、`data/seed`、安装脚本）+ `install-service.bat` 开机自启。推送 `v*` 标签后挂到 GitHub Release；CI 的 `pack-win-x64` 仍打同一份 zip。不含 `Fwlib64.dll`
 - `dotnet test` + GitHub Actions CI（无硬件 / 无厂商 DLL）
 - `IProgramService` 预留 CNC 程序能力；V1 只读，功能开关默认 `false`
+- **Studio 可视化：** 总览大屏（含深色全屏 `/board`）、单机详情、历史曲线、报警、稼动率与产量。统计在 Host 聚合，页面不拉原始历史。见 [docs/visualization.md](docs/visualization.md)
 - 许可证 [Apache-2.0](LICENSE)
 
 ## 仓库结构
@@ -57,7 +58,7 @@ dotnet run --project src/Host
 
 然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动在 `data/gateway.db` 创建 SQLite（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。数据库还没有配置时，会导入已有的 `data/published`、`data/draft` 或 `data/seed`；没有这些文件时写入内置默认配置。目录里有 19 个数控品牌和每品牌一份标准点位模板。之后草稿、发布和回滚只写数据库，采集读已发布槽位，并在进程内重载，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
 
-目录、模拟器和数据库见 [docs/catalog/README.md](docs/catalog/README.md) 与 [docs/database.md](docs/database.md)。Studio 里可以按品牌新建模拟器设备，发布后在「实时值」查看最新值和历史。YAML / JSON 只作为导入导出。换成 PostgreSQL 时设置 `Database:Provider` 和连接字符串，见数据库文档。
+目录、模拟器和数据库见 [docs/catalog/README.md](docs/catalog/README.md) 与 [docs/database.md](docs/database.md)。Studio 里可以按品牌新建模拟器设备。发布后，「总览」按车间和产线看状态，「单机」看仪表和今日状态条，「历史曲线」「报警」「稼动率」读数据库里的聚合结果。种子里的模拟器会在空库时写入约一天的状态、报警和件数。YAML / JSON 只作为导入导出。换成 PostgreSQL 时设置 `Database:Provider` 和连接字符串，见数据库文档。可视化接口见 [docs/visualization.md](docs/visualization.md)。
 
 开发页面热更新：`cd src/Web && npm run dev`（`http://127.0.0.1:5173`，把 `/api` 代理到 5080）。CI 用 npm，本机也可以用 pnpm。
 

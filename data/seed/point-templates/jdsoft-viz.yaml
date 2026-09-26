@@ -1,0 +1,71 @@
+apiVersion: daq.gateway/v1
+kind: PointTemplate
+metadata:
+  id: jdsoft-viz
+  displayName: 精雕 可视化
+spec:
+  adapter: jdsoft
+  points:
+    - id: state
+      address: catalog/state
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: workMode
+      address: catalog/workMode
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: alarm
+      address: catalog/alarm
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: program
+      address: catalog/program
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCount
+      address: catalog/partCount
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleSpeed
+      address: catalog/spindleSpeed
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleOverride
+      address: catalog/spindleOverride
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: feedRate
+      address: catalog/feedRate
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: feedOverride
+      address: catalog/feedOverride
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true

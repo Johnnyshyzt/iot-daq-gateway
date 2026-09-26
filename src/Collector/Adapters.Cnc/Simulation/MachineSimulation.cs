@@ -2,12 +2,15 @@ namespace Adapters.Cnc;
 
 /// <summary>
 /// One coherent machine cycle shared by every brand simulator.
-/// IDLE, then RUNNING, then a short ALARM, then back to IDLE.
-/// Part count steps up when a cycle ends. Spindle and feed are zero unless the machine is running.
+/// Each device id picks a personality so a shop floor shows 运行 / 待机 / 报警 / 离线 / 停机 together.
+/// Part count steps up when a cycle ends and wraps so a shift can see a counter reset.
+/// Spindle and feed are zero unless the machine is running.
 /// </summary>
 public static class MachineSimulation
 {
     public const int CycleSeconds = 90;
+
+    public const int PartCountModulo = 240;
 
     public sealed record Snapshot(
         string State,
@@ -48,30 +51,26 @@ public static class MachineSimulation
             elapsed = 0;
         }
 
+        var personality = Math.Abs(StableHash(deviceId)) % 6;
         var phase = (int)(elapsed % CycleSeconds);
         var completed = elapsed / CycleSeconds;
-        var state = phase switch
-        {
-            < 20 => "IDLE",
-            < 70 => "RUNNING",
-            < 82 => "ALARM",
-            _ => "IDLE"
-        };
+        var state = StateAt(personality, phase);
         var running = state == "RUNNING";
         var alarm = state == "ALARM";
-        var estop = alarm && phase >= 78;
+        var estop = alarm && phase % 5 == 0;
         var spindle = running ? 900 + (phase * 47 % 2100) : 0;
         var feed = running ? 120 + (phase * 13 % 800) : 0;
         var axis = running ? phase * 0.37 : 12.5;
+        var parts = completed % PartCountModulo;
         return new Snapshot(
             State: state,
-            WorkMode: running ? "AUTO" : alarm ? "ALARM" : "JOG",
+            WorkMode: running ? "AUTO" : alarm ? "ALARM" : state == "STOPPED" ? "MDI" : "JOG",
             Estop: estop,
             Alarm: alarm,
             Program: ProgramName(brandId, (int)(completed % 8)),
             ProgramMain: ProgramName(brandId, 0),
             ProgramComment: "PART-" + (completed % 8).ToString(System.Globalization.CultureInfo.InvariantCulture),
-            AlarmText: alarm ? "EX100 伺服过载" : "0",
+            AlarmText: alarm ? AlarmText(personality) : "0",
             ProgramLine: running ? 10 + (phase % 40) : 0,
             SpindleSpeed: spindle,
             SpindleSpeedCmd: running ? 1800 : 0,
@@ -80,7 +79,7 @@ public static class MachineSimulation
             FeedRateCmd: running ? 500 : 0,
             FeedOverride: 100,
             RapidOverride: running ? 100 : 50,
-            PartCount: completed,
+            PartCount: parts,
             PartCountTotal: completed + 120,
             CycleSecondsValue: running ? phase - 20 : phase < 20 ? 0 : 50,
             RunSeconds: elapsed,
@@ -93,6 +92,71 @@ public static class MachineSimulation
             SpindleLoad: running ? 40 + (phase % 30) : 0,
             TempC: running ? 42 + (phase % 8) : 28);
     }
+
+    public static string StateAt(int personality, int phase)
+    {
+        var band = ((personality % 6) + 6) % 6;
+        return band switch
+        {
+            0 => phase switch
+            {
+                < 20 => "IDLE",
+                < 70 => "RUNNING",
+                < 82 => "ALARM",
+                _ => "IDLE"
+            },
+            1 => phase switch
+            {
+                < 12 => "IDLE",
+                < 55 => "RUNNING",
+                < 68 => "STOPPED",
+                < 80 => "ALARM",
+                _ => "IDLE"
+            },
+            2 => phase switch
+            {
+                < 35 => "IDLE",
+                < 68 => "RUNNING",
+                < 80 => "ALARM",
+                _ => "IDLE"
+            },
+            3 => phase switch
+            {
+                < 15 => "IDLE",
+                < 45 => "RUNNING",
+                < 60 => "OFFLINE",
+                < 75 => "RUNNING",
+                < 85 => "ALARM",
+                _ => "IDLE"
+            },
+            4 => phase switch
+            {
+                < 18 => "IDLE",
+                < 40 => "RUNNING",
+                < 55 => "ALARM",
+                < 75 => "STOPPED",
+                _ => "RUNNING"
+            },
+            _ => phase switch
+            {
+                < 22 => "RUNNING",
+                < 36 => "ALARM",
+                < 50 => "IDLE",
+                < 80 => "RUNNING",
+                _ => "IDLE"
+            }
+        };
+    }
+
+    public static string AlarmText(int personality) => (personality % 6) switch
+    {
+        0 => "EX100 伺服过载",
+        1 => "EX231 主轴过热",
+        2 => "PS101 程序错误",
+        3 => "OH000 超程",
+        4 => "SV040 伺服报警",
+        _ => "EX441 冷却异常"
+    };
 
     public static string ProgramName(string brandId, int index)
     {

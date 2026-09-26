@@ -12,6 +12,7 @@ using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Endpoints;
 using Studio.Host.Runtime;
+using Studio.Host.Visualization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -65,6 +66,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized(importPath);
+DemoHistorySeeder.SeedIfEmpty(store.Database, store.ReadPublished());
 var accounts = app.Services.GetRequiredService<AccountStore>();
 accounts.EnsureInitialized();
 store.Database.SyncUsers(Path.Combine(dataDirectory, "auth", "accounts.json"));

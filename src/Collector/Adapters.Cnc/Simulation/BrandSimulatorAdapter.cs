@@ -103,7 +103,7 @@ public sealed class BrandSimulatorAdapter : ISouthboundAdapter
             "state" => (object?)snapshot.State,
             "workMode" => snapshot.WorkMode,
             "alarm" => snapshot.AlarmText,
-            "alarmNumber" => snapshot.Alarm ? "EX100" : "0",
+            "alarmNumber" => snapshot.Alarm ? AlarmCode(snapshot.AlarmText) : "0",
             "estop" => snapshot.Estop,
             "isRunning" => snapshot.State == "RUNNING",
             "isReset" => snapshot.State == "IDLE",
@@ -200,6 +200,12 @@ public sealed class BrandSimulatorAdapter : ISouthboundAdapter
                 _ => snapshot.State
             }
         };
+    }
+
+    private static string AlarmCode(string text)
+    {
+        var token = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(token) ? "ALARM" : token;
     }
 
     private static string FormatAxes(MachineSimulation.Snapshot snapshot) =>

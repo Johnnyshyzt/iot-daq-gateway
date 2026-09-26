@@ -1,0 +1,17 @@
+apiVersion: daq.gateway/v1
+kind: Device
+metadata:
+  id: gsk-01
+  displayName: 广数 01
+spec:
+  adapter: gsk.sim
+  brandId: gsk
+  enabled: true
+  intervalMs: 1000
+  pointTemplateId: gsk-viz
+  workshop: 一车间
+  line: 加工线
+  connection:
+    host: 127.0.0.1
+    port: 8193
+    timeoutMs: 3000
