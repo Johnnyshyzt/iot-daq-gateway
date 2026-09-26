@@ -167,7 +167,7 @@ git push origin vX.Y.Z
 | `pipeline.changeOnly` | 仅在点位值变化时发布（`$status` 每轮仍发） |
 | `programTransfer.enabled` | `IProgramService` 开关，默认 `false` |
 | `mqtt.*` | broker、clientId、QoS、可选 TLS/账号 |
-| `devices[].adapter` | `fanuc.fake` 或 `fanuc.focas` |
+| `devices[].adapter` | 品牌模拟器、开放协议或厂商 SDK 驱动，见下方驱动矩阵 |
 
 默认采集路径是数据目录里的 `published/`（见 [docs/config/README.md](docs/config/README.md)）。`--config` 或 `GATEWAY_CONFIG` 可以改成单文件 YAML 或 v1 目录，那是无界面覆盖，不是推荐启动方式。
 
@@ -175,6 +175,27 @@ git push origin vX.Y.Z
 
 - 厂商 FOCAS 库需用户自行提供，仓库不收录。见 [docs/focas.md](docs/focas.md)。
 - 面板以太网应做网络隔离。见 [docs/security.md](docs/security.md)。
+
+## 驱动矩阵
+
+运行配置在数据库里。每个品牌都有模拟器。真实驱动把读数写到目录项 Id 上，`{品牌}-standard` 模板不用改地址。支持级别在 Studio「品牌目录」里按驱动显示。细节在 [docs/drivers](docs/drivers/README.md)。厂商二进制只放 `data/sdk/<厂商>/`，仓库不提交。
+
+| 品牌 | 真实驱动 | 协议 | SDK |
+| --- | --- | --- | --- |
+| 发那科 | `fanuc.focas` | FOCAS2 Ethernet，8193 | `Fwlib64.dll` / `libfwlib32.so` |
+| 西门子 | `siemens.opcua` | SINUMERIK OPC UA，4840 | 无。需要控制器 OPC UA 选项 |
+| 三菱 | `mitsubishi.opcua` / `.mtconnect` / `.ezsocket` | OPC UA、MTConnect，或 EZSocket | EZSocket 放到 `data/sdk/mitsubishi/`，签名未核对则不调用 |
+| 新代、广数、华中、凯恩帝、宝元、科德、精雕 | `*.custom` | 厂商 API | `data/sdk/<品牌>/`。没有可核对的公开签名，不调用未知入口 |
+| 马扎克 Smooth/Smart、Matrix | `mazak-*.mtconnect` | MTConnect，5000 | 无 |
+| 海德汉 | `heidenhain.lsv2` / `.opcua` | LSV2 19000，或 OPC UA | 无 |
+| 法格 | `fagor.opcua` | OPC UA，节点由地址或浏览名给出 | 无 |
+| 兄弟 | `brother.mtconnect` / `.opcua` | CNC-C00 无公开帧，专有适配器不握手 | 无 |
+| 哈斯 | `haas.mtconnect` / `haas.q` | MTConnect，或 5051 Q 指令（Setting 143） | 无 |
+| 西铁城、森精机 | OPC UA / MTConnect / 三菱 EZSocket | 见对应文档 | EZSocket 同上 |
+| 台达 | `delta.modbus` | Modbus TCP 502 | 无。默认寄存器不是出厂表 |
+| 通用 | `generic.opcua` / `.mtconnect` / `.modbus` / `.ftp` | 同上 | 无 |
+
+验证状态：协议级或模拟器已核对，需在真实机床上做现场验收（verified on simulator/protocol level only, needs on-site acceptance on a real machine）。
 
 ## 路线图
 

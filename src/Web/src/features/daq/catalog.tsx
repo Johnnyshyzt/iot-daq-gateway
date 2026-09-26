@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
@@ -16,8 +23,10 @@ import {
   categoryLabel,
   describeError,
   studioApi,
+  supportLabel,
   type CatalogBrand,
   type CatalogOverview,
+  type CatalogSupport,
 } from '@/lib/studio-api'
 import { cn } from '@/lib/utils'
 import { PageShell } from './page-shell'
@@ -27,6 +36,8 @@ export function CatalogPage() {
   const [brandId, setBrandId] = useState('')
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState('')
+  const [support, setSupport] = useState<CatalogSupport | null>(null)
+  const [adapterId, setAdapterId] = useState('')
 
   useEffect(() => {
     void studioApi<CatalogOverview>('/api/v1/catalog/brands')
@@ -37,7 +48,20 @@ export function CatalogPage() {
       .catch((error: unknown) => setMessage(describeError(error)))
   }, [])
 
+  useEffect(() => {
+    if (!brandId) return
+    void studioApi<CatalogSupport>(`/api/v1/catalog/support?brandId=${encodeURIComponent(brandId)}`)
+      .then((report) => {
+        setSupport(report)
+        setAdapterId((current) =>
+          report.drivers.some((driver) => driver.adapterId === current) ? current : report.drivers[0]?.adapterId || ''
+        )
+      })
+      .catch((error: unknown) => setMessage(describeError(error)))
+  }, [brandId])
+
   const brand = catalog?.brands.find((item) => item.id === brandId)
+  const driver = support?.brandId === brandId ? support.drivers.find((item) => item.adapterId === adapterId) : undefined
   const needle = query.trim().toLowerCase()
   const canonical = useMemo(() => {
     const items = catalog?.items ?? []
@@ -85,7 +109,15 @@ export function CatalogPage() {
                 </nav>
               </ScrollArea>
             </Card>
-            {brand ? <BrandDetail brand={brand} /> : null}
+            {brand ? (
+              <BrandDetail
+                brand={brand}
+                adapterId={adapterId}
+                drivers={support?.brandId === brandId ? support.drivers : []}
+                onAdapter={setAdapterId}
+                support={driver}
+              />
+            ) : null}
           </div>
         </TabsContent>
         <TabsContent value='items' className='mt-3'>
@@ -118,7 +150,19 @@ export function CatalogPage() {
   )
 }
 
-function BrandDetail({ brand }: { brand: CatalogBrand }) {
+function BrandDetail({
+  brand,
+  adapterId,
+  drivers,
+  onAdapter,
+  support,
+}: {
+  brand: CatalogBrand
+  adapterId: string
+  drivers: CatalogSupport['drivers']
+  onAdapter: (id: string) => void
+  support?: CatalogSupport['drivers'][number]
+}) {
   return (
     <div className='grid min-w-0 gap-3'>
       <Card>
@@ -153,8 +197,8 @@ function BrandDetail({ brand }: { brand: CatalogBrand }) {
                     <span className='ms-2 font-mono text-xs text-muted-foreground'>{adapter.id}</span>
                   </div>
                   <div className='text-xs text-muted-foreground'>
-                    {adapter.kind === 'simulator' ? '模拟器' : '协议驱动'} · {adapter.protocol}
-                    {adapter.phase > 1 ? ' · 第二阶段' : ''}
+                    {adapter.kind === 'simulator' ? '模拟器' : adapter.kind === 'stub' ? '占位' : '协议驱动'} · {adapter.protocol}
+                    {adapter.kind === 'stub' ? ' · 尚未实现' : ''}
                   </div>
                 </div>
               ))}
@@ -163,19 +207,40 @@ function BrandDetail({ brand }: { brand: CatalogBrand }) {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader>
+        <CardHeader className='gap-3'>
           <CardTitle>该品牌数据项（{brand.items.length}）</CardTitle>
+          <div className='grid gap-2'>
+            <Select value={adapterId || undefined} onValueChange={onAdapter} disabled={drivers.length === 0}>
+              <SelectTrigger>
+                <SelectValue placeholder='选择驱动以查看支持情况' />
+              </SelectTrigger>
+              <SelectContent>
+                {drivers.map((item) => (
+                  <SelectItem key={item.adapterId} value={item.adapterId}>
+                    {item.displayName}（{item.adapterId}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {support ? <p className='text-xs text-muted-foreground'>{support.verification}</p> : null}
+          </div>
         </CardHeader>
         <CardContent>
           <ItemTable
-            rows={brand.items.map((item) => ({
-              id: item.id,
-              nameZh: item.nameZh,
-              dataType: item.dataType,
-              unit: item.unit,
-              category: item.category,
-              extra: item.brandSpecific ? '品牌专有' : (item.sources ?? []).join('、'),
-            }))}
+            rows={brand.items.map((item) => {
+              const level = support?.items.find((entry) => entry.itemId === item.id)
+              return {
+                id: item.id,
+                nameZh: item.nameZh,
+                dataType: item.dataType,
+                unit: item.unit,
+                category: item.category,
+                extra: item.brandSpecific ? '品牌专有' : (item.sources ?? []).join('、'),
+                support: level ? supportLabel(level.level) : '—',
+                supportNote: level?.note || '',
+                level: level?.level || '',
+              }
+            })}
             extraLabel='说明'
           />
         </CardContent>
@@ -188,7 +253,17 @@ function ItemTable({
   rows,
   extraLabel,
 }: {
-  rows: Array<{ id: string; nameZh: string; dataType: string; unit: string; category: string; extra: string }>
+  rows: Array<{
+    id: string
+    nameZh: string
+    dataType: string
+    unit: string
+    category: string
+    extra: string
+    support?: string
+    supportNote?: string
+    level?: string
+  }>
   extraLabel: string
 }) {
   return (
@@ -202,12 +277,13 @@ function ItemTable({
             <TableHead>类型</TableHead>
             <TableHead>单位</TableHead>
             <TableHead>{extraLabel}</TableHead>
+            {rows.some((row) => row.support) ? <TableHead>驱动支持</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className='text-muted-foreground'>
+              <TableCell colSpan={7} className='text-muted-foreground'>
                 没有匹配的数据项。
               </TableCell>
             </TableRow>
@@ -220,6 +296,14 @@ function ItemTable({
               <TableCell>{row.dataType}</TableCell>
               <TableCell>{row.unit || '—'}</TableCell>
               <TableCell className='max-w-64 whitespace-normal text-xs text-muted-foreground'>{row.extra || '—'}</TableCell>
+              {row.support ? (
+                <TableCell className='max-w-64 whitespace-normal text-xs'>
+                  <Badge variant={row.level === 'supported' ? 'default' : row.level === 'viaSdk' ? 'secondary' : 'outline'}>
+                    {row.support}
+                  </Badge>
+                  {row.supportNote ? <div className='mt-1 text-muted-foreground'>{row.supportNote}</div> : null}
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

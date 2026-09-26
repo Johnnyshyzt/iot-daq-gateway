@@ -102,7 +102,7 @@ public sealed class FocasConnectProbe : IFocasConnectProbe
         FocasLibraryProblem.WrongLibraryArchitecture =>
             "Fwlib64.dll 位数不对（BadImageFormat）。请把 64 位库放到与 Host.exe 同一目录，不要使用 32 位库。",
         FocasLibraryProblem.MissingLibrary =>
-            "未找到 Fwlib64.dll。请把授权的 64 位库放到 Host.exe 同一目录。安装包和仓库都不附带该文件。",
+            $"未找到 Fwlib64.dll。请把授权库放到 {FocasLibraryFiles.SdkDirectory}（Linux 文件名是 libfwlib32.so），或与 Host.exe 同一目录。安装包和仓库都不附带该文件。",
         _ => string.IsNullOrWhiteSpace(detail)
             ? "加载 Fwlib64.dll 失败。请确认它是 64 位、与 Host.exe 放在同一目录，并已安装厂商要求的运行库。"
             : $"加载 Fwlib64.dll 失败：{detail}"

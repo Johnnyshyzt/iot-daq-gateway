@@ -418,6 +418,40 @@ public sealed partial class ConfigStore
         }
     }
 
+    public CollectionResult SetCollectionEnabled(string id, bool enabled)
+    {
+        lock (_gate)
+        {
+            var draft = ReadSlot("draft");
+            var device = FindDevice(draft, id);
+            device.Spec.Enabled = enabled;
+            SaveSlot("draft", draft);
+
+            var published = ReadSlot("published");
+            var index = published.Devices.FindIndex(item => string.Equals(item.Metadata.Id, id, StringComparison.Ordinal));
+            var reloaded = false;
+            if (index >= 0)
+            {
+                published.Devices[index].Spec.Enabled = enabled;
+                SaveSlot("published", published);
+                var hash = CanonicalRevision.Compute(published);
+                _database.AppendRevision(
+                    hash,
+                    DateTimeOffset.UtcNow,
+                    "collection",
+                    enabled ? "启动采集" : "停止采集",
+                    published,
+                    hash);
+                reloaded = true;
+            }
+
+            AppendLogUnlocked(reloaded
+                ? $"设备 {id} 采集已{(enabled ? "启动" : "停止")}"
+                : $"草稿里设备 {id} 已{(enabled ? "启用" : "禁用")}，尚未发布，采集未重载");
+            return new CollectionResult { DeviceId = id, Enabled = enabled, Reloaded = reloaded };
+        }
+    }
+
     public ValidationResult Validate()
     {
         lock (_gate)

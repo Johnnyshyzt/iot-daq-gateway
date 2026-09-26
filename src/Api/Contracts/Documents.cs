@@ -119,6 +119,13 @@ public sealed class DeviceConnection
     public string? Path { get; set; }
 
     public string? Namespace { get; set; }
+
+    public string? Username { get; set; }
+
+    public string? Password { get; set; }
+
+    /// <summary>Adapter-specific fields such as Modbus <c>unitId</c>. Keys match the catalog parameter names.</summary>
+    public Dictionary<string, string>? Parameters { get; set; }
 }
 
 public sealed class PointTemplateDocument

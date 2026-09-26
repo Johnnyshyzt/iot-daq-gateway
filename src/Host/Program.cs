@@ -49,6 +49,7 @@ builder.Services.AddSingleton(sp => new AccountStore(
     sp.GetRequiredService<IConfiguration>(),
     sp.GetRequiredService<ILogger<AccountStore>>()));
 builder.Services.AddFocasConnectProbe();
+builder.Services.AddDriverServices();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<RuntimeQueries>();
 builder.Services.AddSingleton<GatewayReloadClient>();

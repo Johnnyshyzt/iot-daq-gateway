@@ -37,3 +37,24 @@ internal readonly record struct FocasStatInfo(
     short Run,
     short Emergency,
     short Alarm);
+
+internal readonly record struct FocasSignalSnapshot(
+    bool HasSpindle,
+    int Spindle,
+    bool HasFeed,
+    int Feed,
+    bool HasAxes,
+    double AxisX,
+    double AxisY,
+    double AxisZ,
+    bool HasSystem,
+    string SystemType,
+    string SoftwareVersion,
+    int AxisCount,
+    bool HasMainProgram,
+    int MainProgram);
+
+internal interface IFocasSignals
+{
+    FocasSignalSnapshot Read(ushort handle, in FocasStatInfo status);
+}

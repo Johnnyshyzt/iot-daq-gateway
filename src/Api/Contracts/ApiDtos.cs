@@ -205,11 +205,51 @@ public sealed class DeviceTestResult
 
     public bool Ok { get; set; }
 
+    public bool Reachable { get; set; }
+
+    public bool Handshake { get; set; }
+
     public string Adapter { get; set; } = "";
 
     public string Message { get; set; } = "";
 
+    public string? Error { get; set; }
+
+    /// <summary>missing, present, or none.</summary>
+    public string? SdkStatus { get; set; }
+
     public int LatencyMs { get; set; }
+
+    public int ReachableMs { get; set; }
+
+    public int HandshakeMs { get; set; }
+
+    public List<DeviceTestSample> Samples { get; set; } = [];
+}
+
+public sealed class DeviceTestSample
+{
+    public string Point { get; set; } = "";
+
+    public string? Value { get; set; }
+
+    public string Quality { get; set; } = "good";
+
+    public string? Unit { get; set; }
+}
+
+public sealed class CollectionRequest
+{
+    public bool Enabled { get; set; }
+}
+
+public sealed class CollectionResult
+{
+    public string DeviceId { get; set; } = "";
+
+    public bool Enabled { get; set; }
+
+    public bool Reloaded { get; set; }
 }
 
 public sealed class RuntimeStatus

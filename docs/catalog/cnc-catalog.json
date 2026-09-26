@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.26",
+  "version": "2026.09.27",
   "source": "docs/catalog/cnc-data-template.xlsx",
   "notes": [
     "运行状态与工作模式/操作模式保持为两个标准项。同一品牌经常同时给出这两列，合并会丢掉一列。",
@@ -8,7 +8,8 @@
     "报警信息、告警状态、是否报警合并为 alarm。",
     "加工件数、工件数、产量合并为 partCount。",
     "fanuc-standard 仍是历史三态模板（state/alarm/program）。fanuc-catalog 才是发那科全量目录。",
-    "没有出现在 Sheet2 的品牌（兄弟、哈斯、法格、台达、西铁城、森精机）型号列表为空，设备上的控制器型号可留空。"
+    "没有出现在 Sheet2 的品牌（兄弟、哈斯、法格、台达、西铁城、森精机）型号列表为空，设备上的控制器型号可留空。",
+    "第二阶段协议驱动的连接参数在适配器上。模拟器仍然是不连机床的演示路径。"
   ],
   "items": [
     {
@@ -1894,7 +1895,7 @@
         {
           "id": "siemens.opcua",
           "brandId": "siemens",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "opcua",
           "phase": 2,
           "displayName": "西门子 OPC UA",
@@ -1930,11 +1931,26 @@
             {
               "name": "namespace",
               "type": "string",
-              "label": "命名空间",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "需要控制器 OPC UA 选项。828D/840D sl/ONE 按公开的 SINUMERIK 变量路径读取。"
         }
       ]
     },
@@ -2117,12 +2133,111 @@
           ]
         },
         {
-          "id": "mitsubishi.custom",
+          "id": "mitsubishi.opcua",
           "brandId": "mitsubishi",
-          "kind": "stub",
-          "protocol": "mitsubishi",
+          "kind": "driver",
+          "protocol": "opcua",
           "phase": 2,
-          "displayName": "三菱协议",
+          "displayName": "三菱 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "note": "M800 等带 OPC UA 选件时使用。没有公开的固定节点表时，按点位 NodeId 或浏览名读取。"
+        },
+        {
+          "id": "mitsubishi.mtconnect",
+          "brandId": "mitsubishi",
+          "kind": "driver",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "三菱 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ],
+          "note": "机床或边缘侧已安装 MTConnect Agent 时使用。"
+        },
+        {
+          "id": "mitsubishi.ezsocket",
+          "brandId": "mitsubishi",
+          "kind": "driver",
+          "protocol": "ezsocket",
+          "phase": 2,
+          "displayName": "三菱 EZSocket",
           "parameters": [
             {
               "name": "host",
@@ -2152,7 +2267,47 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "EZSocket 程序集放到 data/sdk/mitsubishi/。公开资料没有可核对的方法签名，找到文件也不会调用未知入口。"
+        },
+        {
+          "id": "mitsubishi.custom",
+          "brandId": "mitsubishi",
+          "kind": "driver",
+          "protocol": "ezsocket",
+          "phase": 2,
+          "displayName": "三菱 EZSocket（兼容）",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "note": "与三菱 EZSocket 相同。"
         }
       ]
     },
@@ -2361,10 +2516,10 @@
         {
           "id": "syntec.custom",
           "brandId": "syntec",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "syntec",
           "phase": 2,
-          "displayName": "新代协议",
+          "displayName": "新代 OpenCNC",
           "parameters": [
             {
               "name": "host",
@@ -2394,7 +2549,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把新代 OpenCNC / SyntecRemoteCNC 程序集放到 data/sdk/syntec/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -2574,10 +2730,10 @@
         {
           "id": "gsk.custom",
           "brandId": "gsk",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "gsk",
           "phase": 2,
-          "displayName": "广数协议",
+          "displayName": "广数 SDK",
           "parameters": [
             {
               "name": "host",
@@ -2607,7 +2763,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把广数 SDK 放到 data/sdk/gsk/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -2835,7 +2992,7 @@
         {
           "id": "mazak-smart.mtconnect",
           "brandId": "mazak-smart",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "mtconnect",
           "phase": 2,
           "displayName": "马扎克 MTConnect",
@@ -2868,7 +3025,8 @@
               "required": false,
               "default": "/current"
             }
-          ]
+          ],
+          "note": "Mazak Smooth / Smart 的 MTConnect 适配器。"
         }
       ]
     },
@@ -3004,7 +3162,7 @@
         {
           "id": "mazak-matrix.mtconnect",
           "brandId": "mazak-matrix",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "mtconnect",
           "phase": 2,
           "displayName": "马扎克 MTConnect",
@@ -3037,7 +3195,8 @@
               "required": false,
               "default": "/current"
             }
-          ]
+          ],
+          "note": "Mazak Matrix 的 MTConnect 适配器。"
         }
       ]
     },
@@ -3240,10 +3399,10 @@
         {
           "id": "knd.custom",
           "brandId": "knd",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "knd",
           "phase": 2,
-          "displayName": "凯恩帝协议",
+          "displayName": "凯恩帝 SDK",
           "parameters": [
             {
               "name": "host",
@@ -3273,7 +3432,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把凯恩帝 SDK 放到 data/sdk/knd/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -3466,7 +3626,7 @@
         {
           "id": "heidenhain.lsv2",
           "brandId": "heidenhain",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "lsv2",
           "phase": 2,
           "displayName": "海德汉 LSV2",
@@ -3491,8 +3651,76 @@
               "label": "超时 (ms)",
               "required": false,
               "default": 5000
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "DNC 口令",
+              "required": false,
+              "default": ""
             }
-          ]
+          ],
+          "note": "TCP 19000，LSV2。状态、程序、倍率、报警按公开帧读取；主轴转速等没有对应报文。"
+        },
+        {
+          "id": "heidenhain.opcua",
+          "brandId": "heidenhain",
+          "kind": "driver",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "海德汉 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "note": "TNC 640 / iTNC 的 OPC UA 选件。没有公开的固定节点表时，按点位 NodeId 或浏览名读取。"
         }
       ]
     },
@@ -3648,10 +3876,10 @@
         {
           "id": "hnc.custom",
           "brandId": "hnc",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "hnc",
           "phase": 2,
-          "displayName": "华中数控协议",
+          "displayName": "华中 HNC SDK",
           "parameters": [
             {
               "name": "host",
@@ -3681,7 +3909,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把华中 HNC SDK 放到 data/sdk/hnc/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -3830,42 +4059,124 @@
           ]
         },
         {
-          "id": "fagor.custom",
+          "id": "fagor.opcua",
           "brandId": "fagor",
-          "kind": "stub",
-          "protocol": "fagor",
+          "kind": "driver",
+          "protocol": "opcua",
           "phase": 2,
-          "displayName": "法格协议",
+          "displayName": "法格 OPC UA",
           "parameters": [
             {
               "name": "host",
               "type": "string",
               "label": "主机",
               "required": true,
-              "default": "192.168.1.60"
+              "default": "192.168.1.20"
             },
             {
               "name": "port",
               "type": "int",
               "label": "端口",
               "required": true,
-              "default": 8193
+              "default": 4840
             },
             {
               "name": "timeoutMs",
               "type": "int",
               "label": "超时 (ms)",
               "required": false,
-              "default": 3000
+              "default": 5000
             },
             {
               "name": "path",
               "type": "string",
-              "label": "路径",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "法格 OPC UA。按点位 NodeId 或浏览名读取。"
+        },
+        {
+          "id": "fagor.custom",
+          "brandId": "fagor",
+          "kind": "driver",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "法格 OPC UA（兼容）",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "note": "与法格 OPC UA 相同。"
         }
       ]
     },
@@ -4020,12 +4331,111 @@
           ]
         },
         {
+          "id": "brother.mtconnect",
+          "brandId": "brother",
+          "kind": "driver",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "兄弟 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ],
+          "note": "兄弟机床经 MTConnect Agent 采集。"
+        },
+        {
+          "id": "brother.opcua",
+          "brandId": "brother",
+          "kind": "driver",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "兄弟 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ],
+          "note": "兄弟机床经 OPC UA 采集。按点位 NodeId 或浏览名读取。"
+        },
+        {
           "id": "brother.custom",
           "brandId": "brother",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "brother",
           "phase": 2,
-          "displayName": "兄弟协议",
+          "displayName": "兄弟 CNC-C00",
           "parameters": [
             {
               "name": "host",
@@ -4055,7 +4465,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "CNC-C00 没有可核对的公开帧格式，不会发起专有握手。请改用 MTConnect 或 OPC UA。"
         }
       ]
     },
@@ -4206,7 +4617,7 @@
         {
           "id": "haas.mtconnect",
           "brandId": "haas",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "mtconnect",
           "phase": 2,
           "displayName": "哈斯 MTConnect",
@@ -4239,7 +4650,40 @@
               "required": false,
               "default": "/current"
             }
-          ]
+          ],
+          "note": "Haas NGC 的 MTConnect。控制器需打开数据发布。"
+        },
+        {
+          "id": "haas.q",
+          "brandId": "haas",
+          "kind": "driver",
+          "protocol": "haas-q",
+          "phase": 2,
+          "displayName": "哈斯 Q 指令",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.70"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5051
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ],
+          "note": "以太网端口 5051 的 Q 指令（Q100/Q104/Q500 等）。需打开 Setting 143。"
         }
       ]
     },
@@ -4479,10 +4923,10 @@
         {
           "id": "baoyuan.custom",
           "brandId": "baoyuan",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "baoyuan",
           "phase": 2,
-          "displayName": "宝元协议",
+          "displayName": "宝元 SDK",
           "parameters": [
             {
               "name": "host",
@@ -4512,7 +4956,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把宝元 SDK 放到 data/sdk/baoyuan/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -4822,10 +5267,10 @@
         {
           "id": "kede.custom",
           "brandId": "kede",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "kede",
           "phase": 2,
-          "displayName": "科德协议",
+          "displayName": "科德 SDK",
           "parameters": [
             {
               "name": "host",
@@ -4855,7 +5300,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把科德 SDK 放到 data/sdk/kede/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -5022,12 +5468,71 @@
           ]
         },
         {
+          "id": "citizen.opcua",
+          "brandId": "citizen",
+          "kind": "driver",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "西铁城 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ]
+        },
+        {
           "id": "citizen.mitsubishi",
           "brandId": "citizen",
-          "kind": "stub",
-          "protocol": "mitsubishi",
+          "kind": "driver",
+          "protocol": "ezsocket",
           "phase": 2,
-          "displayName": "西铁城（三菱）协议",
+          "displayName": "西铁城 EZSocket",
           "parameters": [
             {
               "name": "host",
@@ -5057,7 +5562,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "西铁城走三菱 EZSocket 加载器。签名未核对时不会调用未知入口。"
         }
       ]
     },
@@ -5229,12 +5735,110 @@
           ]
         },
         {
+          "id": "dmg-mori.mtconnect",
+          "brandId": "dmg-mori",
+          "kind": "driver",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "森精机 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ],
+          "note": "DMG MORI / 森精机 MTConnect Agent。"
+        },
+        {
+          "id": "dmg-mori.opcua",
+          "brandId": "dmg-mori",
+          "kind": "driver",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "森精机 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间 URI",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "label": "用户名",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "password",
+              "type": "secret",
+              "label": "密码",
+              "required": false,
+              "default": ""
+            }
+          ]
+        },
+        {
           "id": "dmg-mori.mitsubishi",
           "brandId": "dmg-mori",
-          "kind": "stub",
-          "protocol": "mitsubishi",
+          "kind": "driver",
+          "protocol": "ezsocket",
           "phase": 2,
-          "displayName": "森精机（三菱）协议",
+          "displayName": "森精机 EZSocket",
           "parameters": [
             {
               "name": "host",
@@ -5264,7 +5868,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "森精机三菱系统的 EZSocket 加载器。"
         }
       ]
     },
@@ -5490,10 +6095,10 @@
         {
           "id": "jdsoft.custom",
           "brandId": "jdsoft",
-          "kind": "stub",
+          "kind": "driver",
           "protocol": "jdsoft",
           "phase": 2,
-          "displayName": "精雕协议",
+          "displayName": "精雕 SDK",
           "parameters": [
             {
               "name": "host",
@@ -5523,7 +6128,8 @@
               "required": false,
               "default": ""
             }
-          ]
+          ],
+          "note": "把精雕 SDK 放到 data/sdk/jdsoft/。没有可核对的公开函数签名。"
         }
       ]
     },
@@ -5761,26 +6367,26 @@
           ]
         },
         {
-          "id": "delta.custom",
+          "id": "delta.modbus",
           "brandId": "delta",
-          "kind": "stub",
-          "protocol": "delta",
+          "kind": "driver",
+          "protocol": "modbus",
           "phase": 2,
-          "displayName": "台达协议",
+          "displayName": "台达 Modbus TCP",
           "parameters": [
             {
               "name": "host",
               "type": "string",
               "label": "主机",
               "required": true,
-              "default": "192.168.1.60"
+              "default": "192.168.1.80"
             },
             {
               "name": "port",
               "type": "int",
               "label": "端口",
               "required": true,
-              "default": 8193
+              "default": 502
             },
             {
               "name": "timeoutMs",
@@ -5790,13 +6396,53 @@
               "default": 3000
             },
             {
-              "name": "path",
-              "type": "string",
-              "label": "路径",
+              "name": "unitId",
+              "type": "int",
+              "label": "从站号",
               "required": false,
-              "default": ""
+              "default": 1
             }
-          ]
+          ],
+          "note": "Modbus TCP。标准模板走网关默认寄存器表，现场 PLC 地址用点位地址覆盖。"
+        },
+        {
+          "id": "delta.custom",
+          "brandId": "delta",
+          "kind": "driver",
+          "protocol": "modbus",
+          "phase": 2,
+          "displayName": "台达 Modbus TCP（兼容）",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.80"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 502
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "unitId",
+              "type": "int",
+              "label": "从站号",
+              "required": false,
+              "default": 1
+            }
+          ],
+          "note": "与台达 Modbus TCP 相同。"
         }
       ]
     }
@@ -5805,7 +6451,7 @@
     {
       "id": "generic.ftp",
       "brandId": null,
-      "kind": "stub",
+      "kind": "driver",
       "protocol": "ftp",
       "phase": 2,
       "displayName": "通用 FTP / 共享",
@@ -5834,12 +6480,164 @@
         {
           "name": "path",
           "type": "string",
-          "label": "路径或共享",
+          "label": "状态文件路径",
           "required": false,
-          "default": "/"
+          "default": "/status.txt"
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "label": "用户名",
+          "required": false,
+          "default": "anonymous"
+        },
+        {
+          "name": "password",
+          "type": "secret",
+          "label": "密码",
+          "required": false,
+          "default": ""
         }
       ],
-      "note": "Sheet2「Other其他」列为 ftp/共享，不是第 20 个品牌。任何品牌都可以改用这个适配器，第二阶段再实现读取。"
+      "note": "Sheet2「Other其他」列为 ftp/共享，不是第 20 个品牌。读取路径上的状态文件，键为目录数据项 Id。"
+    },
+    {
+      "id": "generic.opcua",
+      "brandId": null,
+      "kind": "driver",
+      "protocol": "opcua",
+      "phase": 2,
+      "displayName": "通用 OPC UA",
+      "parameters": [
+        {
+          "name": "host",
+          "type": "string",
+          "label": "主机",
+          "required": true,
+          "default": "192.168.1.20"
+        },
+        {
+          "name": "port",
+          "type": "int",
+          "label": "端口",
+          "required": true,
+          "default": 4840
+        },
+        {
+          "name": "timeoutMs",
+          "type": "int",
+          "label": "超时 (ms)",
+          "required": false,
+          "default": 5000
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "label": "端点路径",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "string",
+          "label": "命名空间 URI",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "label": "用户名",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "password",
+          "type": "secret",
+          "label": "密码",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "note": "按点位地址中的 NodeId，或按浏览名与数据项 Id 匹配。Okuma 等未单列品牌也走这里。"
+    },
+    {
+      "id": "generic.mtconnect",
+      "brandId": null,
+      "kind": "driver",
+      "protocol": "mtconnect",
+      "phase": 2,
+      "displayName": "通用 MTConnect",
+      "parameters": [
+        {
+          "name": "host",
+          "type": "string",
+          "label": "主机",
+          "required": true,
+          "default": "192.168.1.30"
+        },
+        {
+          "name": "port",
+          "type": "int",
+          "label": "端口",
+          "required": true,
+          "default": 5000
+        },
+        {
+          "name": "timeoutMs",
+          "type": "int",
+          "label": "超时 (ms)",
+          "required": false,
+          "default": 5000
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "label": "路径",
+          "required": false,
+          "default": "/current"
+        }
+      ],
+      "note": "HTTP /probe、/current、/sample。Okuma 等未单列品牌也走这里。"
+    },
+    {
+      "id": "generic.modbus",
+      "brandId": null,
+      "kind": "driver",
+      "protocol": "modbus",
+      "phase": 2,
+      "displayName": "通用 Modbus TCP",
+      "parameters": [
+        {
+          "name": "host",
+          "type": "string",
+          "label": "主机",
+          "required": true,
+          "default": "192.168.1.80"
+        },
+        {
+          "name": "port",
+          "type": "int",
+          "label": "端口",
+          "required": true,
+          "default": 502
+        },
+        {
+          "name": "timeoutMs",
+          "type": "int",
+          "label": "超时 (ms)",
+          "required": false,
+          "default": 3000
+        },
+        {
+          "name": "unitId",
+          "type": "int",
+          "label": "从站号",
+          "required": false,
+          "default": 1
+        }
+      ],
+      "note": "功能码 03/04。标准项走默认寄存器表，点位地址 modbus:holding:N 可覆盖。"
     }
   ]
 }

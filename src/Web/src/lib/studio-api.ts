@@ -156,6 +156,9 @@ export type DeviceDocument = {
       timeoutMs?: number | null
       path?: string | null
       namespace?: string | null
+      username?: string | null
+      password?: string | null
+      parameters?: Record<string, string> | null
     }
   }
 }
@@ -361,11 +364,68 @@ export function expandTopic(
   return result
 }
 
+export type DeviceTestSample = {
+  point: string
+  value?: string | null
+  quality: string
+  unit?: string | null
+}
+
+export type DeviceTestResult = {
+  deviceId: string
+  ok: boolean
+  reachable: boolean
+  handshake: boolean
+  adapter: string
+  message: string
+  error?: string | null
+  sdkStatus?: string | null
+  latencyMs: number
+  reachableMs: number
+  handshakeMs: number
+  samples: DeviceTestSample[]
+}
+
+export type CatalogItemSupport = {
+  itemId: string
+  level: string
+  note: string
+}
+
+export type CatalogDriverSupport = {
+  adapterId: string
+  protocol: string
+  displayName: string
+  requiresSdk: boolean
+  verification: string
+  items: CatalogItemSupport[]
+}
+
+export type CatalogSupport = {
+  brandId: string
+  drivers: CatalogDriverSupport[]
+}
+
+export function supportLabel(level: string) {
+  if (level === 'supported') return '支持'
+  if (level === 'viaSdk') return '经由 SDK'
+  if (level === 'notAvailable') return '不可用'
+  return level
+}
+
+export function sdkStatusLabel(status: string | null | undefined) {
+  if (status === 'missing') return 'SDK 未安装'
+  if (status === 'present') return 'SDK 已放置'
+  if (status === 'none') return '不需要 SDK'
+  return '—'
+}
+
 export function actionLabel(action: string) {
   if (action === 'publish') return '发布'
   if (action === 'rollback') return '回滚'
   if (action === 'seed') return '初始'
   if (action === 'sync') return '对齐'
+  if (action === 'collection') return '启停采集'
   return action
 }
 

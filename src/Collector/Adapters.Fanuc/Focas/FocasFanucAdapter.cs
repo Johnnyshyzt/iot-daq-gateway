@@ -1,3 +1,4 @@
+using System.Globalization;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
 using Microsoft.Extensions.Logging;
@@ -198,9 +199,9 @@ public sealed class FocasFanucAdapter : ISouthboundAdapter
             }
 
             var now = DateTimeOffset.UtcNow;
-            return
-            [
-                new Observation
+            var points = new List<Observation>
+            {
+                new()
                 {
                     DeviceId = DeviceId,
                     Point = "state",
@@ -208,7 +209,7 @@ public sealed class FocasFanucAdapter : ISouthboundAdapter
                     Timestamp = now,
                     Quality = quality
                 },
-                new Observation
+                new()
                 {
                     DeviceId = DeviceId,
                     Point = "alarm",
@@ -216,7 +217,7 @@ public sealed class FocasFanucAdapter : ISouthboundAdapter
                     Timestamp = now,
                     Quality = quality
                 },
-                new Observation
+                new()
                 {
                     DeviceId = DeviceId,
                     Point = "program",
@@ -224,9 +225,93 @@ public sealed class FocasFanucAdapter : ISouthboundAdapter
                     Timestamp = now,
                     Quality = "good"
                 }
-            ];
+            };
+            if (_library is IFocasSignals signals)
+            {
+                try
+                {
+                    AppendSignals(points, signals.Read(handle, status), status, state, alarmNumber, now);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    _logger.LogDebug(ex, "FOCAS extra signals failed for {DeviceId}", DeviceId);
+                }
+            }
+
+            return points;
         }
     }
+
+    private void AppendSignals(
+        List<Observation> points,
+        FocasSignalSnapshot snapshot,
+        in FocasStatInfo status,
+        string state,
+        int alarmNumber,
+        DateTimeOffset now)
+    {
+        points.Add(Signal("workMode", FocasPointMapper.MapWorkMode(status.Aut), now));
+        points.Add(Signal("estop", status.Emergency != 0, now));
+        points.Add(Signal("isRunning", string.Equals(state, "RUNNING", StringComparison.Ordinal), now));
+        points.Add(Signal("alarmNumber", alarmNumber, now));
+        if (snapshot.HasSpindle)
+        {
+            points.Add(Signal("spindleSpeed", snapshot.Spindle, now, "rpm"));
+        }
+
+        if (snapshot.HasFeed)
+        {
+            points.Add(Signal("feedRate", snapshot.Feed, now));
+        }
+
+        if (snapshot.HasAxes)
+        {
+            var x = FormatAxis(snapshot.AxisX);
+            var y = FormatAxis(snapshot.AxisY);
+            var z = FormatAxis(snapshot.AxisZ);
+            var combined = $"X{x} Y{y} Z{z}";
+            points.Add(Signal("machinePosition", combined, now, "mm"));
+            points.Add(Signal("machinePositionX", snapshot.AxisX, now, "mm"));
+            points.Add(Signal("machinePositionY", snapshot.AxisY, now, "mm"));
+            points.Add(Signal("machinePositionZ", snapshot.AxisZ, now, "mm"));
+            points.Add(Signal("absolutePosition", combined, now, "mm"));
+            points.Add(Signal("absolutePositionX", snapshot.AxisX, now, "mm"));
+            points.Add(Signal("absolutePositionY", snapshot.AxisY, now, "mm"));
+            points.Add(Signal("absolutePositionZ", snapshot.AxisZ, now, "mm"));
+        }
+
+        if (snapshot.HasSystem)
+        {
+            if (!string.IsNullOrWhiteSpace(snapshot.SystemType))
+            {
+                points.Add(Signal("systemType", snapshot.SystemType, now));
+            }
+
+            if (!string.IsNullOrWhiteSpace(snapshot.SoftwareVersion))
+            {
+                points.Add(Signal("softwareVersion", snapshot.SoftwareVersion, now));
+            }
+
+            points.Add(Signal("axisCount", snapshot.AxisCount, now));
+        }
+
+        if (snapshot.HasMainProgram)
+        {
+            points.Add(Signal("programMain", FocasPointMapper.FormatProgram(snapshot.MainProgram), now));
+        }
+    }
+
+    private Observation Signal(string point, object? value, DateTimeOffset now, string? unit = null) => new()
+    {
+        DeviceId = DeviceId,
+        Point = point,
+        Value = value,
+        Timestamp = now,
+        Quality = "good",
+        Unit = unit
+    };
+
+    private static string FormatAxis(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     private IReadOnlyList<Observation> FailRead(string api, short rc)
     {

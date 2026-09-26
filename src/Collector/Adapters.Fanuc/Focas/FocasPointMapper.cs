@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Adapters.Fanuc.Focas;
 
 /// <summary>
@@ -27,6 +29,17 @@ internal static class FocasPointMapper
 
     public static string QualityFor(string state) =>
         string.Equals(state, "ALARM", StringComparison.Ordinal) ? "uncertain" : "good";
+
+    public static string MapWorkMode(short aut) => aut switch
+    {
+        0 => "MDI",
+        1 => "AUTO",
+        3 => "EDIT",
+        4 or 5 or 6 or 7 or 8 => "JOG",
+        9 => "REF",
+        10 => "REMOTE",
+        _ => aut.ToString(CultureInfo.InvariantCulture)
+    };
 
     public static string FormatProgram(int programNumber)
     {

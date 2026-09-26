@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 XLSX = ROOT / "docs" / "catalog" / "cnc-data-template.xlsx"
 OUT = ROOT / "docs" / "catalog" / "cnc-catalog.json"
 SEED = ROOT / "data" / "seed" / "point-templates"
-VERSION = "2026.09.26"
+VERSION = "2026.09.27"
 
 # (id, nameZh, dataType, unit, category, synonyms)
 CANONICAL = [
@@ -289,41 +289,84 @@ PROTOCOLS = {
               ("fanuc.sim", "simulator", "sim", 1, "发那科模拟器"),
               ("fanuc.focas", "driver", "focas", 1, "发那科 FOCAS")],
     "siemens": [("siemens.sim", "simulator", "sim", 1, "西门子模拟器"),
-                ("siemens.opcua", "stub", "opcua", 2, "西门子 OPC UA")],
+                ("siemens.opcua", "driver", "opcua", 2, "西门子 OPC UA")],
     "mitsubishi": [("mitsubishi.sim", "simulator", "sim", 1, "三菱模拟器"),
-                   ("mitsubishi.custom", "stub", "mitsubishi", 2, "三菱协议")],
+                   ("mitsubishi.opcua", "driver", "opcua", 2, "三菱 OPC UA"),
+                   ("mitsubishi.mtconnect", "driver", "mtconnect", 2, "三菱 MTConnect"),
+                   ("mitsubishi.ezsocket", "driver", "ezsocket", 2, "三菱 EZSocket"),
+                   ("mitsubishi.custom", "driver", "ezsocket", 2, "三菱 EZSocket（兼容）")],
     "syntec": [("syntec.sim", "simulator", "sim", 1, "新代模拟器"),
-               ("syntec.custom", "stub", "syntec", 2, "新代协议")],
+               ("syntec.custom", "driver", "syntec", 2, "新代 OpenCNC")],
     "gsk": [("gsk.sim", "simulator", "sim", 1, "广数模拟器"),
-            ("gsk.custom", "stub", "gsk", 2, "广数协议")],
+            ("gsk.custom", "driver", "gsk", 2, "广数 SDK")],
     "mazak-smart": [("mazak-smart.sim", "simulator", "sim", 1, "马扎克 smart/smooth 模拟器"),
-                    ("mazak-smart.mtconnect", "stub", "mtconnect", 2, "马扎克 MTConnect")],
+                    ("mazak-smart.mtconnect", "driver", "mtconnect", 2, "马扎克 MTConnect")],
     "mazak-matrix": [("mazak-matrix.sim", "simulator", "sim", 1, "马扎克 640/matrix 模拟器"),
-                     ("mazak-matrix.mtconnect", "stub", "mtconnect", 2, "马扎克 MTConnect")],
+                     ("mazak-matrix.mtconnect", "driver", "mtconnect", 2, "马扎克 MTConnect")],
     "knd": [("knd.sim", "simulator", "sim", 1, "凯恩帝模拟器"),
-            ("knd.custom", "stub", "knd", 2, "凯恩帝协议")],
+            ("knd.custom", "driver", "knd", 2, "凯恩帝 SDK")],
     "heidenhain": [("heidenhain.sim", "simulator", "sim", 1, "海德汉模拟器"),
-                   ("heidenhain.lsv2", "stub", "lsv2", 2, "海德汉 LSV2")],
+                   ("heidenhain.lsv2", "driver", "lsv2", 2, "海德汉 LSV2"),
+                   ("heidenhain.opcua", "driver", "opcua", 2, "海德汉 OPC UA")],
     "hnc": [("hnc.sim", "simulator", "sim", 1, "华中数控模拟器"),
-            ("hnc.custom", "stub", "hnc", 2, "华中数控协议")],
+            ("hnc.custom", "driver", "hnc", 2, "华中 HNC SDK")],
     "fagor": [("fagor.sim", "simulator", "sim", 1, "法格模拟器"),
-              ("fagor.custom", "stub", "fagor", 2, "法格协议")],
+              ("fagor.opcua", "driver", "opcua", 2, "法格 OPC UA"),
+              ("fagor.custom", "driver", "opcua", 2, "法格 OPC UA（兼容）")],
     "brother": [("brother.sim", "simulator", "sim", 1, "兄弟模拟器"),
-                ("brother.custom", "stub", "brother", 2, "兄弟协议")],
+                ("brother.mtconnect", "driver", "mtconnect", 2, "兄弟 MTConnect"),
+                ("brother.opcua", "driver", "opcua", 2, "兄弟 OPC UA"),
+                ("brother.custom", "driver", "brother", 2, "兄弟 CNC-C00")],
     "haas": [("haas.sim", "simulator", "sim", 1, "哈斯模拟器"),
-             ("haas.mtconnect", "stub", "mtconnect", 2, "哈斯 MTConnect")],
+             ("haas.mtconnect", "driver", "mtconnect", 2, "哈斯 MTConnect"),
+             ("haas.q", "driver", "haas-q", 2, "哈斯 Q 指令")],
     "baoyuan": [("baoyuan.sim", "simulator", "sim", 1, "宝元模拟器"),
-                ("baoyuan.custom", "stub", "baoyuan", 2, "宝元协议")],
+                ("baoyuan.custom", "driver", "baoyuan", 2, "宝元 SDK")],
     "kede": [("kede.sim", "simulator", "sim", 1, "科德模拟器"),
-             ("kede.custom", "stub", "kede", 2, "科德协议")],
+             ("kede.custom", "driver", "kede", 2, "科德 SDK")],
     "citizen": [("citizen.sim", "simulator", "sim", 1, "西铁城模拟器"),
-                ("citizen.mitsubishi", "stub", "mitsubishi", 2, "西铁城（三菱）协议")],
+                ("citizen.opcua", "driver", "opcua", 2, "西铁城 OPC UA"),
+                ("citizen.mitsubishi", "driver", "ezsocket", 2, "西铁城 EZSocket")],
     "dmg-mori": [("dmg-mori.sim", "simulator", "sim", 1, "森精机模拟器"),
-                 ("dmg-mori.mitsubishi", "stub", "mitsubishi", 2, "森精机（三菱）协议")],
+                 ("dmg-mori.mtconnect", "driver", "mtconnect", 2, "森精机 MTConnect"),
+                 ("dmg-mori.opcua", "driver", "opcua", 2, "森精机 OPC UA"),
+                 ("dmg-mori.mitsubishi", "driver", "ezsocket", 2, "森精机 EZSocket")],
     "jdsoft": [("jdsoft.sim", "simulator", "sim", 1, "精雕模拟器"),
-               ("jdsoft.custom", "stub", "jdsoft", 2, "精雕协议")],
+               ("jdsoft.custom", "driver", "jdsoft", 2, "精雕 SDK")],
     "delta": [("delta.sim", "simulator", "sim", 1, "台达模拟器"),
-              ("delta.custom", "stub", "delta", 2, "台达协议")],
+              ("delta.modbus", "driver", "modbus", 2, "台达 Modbus TCP"),
+              ("delta.custom", "driver", "modbus", 2, "台达 Modbus TCP（兼容）")],
+}
+
+ADAPTER_NOTES = {
+    "siemens.opcua": "需要控制器 OPC UA 选项。828D/840D sl/ONE 按公开的 SINUMERIK 变量路径读取。",
+    "mitsubishi.opcua": "M800 等带 OPC UA 选件时使用。没有公开的固定节点表时，按点位 NodeId 或浏览名读取。",
+    "mitsubishi.mtconnect": "机床或边缘侧已安装 MTConnect Agent 时使用。",
+    "mitsubishi.ezsocket": "EZSocket 程序集放到 data/sdk/mitsubishi/。公开资料没有可核对的方法签名，找到文件也不会调用未知入口。",
+    "mitsubishi.custom": "与三菱 EZSocket 相同。",
+    "syntec.custom": "把新代 OpenCNC / SyntecRemoteCNC 程序集放到 data/sdk/syntec/。没有可核对的公开函数签名。",
+    "gsk.custom": "把广数 SDK 放到 data/sdk/gsk/。没有可核对的公开函数签名。",
+    "knd.custom": "把凯恩帝 SDK 放到 data/sdk/knd/。没有可核对的公开函数签名。",
+    "heidenhain.lsv2": "TCP 19000，LSV2。状态、程序、倍率、报警按公开帧读取；主轴转速等没有对应报文。",
+    "heidenhain.opcua": "TNC 640 / iTNC 的 OPC UA 选件。没有公开的固定节点表时，按点位 NodeId 或浏览名读取。",
+    "hnc.custom": "把华中 HNC SDK 放到 data/sdk/hnc/。没有可核对的公开函数签名。",
+    "fagor.opcua": "法格 OPC UA。按点位 NodeId 或浏览名读取。",
+    "fagor.custom": "与法格 OPC UA 相同。",
+    "brother.custom": "CNC-C00 没有可核对的公开帧格式，不会发起专有握手。请改用 MTConnect 或 OPC UA。",
+    "brother.mtconnect": "兄弟机床经 MTConnect Agent 采集。",
+    "brother.opcua": "兄弟机床经 OPC UA 采集。按点位 NodeId 或浏览名读取。",
+    "haas.mtconnect": "Haas NGC 的 MTConnect。控制器需打开数据发布。",
+    "haas.q": "以太网端口 5051 的 Q 指令（Q100/Q104/Q500 等）。需打开 Setting 143。",
+    "baoyuan.custom": "把宝元 SDK 放到 data/sdk/baoyuan/。没有可核对的公开函数签名。",
+    "kede.custom": "把科德 SDK 放到 data/sdk/kede/。没有可核对的公开函数签名。",
+    "citizen.mitsubishi": "西铁城走三菱 EZSocket 加载器。签名未核对时不会调用未知入口。",
+    "dmg-mori.mtconnect": "DMG MORI / 森精机 MTConnect Agent。",
+    "dmg-mori.mitsubishi": "森精机三菱系统的 EZSocket 加载器。",
+    "jdsoft.custom": "把精雕 SDK 放到 data/sdk/jdsoft/。没有可核对的公开函数签名。",
+    "delta.modbus": "Modbus TCP。标准模板走网关默认寄存器表，现场 PLC 地址用点位地址覆盖。",
+    "delta.custom": "与台达 Modbus TCP 相同。",
+    "mazak-smart.mtconnect": "Mazak Smooth / Smart 的 MTConnect 适配器。",
+    "mazak-matrix.mtconnect": "Mazak Matrix 的 MTConnect 适配器。",
 }
 
 SIM_PARAMS = [
@@ -353,18 +396,43 @@ PROTOCOL_PARAMS = {
         {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 5000},
         {"name": "path", "type": "string", "label": "路径", "required": False, "default": "/current"},
     ],
-    "lsv2": [
-        {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.40"},
-        {"name": "port", "type": "int", "label": "端口", "required": True, "default": 19000},
-        {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 5000},
-    ],
     "ftp": [
         {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.50"},
         {"name": "port", "type": "int", "label": "端口", "required": True, "default": 21},
         {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 8000},
-        {"name": "path", "type": "string", "label": "路径或共享", "required": False, "default": "/"},
+        {"name": "path", "type": "string", "label": "状态文件路径", "required": False, "default": "/status.txt"},
+        {"name": "username", "type": "string", "label": "用户名", "required": False, "default": "anonymous"},
+        {"name": "password", "type": "secret", "label": "密码", "required": False, "default": ""},
+    ],
+    "haas-q": [
+        {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.70"},
+        {"name": "port", "type": "int", "label": "端口", "required": True, "default": 5051},
+        {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 3000},
+    ],
+    "modbus": [
+        {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.80"},
+        {"name": "port", "type": "int", "label": "端口", "required": True, "default": 502},
+        {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 3000},
+        {"name": "unitId", "type": "int", "label": "从站号", "required": False, "default": 1},
+    ],
+    "lsv2": [
+        {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.40"},
+        {"name": "port", "type": "int", "label": "端口", "required": True, "default": 19000},
+        {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 5000},
+        {"name": "password", "type": "secret", "label": "DNC 口令", "required": False, "default": ""},
     ],
 }
+
+OPCUA_PARAMS = [
+    {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.20"},
+    {"name": "port", "type": "int", "label": "端口", "required": True, "default": 4840},
+    {"name": "timeoutMs", "type": "int", "label": "超时 (ms)", "required": False, "default": 5000},
+    {"name": "path", "type": "string", "label": "端点路径", "required": False, "default": ""},
+    {"name": "namespace", "type": "string", "label": "命名空间 URI", "required": False, "default": ""},
+    {"name": "username", "type": "string", "label": "用户名", "required": False, "default": ""},
+    {"name": "password", "type": "secret", "label": "密码", "required": False, "default": ""},
+]
+PROTOCOL_PARAMS["opcua"] = OPCUA_PARAMS
 
 DEFAULT_CUSTOM = [
     {"name": "host", "type": "string", "label": "主机", "required": True, "default": "192.168.1.60"},
@@ -529,7 +597,7 @@ def main() -> None:
         adapters = []
         for adapter_id, kind, protocol, phase, display in PROTOCOLS[brand["id"]]:
             params = PROTOCOL_PARAMS.get(protocol, DEFAULT_CUSTOM)
-            adapters.append({
+            entry = {
                 "id": adapter_id,
                 "brandId": brand["id"],
                 "kind": kind,
@@ -537,19 +605,35 @@ def main() -> None:
                 "phase": phase,
                 "displayName": display,
                 "parameters": params,
-            })
+            }
+            note = ADAPTER_NOTES.get(adapter_id)
+            if note:
+                entry["note"] = note
+            adapters.append(entry)
         brand["adapters"] = adapters
 
-    generic = {
-        "id": "generic.ftp",
-        "brandId": None,
-        "kind": "stub",
-        "protocol": "ftp",
-        "phase": 2,
-        "displayName": "通用 FTP / 共享",
-        "parameters": PROTOCOL_PARAMS["ftp"],
-        "note": "Sheet2「Other其他」列为 ftp/共享，不是第 20 个品牌。任何品牌都可以改用这个适配器，第二阶段再实现读取。",
-    }
+    generic_specs = [
+        ("generic.ftp", "ftp", "通用 FTP / 共享",
+         "Sheet2「Other其他」列为 ftp/共享，不是第 20 个品牌。读取路径上的状态文件，键为目录数据项 Id。"),
+        ("generic.opcua", "opcua", "通用 OPC UA",
+         "按点位地址中的 NodeId，或按浏览名与数据项 Id 匹配。Okuma 等未单列品牌也走这里。"),
+        ("generic.mtconnect", "mtconnect", "通用 MTConnect",
+         "HTTP /probe、/current、/sample。Okuma 等未单列品牌也走这里。"),
+        ("generic.modbus", "modbus", "通用 Modbus TCP",
+         "功能码 03/04。标准项走默认寄存器表，点位地址 modbus:holding:N 可覆盖。"),
+    ]
+    generic = []
+    for adapter_id, protocol, display, note in generic_specs:
+        generic.append({
+            "id": adapter_id,
+            "brandId": None,
+            "kind": "driver",
+            "protocol": protocol,
+            "phase": 2,
+            "displayName": display,
+            "parameters": PROTOCOL_PARAMS[protocol],
+            "note": note,
+        })
 
     catalog = {
         "version": VERSION,
@@ -562,10 +646,11 @@ def main() -> None:
             "加工件数、工件数、产量合并为 partCount。",
             "fanuc-standard 仍是历史三态模板（state/alarm/program）。fanuc-catalog 才是发那科全量目录。",
             "没有出现在 Sheet2 的品牌（兄弟、哈斯、法格、台达、西铁城、森精机）型号列表为空，设备上的控制器型号可留空。",
+            "第二阶段协议驱动的连接参数在适配器上。模拟器仍然是不连机床的演示路径。",
         ],
         "items": items,
         "brands": brands,
-        "genericAdapters": [generic],
+        "genericAdapters": generic,
     }
     OUT.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

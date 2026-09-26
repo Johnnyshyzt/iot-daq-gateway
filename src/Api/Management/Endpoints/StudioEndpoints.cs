@@ -1,3 +1,4 @@
+using Adapters.Cnc.Drivers;
 using IotDaq.Persistence;
 using Studio.Contracts;
 using Studio.Host.Auth;
@@ -69,6 +70,7 @@ public static class StudioEndpoints
 
         api.MapGet("/catalog/brands", (GatewayPersistence database) => ApiResults.Ok(database.ReadCatalog()));
         api.MapGet("/catalog/items", (GatewayPersistence database) => ApiResults.Ok(database.ReadCatalog().Items));
+        api.MapGet("/catalog/support", (string? brandId) => ApiResults.Ok(DriverCatalog.Describe(brandId)));
         api.MapGet("/groups", (GatewayPersistence database) => ApiResults.Ok(database.ListGroups()));
         api.MapPut("/groups/{id}", (string id, GroupWrite body, GatewayPersistence database) =>
         {
@@ -204,8 +206,20 @@ public static class StudioEndpoints
             });
         }).RequireWriter();
 
+        api.MapPost("/devices/test", async (DeviceDocument? body, RuntimeQueries runtime, CancellationToken cancellationToken) =>
+            ApiResults.Ok(await runtime.TestUnsavedAsync(body, cancellationToken))).RequireWriter();
         api.MapPost("/devices/{id}/test", async (string id, RuntimeQueries runtime, CancellationToken cancellationToken) =>
             ApiResults.Ok(await runtime.TestDeviceAsync(id, cancellationToken))).RequireWriter();
+        api.MapPost("/devices/{id}/collection", async (string id, CollectionRequest? body, ConfigStore store, GatewayReloadClient reload, CancellationToken cancellationToken) =>
+        {
+            var result = store.SetCollectionEnabled(id, body?.Enabled ?? false);
+            if (result.Reloaded)
+            {
+                await reload.NotifyAsync(cancellationToken);
+            }
+
+            return ApiResults.Ok(result);
+        }).RequireWriter();
 
         api.MapGet("/runtime/status", async (RuntimeQueries runtime, CancellationToken cancellationToken) =>
             ApiResults.Ok(await runtime.StatusAsync(cancellationToken)));

@@ -40,6 +40,18 @@ libfwlib32.so.*
 Fwlib32.dll
 fwlib32.dll
 
+## Vendor SDK drop-ins and OPC UA PKI (never commit)
+data/sdk/**/*.dll
+data/sdk/**/*.so
+data/sdk/**/*.so.*
+data/sdk/**/*.dylib
+data/sdk/**/*.exe
+data/sdk/**/*.h
+data/sdk/**/*.lib
+data/sdk/**/*.a
+data/sdk/**/opcua-pki/
+data/opcua-pki/
+
 ## OS / tooling
 .DS_Store
 Thumbs.db
