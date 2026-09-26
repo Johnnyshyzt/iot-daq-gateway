@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>IotDaq.Persistence</RootNamespace>
+    <Description>EF Core persistence for the edge host. SQLite by default, PostgreSQL optional.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <ProjectReference Include="..\Shared\Catalog\Cnc.Catalog.csproj" />
+    <ProjectReference Include="..\Api\Contracts\Studio.Contracts.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

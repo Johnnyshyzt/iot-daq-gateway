@@ -40,7 +40,10 @@ if (acquisitionOn)
     builder.Services.AddCollector(collectorPath);
 }
 
-builder.Services.AddSingleton(new ConfigStore(dataDirectory));
+var store = new ConfigStore(dataDirectory);
+builder.Services.AddSingleton(store);
+builder.Services.AddGatewayData(store);
+AccountStore.AccountsChanged = path => store.Database.SyncUsers(path);
 builder.Services.AddSingleton(sp => new AccountStore(
     dataDirectory,
     sp.GetRequiredService<IConfiguration>(),
@@ -63,6 +66,7 @@ var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized();
 var accounts = app.Services.GetRequiredService<AccountStore>();
 accounts.EnsureInitialized();
+store.Database.SyncUsers(Path.Combine(dataDirectory, "auth", "accounts.json"));
 
 app.UseExceptionHandler(handler =>
 {

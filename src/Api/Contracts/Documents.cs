@@ -92,6 +92,17 @@ public sealed class DeviceSpec
     /// </summary>
     public string? PointTemplateId { get; set; }
 
+    /// <summary>Catalog brand id, for example <c>siemens</c>. Inferred from the adapter when empty.</summary>
+    public string? BrandId { get; set; }
+
+    public string? ControllerModelId { get; set; }
+
+    public string? Workshop { get; set; }
+
+    public string? Line { get; set; }
+
+    public string? GroupId { get; set; }
+
     public DeviceConnection Connection { get; set; } = new();
 }
 
@@ -102,6 +113,12 @@ public sealed class DeviceConnection
     public int Port { get; set; } = 8193;
 
     public int? FocasTimeoutMs { get; set; }
+
+    public int? TimeoutMs { get; set; }
+
+    public string? Path { get; set; }
+
+    public string? Namespace { get; set; }
 }
 
 public sealed class PointTemplateDocument

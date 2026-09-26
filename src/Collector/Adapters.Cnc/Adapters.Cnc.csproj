@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Adapters.Cnc</RootNamespace>
+    <Description>Brand simulators and phase-2 protocol stubs. No vendor SDK binaries.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Shared\Catalog\Cnc.Catalog.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

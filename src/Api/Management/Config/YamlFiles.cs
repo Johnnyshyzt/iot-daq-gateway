@@ -48,6 +48,23 @@ public static class YamlFiles
         }
     }
 
+    public static string Serialize<T>(T document)
+    {
+        var yaml = Serializer.Serialize(document).Replace("\r\n", "\n", StringComparison.Ordinal);
+        return yaml.EndsWith('\n') ? yaml : yaml + "\n";
+    }
+
+    public static T Deserialize<T>(string yaml)
+    {
+        var document = Deserializer.Deserialize<T>(yaml);
+        if (document is null)
+        {
+            throw new InvalidOperationException("YAML deserialized to null.");
+        }
+
+        return document;
+    }
+
     public static void Write<T>(string path, T document)
     {
         var directory = Path.GetDirectoryName(path);
@@ -56,13 +73,7 @@ public static class YamlFiles
             Directory.CreateDirectory(directory);
         }
 
-        var yaml = Serializer.Serialize(document).Replace("\r\n", "\n", StringComparison.Ordinal);
-        if (!yaml.EndsWith('\n'))
-        {
-            yaml += "\n";
-        }
-
-        File.WriteAllText(path, yaml);
+        File.WriteAllText(path, Serialize(document));
     }
 
     public static ConfigBundle Normalize(ConfigBundle bundle)

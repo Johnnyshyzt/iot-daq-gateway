@@ -157,8 +157,15 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `GET` | `/api/v1/catalog/points?adapter=fanuc.fake` | 发那科目录。`fanuc.focas` 返回同一份 |
-| `GET` | `/api/v1/catalog/points?adapter=` 其他值 | `404 catalog_unsupported`。M1 没有别的品牌目录 |
+| `GET` | `/api/v1/catalog/points?adapter=fanuc.fake` | 发那科三态目录。`fanuc.focas` 返回同一份。历史接口，仍然只含 `state` / `alarm` / `program` |
+| `GET` | `/api/v1/catalog/points?adapter=` 其他值 | `404 catalog_unsupported` |
+| `GET` | `/api/v1/catalog/brands` | 19 个品牌、型号、适配器、每品牌数据项，以及标准项 |
+| `GET` | `/api/v1/catalog/items` | 标准数据项 |
+| `GET` | `/api/v1/devices/{id}/latest` | 该设备最新采样 |
+| `GET` | `/api/v1/samples/history?deviceId=&items=&from=&to=&bucketMs=` | 历史。`from` / `to` 为 Unix 毫秒或 ISO。`bucketMs` 大于 0 时按桶取最后一条 |
+| `GET` | `/api/v1/alarms?deviceId=&limit=` | 报警 |
+| `GET` | `/api/v1/config/export?format=yaml\|json&slot=draft\|published` | 导出 |
+| `POST` | `/api/v1/config/import?format=yaml\|json` | 把正文导入草稿 |
 
 ### MQTT
 

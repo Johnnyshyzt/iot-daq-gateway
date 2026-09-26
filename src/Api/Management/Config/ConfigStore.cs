@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Cnc.Catalog;
+using IotDaq.Persistence;
 using Studio.Contracts;
 
 namespace Studio.Host.Config;
@@ -13,13 +15,14 @@ public sealed partial class ConfigStore
     private readonly string _published;
     private readonly string _revisions;
     private readonly string _runtime;
+    private readonly GatewayPersistence _database;
 
     private static readonly JsonSerializerOptions IndexOptions = new(StudioJson.Options)
     {
         WriteIndented = true
     };
 
-    public ConfigStore(string dataDirectory)
+    public ConfigStore(string dataDirectory, GatewayPersistence? database = null)
     {
         DataDirectory = dataDirectory;
         _seed = Path.Combine(dataDirectory, "seed");
@@ -27,9 +30,12 @@ public sealed partial class ConfigStore
         _published = Path.Combine(dataDirectory, "published");
         _revisions = Path.Combine(dataDirectory, "revisions");
         _runtime = Path.Combine(dataDirectory, "runtime");
+        _database = database ?? GatewayPersistence.Open(dataDirectory, null);
     }
 
     public string DataDirectory { get; }
+
+    public GatewayPersistence Database => _database;
 
     public void EnsureInitialized()
     {
@@ -39,6 +45,7 @@ public sealed partial class ConfigStore
             Directory.CreateDirectory(_published);
             Directory.CreateDirectory(_revisions);
             Directory.CreateDirectory(_runtime);
+            _database.EnsureReady();
 
             var legacy = Path.Combine(DataDirectory, "config");
             if (!File.Exists(GatewayPath(_published)) && File.Exists(GatewayPath(legacy)))
@@ -65,6 +72,8 @@ public sealed partial class ConfigStore
                 CopyBundleFiles(_published, _draft);
             }
 
+            EnsureBrandTemplatesUnlocked();
+
             var published = ReadWorking(_published);
             ReadWorking(_draft);
             var hash = CanonicalRevision.Compute(published);
@@ -90,6 +99,8 @@ public sealed partial class ConfigStore
                 WriteIndex(index);
             }
 
+            ImportSlotsIfEmpty();
+            SyncRevisionIndex();
             AppendLogUnlocked("Config Studio 已启动");
         }
     }
@@ -162,15 +173,39 @@ public sealed partial class ConfigStore
                 : document.Spec.PointTemplateId.Trim();
 
             var bundle = ReadWorking(_draft);
-            if (FanucPointCatalog.IsFanuc(document.Spec.Adapter) && string.IsNullOrWhiteSpace(document.Spec.PointTemplateId))
+            var brandId = CncCatalog.Current.BrandOfAdapter(document.Spec.Adapter);
+            if (string.IsNullOrWhiteSpace(brandId))
             {
-                document.Spec.PointTemplateId = ConfigDefaults.DefaultFanucTemplateId;
+                brandId = CncCatalog.Current.FindBrand(document.Spec.BrandId)?.Id;
+            }
+
+            if (!string.IsNullOrWhiteSpace(brandId) && string.IsNullOrWhiteSpace(document.Spec.PointTemplateId))
+            {
+                document.Spec.PointTemplateId = string.Equals(brandId, FanucPointCatalog.Family, StringComparison.Ordinal)
+                    ? ConfigDefaults.DefaultFanucTemplateId
+                    : brandId + "-standard";
             }
 
             if (string.Equals(document.Spec.PointTemplateId, ConfigDefaults.DefaultFanucTemplateId, StringComparison.Ordinal)
                 && bundle.PointTemplates.All(template => !string.Equals(template.Metadata.Id, ConfigDefaults.DefaultFanucTemplateId, StringComparison.Ordinal)))
             {
                 bundle.PointTemplates.Add(ConfigDefaults.FanucTemplate());
+            }
+
+            if (!string.IsNullOrWhiteSpace(brandId))
+            {
+                var standardId = string.Equals(brandId, FanucPointCatalog.Family, StringComparison.Ordinal)
+                    ? CncCatalog.Current.StandardTemplateId(brandId)
+                    : brandId + "-standard";
+                if (string.Equals(document.Spec.PointTemplateId, standardId, StringComparison.Ordinal)
+                    && bundle.PointTemplates.All(template => !string.Equals(template.Metadata.Id, standardId, StringComparison.Ordinal)))
+                {
+                    var brand = CncCatalog.Current.FindBrand(brandId);
+                    if (brand is not null)
+                    {
+                        bundle.PointTemplates.Add(BrandTemplateSeeder.Create(CncCatalog.Current, brand, standardId));
+                    }
+                }
             }
 
             var index = bundle.Devices.FindIndex(device => string.Equals(device.Metadata.Id, id, StringComparison.OrdinalIgnoreCase));
@@ -260,11 +295,7 @@ public sealed partial class ConfigStore
                 point.DataType = (point.DataType ?? "").Trim().ToLowerInvariant();
                 point.Address = (point.Address ?? "").Trim();
                 point.Unit ??= "";
-                if (string.Equals(document.Spec.Adapter, FanucPointCatalog.Family, StringComparison.Ordinal)
-                    || FanucPointCatalog.IsFanuc(document.Spec.Adapter))
-                {
-                    FanucPointCatalog.TryNormalize(point);
-                }
+                PointCatalogNormalizer.TryNormalize(document.Spec.Adapter, point);
             }
 
             var bundle = ReadWorking(_draft);
@@ -345,17 +376,15 @@ public sealed partial class ConfigStore
             document.Metadata.DeviceId = deviceId;
             document.Spec ??= new PointSetSpec();
             document.Spec.Points ??= [];
-            var fanuc = FanucPointCatalog.IsFanuc(device.Spec.Adapter);
+            var pointBrand = CncCatalog.Current.BrandOfAdapter(device.Spec.Adapter)
+                ?? CncCatalog.Current.FindBrand(device.Spec.BrandId)?.Id;
             foreach (var point in document.Spec.Points)
             {
                 point.Id = (point.Id ?? "").Trim();
                 point.DataType = (point.DataType ?? "").Trim().ToLowerInvariant();
                 point.Address = (point.Address ?? "").Trim();
                 point.Unit ??= "";
-                if (fanuc)
-                {
-                    FanucPointCatalog.TryNormalize(point);
-                }
+                PointCatalogNormalizer.TryNormalize(pointBrand, point);
             }
 
             var index = bundle.PointSets.FindIndex(set => string.Equals(set.Metadata.DeviceId, deviceId, StringComparison.Ordinal));
@@ -486,6 +515,7 @@ public sealed partial class ConfigStore
             Trim(index, hash);
             WriteIndex(index);
             AppendLogUnlocked($"已发布配置 {hash[..12]}");
+            SyncRevisionIndex();
             return new PublishOutcome
             {
                 Published = true,
@@ -539,6 +569,7 @@ public sealed partial class ConfigStore
             Trim(index, hash);
             WriteIndex(index);
             AppendLogUnlocked($"已回滚到 {hash[..12]}");
+            SyncRevisionIndex();
             return new RollbackOutcome { Revision = hash, RolledBackAt = now };
         }
     }
@@ -607,6 +638,109 @@ public sealed partial class ConfigStore
         return template;
     }
 
+    public string ExportJson(bool published)
+    {
+        lock (_gate)
+        {
+            var bundle = published ? ReadWorking(_published) : ReadWorking(_draft);
+            return JsonSerializer.Serialize(bundle, StudioJson.Options);
+        }
+    }
+
+    public string ExportYaml(bool published)
+    {
+        lock (_gate)
+        {
+            var bundle = published ? ReadWorking(_published) : ReadWorking(_draft);
+            return YamlFiles.Serialize(bundle);
+        }
+    }
+
+    public void ImportJson(string json)
+    {
+        ConfigBundle bundle;
+        try
+        {
+            bundle = JsonSerializer.Deserialize<ConfigBundle>(json, StudioJson.Options)
+                ?? throw new InvalidOperationException("empty");
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            throw new ConfigStoreException("import_invalid", "无法解析 JSON 配置：" + ex.Message, StatusCodes.Status400BadRequest);
+        }
+
+        ImportBundle(bundle);
+    }
+
+    public void ImportYaml(string yaml)
+    {
+        ConfigBundle bundle;
+        try
+        {
+            bundle = YamlFiles.Deserialize<ConfigBundle>(yaml);
+        }
+        catch (Exception ex) when (ex is not ConfigStoreException)
+        {
+            throw new ConfigStoreException("import_invalid", "无法解析 YAML 配置：" + ex.Message, StatusCodes.Status400BadRequest);
+        }
+
+        ImportBundle(bundle);
+    }
+
+    private void ImportBundle(ConfigBundle bundle)
+    {
+        lock (_gate)
+        {
+            YamlFiles.Normalize(bundle);
+            WriteBundle(_draft, bundle);
+            AppendLogUnlocked("已导入草稿");
+        }
+    }
+
+    private void EnsureBrandTemplatesUnlocked()
+    {
+        var published = ReadWorking(_published);
+        var draft = ReadWorking(_draft);
+        if (BrandTemplateSeeder.Ensure(published))
+        {
+            WriteBundle(_published, published);
+        }
+
+        if (BrandTemplateSeeder.Ensure(draft))
+        {
+            WriteBundle(_draft, draft);
+        }
+    }
+
+    private void ImportSlotsIfEmpty()
+    {
+        if (!_database.HasSlot("published"))
+        {
+            var published = ReadWorking(_published);
+            _database.SaveBundle("published", published, CanonicalRevision.Compute(published));
+        }
+
+        if (!_database.HasSlot("draft"))
+        {
+            var draft = ReadWorking(_draft);
+            _database.SaveBundle("draft", draft, CanonicalRevision.Compute(draft));
+        }
+    }
+
+    private void SyncRevisionIndex()
+    {
+        foreach (var item in ReadIndex().Items)
+        {
+            var directory = SnapshotDir(item.Revision);
+            if (!File.Exists(GatewayPath(directory)))
+            {
+                continue;
+            }
+
+            _database.SaveRevision(item.Revision, item.CreatedAt, item.Action, item.Note, ReadBundle(directory));
+        }
+    }
+
     private static void EnsureSafeId(string id)
     {
         if (!ConfigValidator.IsSafeId(id))
@@ -664,9 +798,22 @@ public sealed partial class ConfigStore
             .ToList();
     }
 
-    private static void WriteBundle(string root, ConfigBundle bundle)
+    private void WriteBundle(string root, ConfigBundle bundle)
     {
         YamlFiles.Normalize(bundle);
+        WriteBundleFiles(root, bundle);
+        if (string.Equals(root, _draft, StringComparison.Ordinal))
+        {
+            _database.SaveBundle("draft", bundle, CanonicalRevision.Compute(bundle));
+        }
+        else if (string.Equals(root, _published, StringComparison.Ordinal))
+        {
+            _database.SaveBundle("published", bundle, CanonicalRevision.Compute(bundle));
+        }
+    }
+
+    private static void WriteBundleFiles(string root, ConfigBundle bundle)
+    {
         Directory.CreateDirectory(root);
         YamlFiles.Write(GatewayPath(root), bundle.Gateway);
         ReplaceYaml(Path.Combine(root, "devices"), bundle.Devices.Select(device => (device.Metadata.Id, device)));

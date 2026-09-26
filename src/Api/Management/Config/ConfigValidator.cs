@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Cnc.Catalog;
 using Studio.Contracts;
 
 namespace Studio.Host.Config;
@@ -6,7 +7,6 @@ namespace Studio.Host.Config;
 public static partial class ConfigValidator
 {
     private static readonly string[] LogLevels = ["Trace", "Debug", "Information", "Warning", "Error", "Critical"];
-    private static readonly string[] Adapters = ["fanuc.fake", "fanuc.focas"];
     private static readonly string[] DataTypes = ["string", "number", "bool", "int", "int32", "int64", "float", "double"];
 
     public static ValidationResult Validate(ConfigBundle bundle)
@@ -49,7 +49,7 @@ public static partial class ConfigValidator
 
         if (bundle.Devices.Count == 0)
         {
-            Error(issues, "devices", "至少需要一台 Fanuc 设备");
+            Error(issues, "devices", "至少需要一台设备");
         }
 
         var deviceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -76,34 +76,63 @@ public static partial class ConfigValidator
                 Error(issues, $"{path}.displayName", "请填写设备显示名称");
             }
 
-            if (!Adapters.Contains(device.Spec.Adapter, StringComparer.Ordinal))
+            var catalog = CncCatalog.Current;
+            var knownAdapter = catalog.FindAdapter(device.Spec.Adapter);
+            if (knownAdapter is null)
             {
-                Error(issues, $"{path}.adapter", "M1 只支持 fanuc.fake 和 fanuc.focas");
+                Error(issues, $"{path}.adapter", $"适配器「{device.Spec.Adapter}」不在目录中。请选择该品牌的模拟器或已登记的协议驱动。");
+            }
+            else if (knownAdapter.Phase > 1)
+            {
+                Warning(issues, $"{path}.adapter", $"适配器「{device.Spec.Adapter}」的真实驱动在第二阶段实现，发布后设备会保持离线。请先用模拟器。");
             }
 
-            if (FanucPointCatalog.IsFanuc(device.Spec.Adapter))
+            var adapterBrand = catalog.BrandOfAdapter(device.Spec.Adapter);
+            var explicitBrand = catalog.FindBrand(device.Spec.BrandId);
+            if (!string.IsNullOrWhiteSpace(device.Spec.BrandId) && explicitBrand is null)
             {
-                var templateId = (device.Spec.PointTemplateId ?? "").Trim();
-                device.Spec.PointTemplateId = templateId;
-                if (!SafeId().IsMatch(templateId))
+                Error(issues, $"{path}.brandId", $"品牌「{device.Spec.BrandId}」不在目录中。");
+            }
+
+            if (adapterBrand is not null && explicitBrand is not null
+                && !string.Equals(adapterBrand, explicitBrand.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                Error(issues, $"{path}.brandId", $"品牌「{device.Spec.BrandId}」与适配器「{device.Spec.Adapter}」不一致。");
+            }
+
+            var deviceBrand = adapterBrand ?? explicitBrand?.Id;
+
+            if (!string.IsNullOrWhiteSpace(device.Spec.ControllerModelId))
+            {
+                var brand = catalog.FindBrand(deviceBrand);
+                if (brand is null || brand.Models.All(model =>
+                        !string.Equals(model.Id, device.Spec.ControllerModelId, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Error(issues, $"{path}.pointTemplateId", "请选择点位模板。一类模板给多台同类设备用，不必每台各写一张地址表。");
+                    Error(issues, $"{path}.controllerModelId", $"控制器型号「{device.Spec.ControllerModelId}」不属于该品牌。");
                 }
-                else
+            }
+
+            var templateId = (device.Spec.PointTemplateId ?? "").Trim();
+            device.Spec.PointTemplateId = string.IsNullOrEmpty(templateId) ? null : templateId;
+            if (!SafeId().IsMatch(templateId))
+            {
+                Error(issues, $"{path}.pointTemplateId", "请选择点位模板。一类模板给多台同类设备用，不必每台各写一张地址表。");
+            }
+            else
+            {
+                var template = bundle.PointTemplates.FirstOrDefault(item =>
+                    string.Equals(item.Metadata.Id, templateId, StringComparison.OrdinalIgnoreCase));
+                if (template is null)
                 {
-                    var template = bundle.PointTemplates.FirstOrDefault(item =>
-                        string.Equals(item.Metadata.Id, templateId, StringComparison.OrdinalIgnoreCase));
-                    if (template is null)
-                    {
-                        Error(issues, $"{path}.pointTemplateId", $"点位模板「{templateId}」不存在。");
-                    }
-                    else if (!FanucPointCatalog.MatchesFamily(template.Spec.Adapter, device.Spec.Adapter))
-                    {
-                        Error(
-                            issues,
-                            $"{path}.pointTemplateId",
-                            $"点位模板「{templateId}」的适配器族是「{template.Spec.Adapter}」，与设备适配器「{device.Spec.Adapter}」不一致。发那科设备请使用发那科模板。");
-                    }
+                    Error(issues, $"{path}.pointTemplateId", $"点位模板「{templateId}」不存在。");
+                }
+                else if (deviceBrand is not null
+                    && !string.Equals(template.Spec.Adapter, deviceBrand, StringComparison.OrdinalIgnoreCase))
+                {
+                    Error(
+                        issues,
+                        $"{path}.pointTemplateId",
+                        $"点位模板「{templateId}」的适配器族是「{template.Spec.Adapter}」，与设备适配器「{device.Spec.Adapter}」不一致。请改用同一品牌的模板。");
                 }
             }
 
@@ -163,12 +192,13 @@ public static partial class ConfigValidator
             }
 
             template.Spec.Adapter = (template.Spec.Adapter ?? "").Trim().ToLowerInvariant();
-            if (!string.Equals(template.Spec.Adapter, FanucPointCatalog.Family, StringComparison.Ordinal))
+            var templateBrand = CncCatalog.Current.FindBrand(template.Spec.Adapter);
+            if (templateBrand is null)
             {
-                Error(issues, $"{path}.adapter", "M1 点位模板只支持发那科（adapter: fanuc）。fanuc.fake 与 fanuc.focas 共用这一族，不能按其他品牌编目录。");
+                Error(issues, $"{path}.adapter", $"点位模板的适配器族「{template.Spec.Adapter}」不在品牌目录中。不能按未收录的品牌编点表。");
             }
 
-            ValidatePointList(issues, path, template.Spec.Points, "模板点位", fanuc: true);
+            ValidatePointList(issues, path, template.Spec.Points, "模板点位", templateBrand?.Id);
             if (template.Spec.Points.Count == 0)
             {
                 Warning(issues, path, "点位模板还没有任何点");
@@ -198,17 +228,12 @@ public static partial class ConfigValidator
 
             var device = bundle.Devices.First(item =>
                 string.Equals(item.Metadata.Id, deviceId, StringComparison.OrdinalIgnoreCase));
-            var fanuc = FanucPointCatalog.IsFanuc(device.Spec.Adapter);
-            ValidatePointList(issues, path, set.Spec.Points, "本机覆盖点位", fanuc);
+            var overrideBrand = CncCatalog.Current.ResolveBrand(device.Spec.Adapter, device.Spec.BrandId);
+            ValidatePointList(issues, path, set.Spec.Points, "本机覆盖点位", overrideBrand);
         }
 
         foreach (var device in bundle.Devices)
         {
-            if (!FanucPointCatalog.IsFanuc(device.Spec.Adapter))
-            {
-                continue;
-            }
-
             var template = bundle.PointTemplates.FirstOrDefault(item =>
                 string.Equals(item.Metadata.Id, device.Spec.PointTemplateId, StringComparison.OrdinalIgnoreCase));
             if (template is null)
@@ -290,21 +315,22 @@ public static partial class ConfigValidator
         string path,
         List<PointDefinition> points,
         string role,
-        bool fanuc)
+        string? brandId)
     {
+        var fanuc = string.Equals(brandId, FanucPointCatalog.Family, StringComparison.OrdinalIgnoreCase);
         var pointIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var point in points)
         {
             point.Id = (point.Id ?? "").Trim();
-            var known = fanuc && FanucPointCatalog.TryNormalize(point);
+            var known = PointCatalogNormalizer.TryNormalize(brandId, point);
             var pointId = point.Id ?? "";
             var pointPath = $"{path}/{pointId}";
-            if (fanuc && !known)
+            if (!string.IsNullOrWhiteSpace(brandId) && !known)
             {
-                Error(
-                    issues,
-                    pointPath,
-                    $"{role} Id「{pointId}」不在发那科适配器目录中。只能使用 {FanucPointCatalog.IdList}。覆盖不能新增目录以外的点，也不能手填协议地址。");
+                var catalogHint = fanuc
+                    ? $"不在发那科适配器目录中。只能使用目录中的点位（含 {FanucPointCatalog.IdList}）。覆盖不能新增目录以外的点，也不能手填协议地址。"
+                    : $"不在「{brandId}」目录中。只能从该品牌目录选择，不能手填协议地址。";
+                Error(issues, pointPath, $"{role} Id「{pointId}」{catalogHint}");
             }
 
             if (!SafeId().IsMatch(pointId))
@@ -316,7 +342,7 @@ public static partial class ConfigValidator
                 Error(issues, pointPath, "点位 Id 重复");
             }
 
-            if (!fanuc && string.IsNullOrWhiteSpace(point.Address))
+            if (string.IsNullOrWhiteSpace(brandId) && string.IsNullOrWhiteSpace(point.Address))
             {
                 Error(issues, $"{pointPath}.address", "请填写点位地址");
             }

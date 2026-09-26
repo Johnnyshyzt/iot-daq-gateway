@@ -1,0 +1,155 @@
+apiVersion: daq.gateway/v1
+kind: PointTemplate
+metadata:
+  id: heidenhain-standard
+  displayName: 海德汉 标准目录
+spec:
+  adapter: heidenhain
+  points:
+    - id: heidenhain_systemInfo
+      address: catalog/heidenhain_systemInfo
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: machinePosition
+      address: catalog/machinePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: relativePosition
+      address: catalog/relativePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_spindlePowerOnTime
+      address: catalog/heidenhain_spindlePowerOnTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_spindleRunTime
+      address: catalog/heidenhain_spindleRunTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: powerOnTime
+      address: catalog/powerOnTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: runTime
+      address: catalog/runTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: feedOverride
+      address: catalog/feedOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleOverride
+      address: catalog/spindleOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: rapidOverride
+      address: catalog/rapidOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_quoteInfo
+      address: catalog/heidenhain_quoteInfo
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: state
+      address: catalog/state
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_dncMode
+      address: catalog/heidenhain_dncMode
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: workMode
+      address: catalog/workMode
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_toolInfo
+      address: catalog/heidenhain_toolInfo
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: program
+      address: catalog/program
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleSpeed
+      address: catalog/spindleSpeed
+      dataType: number
+      unit: rpm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_editedFeed
+      address: catalog/heidenhain_editedFeed
+      dataType: number
+      unit: mm/min
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleSpeedCmd
+      address: catalog/spindleSpeedCmd
+      dataType: number
+      unit: rpm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_maxFeedRate
+      address: catalog/heidenhain_maxFeedRate
+      dataType: number
+      unit: mm/min
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: heidenhain_contourFeedRate
+      address: catalog/heidenhain_contourFeedRate
+      dataType: number
+      unit: mm/min
+      scale: 1
+      deadband: 0
+      enabled: true

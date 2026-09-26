@@ -1,3 +1,4 @@
+using Adapters.Cnc;
 using Adapters.Fanuc;
 using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Contracts;
@@ -38,6 +39,7 @@ public static class CollectorHost
         services.AddSingleton(new GatewayConfigSource(fullPath));
         services.AddSingleton(_ => new GatewayConfigHolder(GatewayConfigLoader.Load(fullPath).Configuration));
         services.AddFanucAdapters();
+        services.AddCncAdapters();
         services.AddSingleton<LiveGateway>();
         services.AddSingleton<ICollectorControl>(sp => sp.GetRequiredService<LiveGateway>());
         services.AddHostedService(sp => sp.GetRequiredService<LiveGateway>());

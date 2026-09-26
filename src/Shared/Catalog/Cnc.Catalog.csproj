@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cnc.Catalog</RootNamespace>
+    <Description>Versioned multi-brand CNC data-item catalog.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\docs\catalog\cnc-catalog.json" Link="cnc-catalog.json" />
+  </ItemGroup>
+</Project>

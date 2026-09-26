@@ -84,7 +84,18 @@ public sealed class PointTemplateTests : IDisposable
 
         Assert.False(result.Valid);
         Assert.Contains(result.Issues, issue => issue.Message.Contains("不一致", StringComparison.Ordinal) && issue.Message.Contains("fanuc.fake", StringComparison.Ordinal));
-        Assert.Contains(result.Issues, issue => issue.Message.Contains("只支持发那科", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Unknown_template_family_is_rejected()
+    {
+        var bundle = ConfigDefaults.Create();
+        bundle.PointTemplates[0].Spec.Adapter = "modbus";
+
+        var result = ConfigValidator.Validate(bundle);
+
+        Assert.False(result.Valid);
+        Assert.Contains(result.Issues, issue => issue.Message.Contains("目录", StringComparison.Ordinal));
     }
 
     [Theory]

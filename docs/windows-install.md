@@ -60,7 +60,7 @@ git push origin vX.Y.Z
 
 1. 把 zip 解压到固定目录，例如 `C:\iot-daq-gateway\`。必须保留全部文件，不要只拷 exe。
 2. 将授权的 **64 位** `Fwlib64.dll` 放到与 `Host.exe` 同一目录。仓库和镜像从不附带该文件。缺库时进程仍运行，`fanuc.focas` 设备 `$status=offline`。
-3. 包内已经有 Studio 静态页（`wwwroot`）、`data\seed` 和 `Host.exe`。第一次启动会把 `data\seed` 复制到 `data\published` 和 `data\draft`。服务的内容根目录是安装目录，不依赖系统目录。
+3. 包内已经有 Studio 静态页（`wwwroot`）、`data\seed` 和 `Host.exe`。第一次启动会把 `data\seed` 复制到 `data\published` 和 `data\draft`，并创建 `data\gateway.db`（SQLite，无需安装数据库）。zip 不包含数据库文件。服务的内容根目录是安装目录，不依赖系统目录。
 4. **MQTT 密码**：复制 `service.env.example` 为 `service.env`，填写 `MQTT_USER` 和 `MQTT_PASSWORD`。YAML 和页面只保存这两个**变量名**（`usernameFromEnv` / `passwordFromEnv`），不要写明文密码。见下一节。
 5. **建议先前台验证**：双击 `run-console.bat`。它会加载 `service.env`，再启动 `Host.exe`。看 `logs\gateway-yyyyMMdd.log` 是否打印版本号。浏览器打开 `http://127.0.0.1:5080`。
 6. **首次登录**（现场包，不是开发机的演示口令）：

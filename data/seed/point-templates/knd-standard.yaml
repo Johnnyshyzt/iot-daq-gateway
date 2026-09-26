@@ -1,0 +1,176 @@
+apiVersion: daq.gateway/v1
+kind: PointTemplate
+metadata:
+  id: knd-standard
+  displayName: 凯恩帝 标准目录
+spec:
+  adapter: knd
+  points:
+    - id: softwareVersion
+      address: catalog/softwareVersion
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: knd_fpgaVersion
+      address: catalog/knd_fpgaVersion
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: knd_ladderVersion
+      address: catalog/knd_ladderVersion
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: serialNumber
+      address: catalog/serialNumber
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: knd_manufacturer
+      address: catalog/knd_manufacturer
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: systemType
+      address: catalog/systemType
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: axisCount
+      address: catalog/axisCount
+      dataType: number
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: workMode
+      address: catalog/workMode
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: state
+      address: catalog/state
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCountTarget
+      address: catalog/partCountTarget
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCountTotal
+      address: catalog/partCountTotal
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCount
+      address: catalog/partCount
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: machinePosition
+      address: catalog/machinePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: relativePosition
+      address: catalog/relativePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: absolutePosition
+      address: catalog/absolutePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: cycleTime
+      address: catalog/cycleTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: runTime
+      address: catalog/runTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: program
+      address: catalog/program
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleSpeed
+      address: catalog/spindleSpeed
+      dataType: number
+      unit: rpm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: feedRate
+      address: catalog/feedRate
+      dataType: number
+      unit: mm/min
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleOverride
+      address: catalog/spindleOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: feedOverride
+      address: catalog/feedOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: rapidOverride
+      address: catalog/rapidOverride
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: alarm
+      address: catalog/alarm
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true

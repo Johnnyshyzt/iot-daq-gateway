@@ -95,8 +95,12 @@ internal static class V1BundleLoader
             {
                 ["host"] = OptionalString(connection, "host") ?? "127.0.0.1",
                 ["port"] = OptionalInt(connection, "port") ?? 8193,
-                ["timeoutMs"] = OptionalInt(connection, "focasTimeoutMs") ?? 3000,
-                ["displayName"] = OptionalString(metadata, "displayName") ?? id
+                ["timeoutMs"] = OptionalInt(connection, "timeoutMs") ?? OptionalInt(connection, "focasTimeoutMs") ?? 3000,
+                ["displayName"] = OptionalString(metadata, "displayName") ?? id,
+                ["path"] = OptionalString(connection, "path"),
+                ["namespace"] = OptionalString(connection, "namespace"),
+                ["brandId"] = OptionalString(spec, "brandId"),
+                ["controllerModelId"] = OptionalString(spec, "controllerModelId")
             };
 
             var templateId = OptionalString(spec, "pointTemplateId");

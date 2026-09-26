@@ -55,7 +55,9 @@ cd src/Web && npm ci && npm run build
 dotnet run --project src/Host
 ```
 
-然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。发布和回滚会在进程内重载采集，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
+然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录），并在 `data/gateway.db` 创建 SQLite。没有配置文件时也会写入 19 个数控品牌的目录和每品牌一份标准点位模板。发布和回滚会在进程内重载采集，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
+
+目录、模拟器和数据库见 [docs/catalog/README.md](docs/catalog/README.md) 与 [docs/database.md](docs/database.md)。Studio 里可以按品牌新建模拟器设备，发布后在「实时值」查看最新值和历史。YAML / JSON 只作为导入导出。换成 PostgreSQL 时设置 `Database:Provider` 和连接字符串，见数据库文档。
 
 开发页面热更新：`cd src/Web && npm run dev`（`http://127.0.0.1:5173`，把 `/api` 代理到 5080）。CI 用 npm，本机也可以用 pnpm。
 

@@ -15,6 +15,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -26,9 +33,12 @@ import {
 } from '@/components/ui/table'
 import {
   canWrite,
+  catalogAddress,
   describeError,
   normalizeDataType,
   studioApi,
+  type CatalogBrand,
+  type CatalogOverview,
   type DeviceDocument,
   type PointCatalogDocument,
   type PointCatalogEntry,
@@ -52,14 +62,18 @@ export function PointsPage() {
   const [templateId, setTemplateId] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [points, setPoints] = useState<PointDefinition[]>([])
-  const [catalog, setCatalog] = useState<PointCatalogDocument | null>(null)
+  const [brands, setBrands] = useState<CatalogBrand[]>([])
   const [createOpen, setCreateOpen] = useState(false)
   const [newId, setNewId] = useState('')
   const [newName, setNewName] = useState('')
+  const [newBrand, setNewBrand] = useState('fanuc')
   const [message, setMessage] = useState('')
 
   const template = templates.find((item) => item.metadata.id === templateId)
   const users = devices.filter((device) => device.spec.pointTemplateId === templateId)
+  const templateBrand = brands.find((brand) => brand.id === (template?.spec.adapter || ''))
+  const createBrand = brands.find((brand) => brand.id === newBrand) ?? brands[0]
+  const catalog = templateBrand ? brandCatalog(templateBrand) : null
 
   async function reload() {
     const [templateItems, deviceItems] = await Promise.all([
@@ -102,15 +116,16 @@ export function PointsPage() {
 
   useEffect(() => {
     let cancelled = false
-    void studioApi<PointCatalogDocument>('/api/v1/catalog/points?adapter=fanuc.fake')
-      .then((document) => {
-        if (!cancelled) setCatalog(document)
+    void studioApi<CatalogOverview>('/api/v1/catalog/brands')
+      .then((overview) => {
+        if (cancelled) return
+        setBrands(overview.brands)
+        if (overview.brands[0] && !overview.brands.some((brand) => brand.id === 'fanuc')) {
+          setNewBrand(overview.brands[0].id)
+        }
       })
       .catch((error: unknown) => {
-        if (!cancelled) {
-          setCatalog(null)
-          setMessage(describeError(error))
-        }
+        if (!cancelled) setMessage(describeError(error))
       })
     return () => {
       cancelled = true
@@ -159,7 +174,7 @@ export function PointsPage() {
       .map((point) => point.id.trim())
       .filter((id) => id && !entryFor(id))
     if (unknown.length > 0) {
-      const text = `点位 Id 不在发那科目录中：${unknown.join('、')}。只能使用 ${catalog.points.map((item) => item.id).join('、')}。请移除后再保存。`
+      const text = `点位 Id 不在${templateBrand?.nameZh ?? '该品牌'}目录中：${unknown.join('、')}。只能从该品牌目录选择。请移除后再保存。`
       setMessage(text)
       toast.error(text)
       return
@@ -167,7 +182,7 @@ export function PointsPage() {
     const body: PointTemplateDocument = {
       metadata: { id: templateId, displayName: displayName.trim() },
       spec: {
-        adapter: 'fanuc',
+        adapter: templateBrand?.id || template?.spec.adapter || 'fanuc',
         points: points.filter((point) => point.id.trim()).map(withCatalog),
       },
     }
@@ -182,7 +197,8 @@ export function PointsPage() {
   }
 
   async function createTemplate() {
-    if (!catalog) return
+    if (!createBrand) return
+    const created = brandCatalog(createBrand)
     const id = newId.trim()
     if (!idPattern.test(id)) {
       const text = '模板 Id 只能包含字母、数字、下划线和连字符，且必须以字母或数字开头'
@@ -193,8 +209,8 @@ export function PointsPage() {
     const body: PointTemplateDocument = {
       metadata: { id, displayName: newName.trim() || id },
       spec: {
-        adapter: 'fanuc',
-        points: catalog.points.map(fromCatalog),
+        adapter: createBrand.id,
+        points: created.points.map(fromCatalog),
       },
     }
     await studioApi(`/api/v1/config/point-templates/${encodeURIComponent(id)}`, {
@@ -207,7 +223,7 @@ export function PointsPage() {
     await reload()
     setTemplateId(id)
     setCreateOpen(false)
-    setMessage('新模板已写入草稿，并带上发那科目录里的三个点。按需要改启用后再发布。')
+    setMessage(`新模板已写入草稿，并带上${createBrand?.nameZh ?? ''}目录中的点位。按需要改启用后再发布。`)
     toast.success('已新建点位模板')
   }
 
@@ -247,7 +263,7 @@ export function PointsPage() {
         .map(fromCatalog)
       return added.length === 0 ? current : [...current, ...added]
     })
-    setMessage('已从发那科目录加入尚未在表中的点位，尚未保存。')
+    setMessage(`已从${templateBrand?.nameZh ?? '品牌'}目录加入尚未在表中的点位，尚未保存。`)
   }
 
   function exportCsv() {
@@ -277,8 +293,8 @@ export function PointsPage() {
   }
 
   async function importCsv(file: File) {
-    if (!catalog) {
-      const text = 'M1 只支持发那科点位目录，不能按通用地址导入 CSV。'
+    if (!catalog || !templateBrand) {
+      const text = '请先选择一个品牌模板，再按该品牌目录导入 CSV。不能手填协议地址。'
       setMessage(text)
       toast.error(text)
       return
@@ -303,7 +319,7 @@ export function PointsPage() {
     const unknown = ids.filter((id) => !entryFor(id))
     if (unknown.length > 0) {
       const unique = [...new Set(unknown)]
-      const error = `CSV 中的点位 Id 不在发那科目录中：${unique.join('、')}。只能导入 ${catalog.points.map((item) => item.id).join('、')}。这不是跨品牌地址表。`
+      const error = `CSV 中的点位 Id 不在${templateBrand.nameZh}目录中：${unique.join('、')}。只能导入该品牌目录里的点。`
       setMessage(error)
       toast.error(error)
       return
@@ -335,16 +351,16 @@ export function PointsPage() {
           }
         })
     )
-    setMessage('已按发那科目录填入模板。地址列已忽略。确认后点「保存草稿」。')
+    setMessage(`已按${templateBrand.nameZh}目录填入模板。地址列已忽略。确认后点「保存草稿」。`)
   }
 
   const missing =
     catalog?.points.filter((entry) => !points.some((point) => point.id.trim().toLowerCase() === entry.id.toLowerCase())) ??
     []
-  const groups = groupByAdapter(templates)
+  const groups = groupByBrand(templates, brands)
   const description = catalog
-    ? `${catalog.message} 一类模板给多台同类设备用，不是每台各写一张地址表。可改启用、单位、倍率和死区。Excel 请另存为 CSV。`
-    : '正在读取发那科点位目录… 一类模板给多台同类设备用，不是每台各写一张地址表。'
+    ? `${catalog.message} 一类模板给多台同类设备用。可改启用、单位、倍率和死区。Excel 请另存为 CSV。`
+    : '正在读取品牌目录… 左侧按品牌分组。添加点位只能从该品牌目录里选。'
 
   return (
     <PageShell
@@ -396,7 +412,7 @@ export function PointsPage() {
               className='size-7'
               aria-label='新建模板'
               title='新建模板'
-              disabled={!writable || !catalog}
+              disabled={!writable || brands.length === 0}
               onClick={() => setCreateOpen(true)}
             >
               <Plus />
@@ -449,7 +465,7 @@ export function PointsPage() {
                 <div className='grid gap-3'>
                   <p className='text-sm text-muted-foreground'>
                     {templates.length === 0
-                      ? '还没有点位模板。点「新建模板」创建一份发那科模板。'
+                      ? '还没有点位模板。点「新建模板」，选择品牌后从该品牌目录生成。'
                       : '从左侧选择一个模板。'}
                   </p>
                   {message ? <p className='text-sm text-muted-foreground'>{message}</p> : null}
@@ -467,7 +483,7 @@ export function PointsPage() {
                     />
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    适配器族 fanuc，供 fanuc.fake 与 fanuc.focas 共用。内部地址由目录填写，采集按点位 id。
+                    品牌 {templateBrand?.nameZh ?? template?.spec.adapter}。内部地址由目录填写，采集按点位 id。不能手填协议地址。
                   </p>
                   <div className='overflow-auto'>
                     <Table>
@@ -489,7 +505,7 @@ export function PointsPage() {
                             <TableCell colSpan={8} className='text-muted-foreground'>
                               {catalog
                                 ? `模板里还没有点位。点「从目录添加」加入 ${catalog.points.map((item) => item.id).join('、')}。`
-                                : '正在读取发那科点位目录…'}
+                                : '正在读取品牌目录…'}
                             </TableCell>
                           </TableRow>
                         ) : null}
@@ -500,10 +516,10 @@ export function PointsPage() {
                               <TableCell className='font-mono text-sm'>{point.id || '—'}</TableCell>
                               <TableCell className='max-w-64 whitespace-normal text-sm text-muted-foreground'>
                                 {!catalog
-                                  ? '正在读取发那科点位目录…'
+                                  ? '正在读取品牌目录…'
                                   : entry
                                     ? entry.description
-                                    : '不在发那科目录中。请移除，否则无法发布。'}
+                                    : `不在${templateBrand?.nameZh ?? '该品牌'}目录中。请移除，否则无法发布。`}
                               </TableCell>
                               <TableCell className='text-sm'>{entry?.dataType ?? normalizeDataType(point.dataType)}</TableCell>
                               <TableCell>
@@ -607,7 +623,7 @@ export function PointsPage() {
           <DialogHeader>
             <DialogTitle>新建模板</DialogTitle>
             <DialogDescription>
-              新建的是另一类发那科设备的点表，例如只启用报警。创建后带上目录中的三个点，可再关掉不需要的。
+              选择品牌后，模板会带上该品牌目录中的全部数据项。可以再关掉不需要的。不能手填协议地址。
             </DialogDescription>
           </DialogHeader>
           <form
@@ -617,6 +633,21 @@ export function PointsPage() {
               void createTemplate().catch(fail)
             }}
           >
+            <div className='grid gap-1.5'>
+              <Label>品牌</Label>
+              <Select value={createBrand?.id} disabled={!writable} onValueChange={setNewBrand}>
+                <SelectTrigger>
+                  <SelectValue placeholder='选择品牌' />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      {brand.nameZh}（{brand.nameEn}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className='grid gap-3 sm:grid-cols-2'>
               <div className='grid gap-1.5'>
                 <Label htmlFor='new-template-id'>模板 Id</Label>
@@ -644,7 +675,7 @@ export function PointsPage() {
               <Button type='button' variant='outline' onClick={() => closeCreate(false)}>
                 取消
               </Button>
-              <Button type='submit' disabled={!writable || !catalog || !newId.trim()}>
+              <Button type='submit' disabled={!writable || !createBrand || !newId.trim()}>
                 新建模板
               </Button>
             </DialogFooter>
@@ -655,7 +686,7 @@ export function PointsPage() {
   )
 }
 
-function groupByAdapter(templates: PointTemplateDocument[]) {
+function groupByBrand(templates: PointTemplateDocument[], brands: CatalogBrand[]) {
   const order: string[] = []
   const groups = new Map<string, PointTemplateDocument[]>()
   for (const template of templates) {
@@ -670,13 +701,32 @@ function groupByAdapter(templates: PointTemplateDocument[]) {
   order.sort((left, right) => {
     if (left === 'fanuc') return -1
     if (right === 'fanuc') return 1
-    return left.localeCompare(right)
+    const leftName = brands.find((brand) => brand.id === left)?.nameZh ?? left
+    const rightName = brands.find((brand) => brand.id === right)?.nameZh ?? right
+    return leftName.localeCompare(rightName, 'zh')
   })
   return order.map((adapter) => ({
     adapter: adapter || 'ungrouped',
-    label: adapter === 'fanuc' ? 'Fanuc' : adapter || '未分组',
+    label: brands.find((brand) => brand.id === adapter)?.nameZh || (adapter === 'fanuc' ? '发那科' : adapter || '未分组'),
     templates: groups.get(adapter) ?? [],
   }))
+}
+
+function brandCatalog(brand: CatalogBrand): PointCatalogDocument {
+  return {
+    adapter: brand.id,
+    scope: brand.nameZh,
+    message: `${brand.nameZh}（${brand.nameEn}）共 ${brand.items.length} 个目录项。只能从该品牌目录选择，不能手填协议地址。`,
+    points: brand.items.map((item) => ({
+      id: item.id,
+      dataType: normalizeDataType(item.dataType),
+      description: item.nameZh,
+      scale: 1,
+      deadband: 0,
+      address: catalogAddress(brand.id, item.id),
+      unit: item.unit,
+    })),
+  }
 }
 
 function fromCatalog(entry: PointCatalogEntry): PointDefinition {
@@ -684,7 +734,7 @@ function fromCatalog(entry: PointCatalogEntry): PointDefinition {
     id: entry.id,
     address: entry.address,
     dataType: entry.dataType,
-    unit: '',
+    unit: entry.unit ?? '',
     scale: entry.scale,
     deadband: entry.deadband,
     enabled: true,

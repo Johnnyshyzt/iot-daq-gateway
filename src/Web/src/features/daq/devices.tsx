@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -27,43 +23,57 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  brandOfAdapter,
   canWrite,
   describeError,
+  standardTemplateId,
   studioApi,
+  type CatalogAdapter,
+  type CatalogOverview,
   type DeviceDocument,
   type PointTemplateDocument,
 } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
+const noneModel = '__none__'
+
 const emptyDevice = (): DeviceDocument => ({
   metadata: { id: '', displayName: '' },
   spec: {
-    adapter: 'fanuc.fake',
+    adapter: 'fanuc.sim',
+    brandId: 'fanuc',
+    controllerModelId: '',
     enabled: true,
     intervalMs: 1000,
-    pointTemplateId: 'fanuc-standard',
-    connection: { host: '127.0.0.1', port: 8193, focasTimeoutMs: 3000 },
+    pointTemplateId: 'fanuc-catalog',
+    workshop: '',
+    line: '',
+    connection: { host: '127.0.0.1', port: 8193, timeoutMs: 3000, focasTimeoutMs: 3000, path: '', namespace: '' },
   },
 })
 
 export function DevicesPage() {
+  const navigate = useNavigate()
   const role = useAuthStore((state) => state.auth.user?.role[0])
   const writable = canWrite(role)
   const [devices, setDevices] = useState<DeviceDocument[]>([])
   const [templates, setTemplates] = useState<PointTemplateDocument[]>([])
+  const [catalog, setCatalog] = useState<CatalogOverview | null>(null)
   const [draft, setDraft] = useState<DeviceDocument>(emptyDevice())
   const [mode, setMode] = useState<'create' | 'edit'>('create')
   const [message, setMessage] = useState('')
 
   async function reload() {
-    const [deviceItems, templateItems] = await Promise.all([
+    const [deviceItems, templateItems, overview] = await Promise.all([
       studioApi<DeviceDocument[]>('/api/v1/config/devices'),
       studioApi<PointTemplateDocument[]>('/api/v1/config/point-templates'),
+      studioApi<CatalogOverview>('/api/v1/catalog/brands'),
     ])
     setDevices(deviceItems)
     setTemplates(templateItems)
-    return templateItems
+    setCatalog(overview)
+    return { templateItems, overview }
   }
 
   useEffect(() => {
@@ -76,9 +86,19 @@ export function DevicesPage() {
     toast.error(text)
   }
 
+  const brandId = draft.spec.brandId || brandOfAdapter(catalog, draft.spec.adapter)?.id || 'fanuc'
+  const brand = catalog?.brands.find((item) => item.id === brandId)
+  const adapters = [
+    ...(brand?.adapters ?? []),
+    ...(catalog?.genericAdapters ?? []),
+  ]
+  const adapter = adapters.find((item) => item.id === draft.spec.adapter) ?? brand?.adapters[0]
+  const brandTemplates = templates.filter((item) => (item.spec.adapter || 'fanuc') === brandId)
+
   function select(device: DeviceDocument) {
+    const inferred = device.spec.brandId || brandOfAdapter(catalog, device.spec.adapter)?.id || 'fanuc'
     setMode('edit')
-    setDraft(structuredClone(device))
+    setDraft(structuredClone({ ...device, spec: { ...device.spec, brandId: inferred } }))
     setMessage('')
   }
 
@@ -86,6 +106,49 @@ export function DevicesPage() {
     setMode('create')
     setDraft(emptyDevice())
     setMessage('')
+  }
+
+  function applyAdapter(current: DeviceDocument, next: CatalogAdapter, nextBrand: string, templateId: string) {
+    const connection = { ...current.spec.connection }
+    for (const param of next.parameters) {
+      if (param.name === 'host' && param.default != null) connection.host = String(param.default)
+      if (param.name === 'port' && param.default != null) connection.port = Number(param.default)
+      if (param.name === 'timeoutMs' && param.default != null) {
+        const timeout = Number(param.default)
+        connection.timeoutMs = timeout
+        connection.focasTimeoutMs = timeout
+      }
+      if (param.name === 'path') connection.path = param.default == null ? '' : String(param.default)
+      if (param.name === 'namespace') connection.namespace = param.default == null ? '' : String(param.default)
+    }
+    return {
+      ...current,
+      spec: {
+        ...current.spec,
+        brandId: nextBrand,
+        adapter: next.id,
+        pointTemplateId: templateId,
+        connection,
+      },
+    }
+  }
+
+  function chooseBrand(nextBrandId: string) {
+    const nextBrand = catalog?.brands.find((item) => item.id === nextBrandId)
+    if (!nextBrand) {
+      setDraft({ ...draft, spec: { ...draft.spec, brandId: nextBrandId } })
+      return
+    }
+    const pool = [...nextBrand.adapters, ...(catalog?.genericAdapters ?? [])]
+    const preferred = pool.find((item) => item.id.endsWith('.sim')) ?? pool[0]
+    const templateId = templates.some((item) => item.metadata.id === standardTemplateId(nextBrand.id))
+      ? standardTemplateId(nextBrand.id)
+      : templates.find((item) => item.spec.adapter === nextBrand.id)?.metadata.id ?? standardTemplateId(nextBrand.id)
+    const modelId = nextBrand.models[0]?.id ?? ''
+    const next = preferred
+      ? applyAdapter(draft, preferred, nextBrand.id, templateId)
+      : { ...draft, spec: { ...draft.spec, brandId: nextBrand.id, pointTemplateId: templateId } }
+    setDraft({ ...next, spec: { ...next.spec, controllerModelId: modelId } })
   }
 
   async function save() {
@@ -104,7 +167,20 @@ export function DevicesPage() {
     }
     const body: DeviceDocument = {
       ...draft,
-      metadata: { ...draft.metadata, id },
+      metadata: { ...draft.metadata, id, displayName: draft.metadata.displayName.trim() },
+      spec: {
+        ...draft.spec,
+        brandId,
+        controllerModelId: draft.spec.controllerModelId?.trim() || null,
+        workshop: draft.spec.workshop?.trim() || null,
+        line: draft.spec.line?.trim() || null,
+        groupId: draft.spec.groupId?.trim() || null,
+        connection: {
+          ...draft.spec.connection,
+          path: draft.spec.connection.path?.trim() || null,
+          namespace: draft.spec.connection.namespace?.trim() || null,
+        },
+      },
     }
     await studioApi(`/api/v1/config/devices/${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -118,9 +194,7 @@ export function DevicesPage() {
   }
 
   async function remove(id: string) {
-    await studioApi(`/api/v1/config/devices/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    })
+    await studioApi(`/api/v1/config/devices/${encodeURIComponent(id)}`, { method: 'DELETE' })
     if (draft.metadata.id === id) {
       setDraft(emptyDevice())
       setMode('create')
@@ -138,16 +212,21 @@ export function DevicesPage() {
     toast[result.ok ? 'success' : 'error'](result.message)
   }
 
+  function setConnection(patch: Partial<DeviceDocument['spec']['connection']>) {
+    setDraft({
+      ...draft,
+      spec: { ...draft.spec, connection: { ...draft.spec.connection, ...patch } },
+    })
+  }
+
+  const timeoutValue = draft.spec.connection.timeoutMs ?? draft.spec.connection.focasTimeoutMs ?? 3000
+
   return (
     <PageShell
       title='设备'
-      description='Fanuc 设备只支持 fanuc.fake 与 fanuc.focas。每台选择一个点位模板：一类模板给多台同类设备用，不是每台各写一张地址表。保存写入草稿，发布后网关才会加载。fanuc.focas 的连接测试走真实握手，不会因为 TCP 端口通了就显示成功。'
+      description='先选品牌和控制器型号，再选适配器（模拟器或真实驱动）和该品牌的点位模板。连接参数来自适配器定义。保存写入草稿，发布后网关才会加载。模拟器不连接真实机床。'
       actions={
-        <Button
-          variant='outline'
-          disabled={!writable}
-          onClick={createNew}
-        >
+        <Button variant='outline' disabled={!writable} onClick={createNew}>
           新建设备
         </Button>
       }
@@ -162,7 +241,7 @@ export function DevicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>名称</TableHead>
-                  <TableHead>适配器</TableHead>
+                  <TableHead>品牌 / 适配器</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead />
                 </TableRow>
@@ -171,42 +250,54 @@ export function DevicesPage() {
                 {devices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className='text-muted-foreground'>
-                      还没有设备。点击「新建设备」，适配器选 fanuc.fake。
+                      还没有设备。点击「新建设备」，选择品牌后使用该品牌的模拟器。
                     </TableCell>
                   </TableRow>
                 ) : null}
-                {devices.map((device) => (
-                  <TableRow key={device.metadata.id}>
-                    <TableCell>
-                      <div className='font-medium'>{device.metadata.displayName}</div>
-                      <div className='text-xs text-muted-foreground'>{device.metadata.id}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{device.spec.adapter}</div>
-                      <div className='text-xs text-muted-foreground'>
-                        {templateName(templates, device.spec.pointTemplateId)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={device.spec.enabled ? 'default' : 'secondary'}>
-                        {device.spec.enabled ? '启用' : '禁用'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className='space-x-2 text-end'>
-                      <Button size='sm' variant='outline' onClick={() => select(device)}>
-                        编辑
-                      </Button>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        disabled={!writable}
-                        onClick={() => void test(device.metadata.id).catch(fail)}
-                      >
-                        测试
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {devices.map((device) => {
+                  const rowBrand =
+                    catalog?.brands.find((item) => item.id === device.spec.brandId) ??
+                    brandOfAdapter(catalog, device.spec.adapter)
+                  return (
+                    <TableRow key={device.metadata.id}>
+                      <TableCell>
+                        <div className='font-medium'>{device.metadata.displayName}</div>
+                        <div className='text-xs text-muted-foreground'>{device.metadata.id}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{rowBrand ? `${rowBrand.nameZh} · ${device.spec.adapter}` : device.spec.adapter}</div>
+                        <div className='text-xs text-muted-foreground'>
+                          {templateName(templates, device.spec.pointTemplateId)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={device.spec.enabled ? 'default' : 'secondary'}>
+                          {device.spec.enabled ? '启用' : '禁用'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className='space-x-2 text-end'>
+                        <Button size='sm' variant='outline' onClick={() => select(device)}>
+                          编辑
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => void navigate({ to: '/live', search: { device: device.metadata.id } })}
+                        >
+                          实时
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={!writable}
+                          onClick={() => void test(device.metadata.id).catch(fail)}
+                        >
+                          测试
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -221,10 +312,7 @@ export function DevicesPage() {
                 value={draft.metadata.id}
                 disabled={!writable || mode === 'edit'}
                 onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    metadata: { ...draft.metadata, id: event.target.value },
-                  })
+                  setDraft({ ...draft, metadata: { ...draft.metadata, id: event.target.value } })
                 }
               />
             </Field>
@@ -236,111 +324,185 @@ export function DevicesPage() {
                 value={draft.metadata.displayName}
                 disabled={!writable}
                 onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    metadata: { ...draft.metadata, displayName: event.target.value },
-                  })
+                  setDraft({ ...draft, metadata: { ...draft.metadata, displayName: event.target.value } })
                 }
               />
             </Field>
-            <Field label='适配器'>
-              <Select
-                value={draft.spec.adapter}
-                disabled={!writable}
-                onValueChange={(adapter) =>
-                  setDraft({ ...draft, spec: { ...draft.spec, adapter } })
-                }
-              >
+            <Field label='品牌'>
+              <Select value={brandId} disabled={!writable || !catalog} onValueChange={chooseBrand}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder='选择品牌' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='fanuc.fake'>fanuc.fake（模拟）</SelectItem>
-                  <SelectItem value='fanuc.focas'>fanuc.focas</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label='点位模板'>
-              <Select
-                value={draft.spec.pointTemplateId || undefined}
-                disabled={!writable || templates.length === 0}
-                onValueChange={(pointTemplateId) =>
-                  setDraft({ ...draft, spec: { ...draft.spec, pointTemplateId } })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={templates.length === 0 ? '还没有模板' : '选择模板'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.metadata.id} value={template.metadata.id}>
-                      {(template.metadata.displayName || template.metadata.id) +
-                        `（${template.metadata.id}）`}
+                  {(catalog?.brands ?? []).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.nameZh}（{item.nameEn}）
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
-            <p className='text-xs text-muted-foreground'>
-              一类模板给多台同类设备用。点位在「点位模板」页维护，这里只选择用哪一份。
-            </p>
-            <Field label='主机'>
-              <Input
-                value={draft.spec.connection.host}
+            <Field label='控制器型号'>
+              <Select
+                value={draft.spec.controllerModelId || noneModel}
                 disabled={!writable}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setDraft({
                     ...draft,
-                    spec: {
-                      ...draft.spec,
-                      connection: { ...draft.spec.connection, host: event.target.value },
-                    },
+                    spec: { ...draft.spec, controllerModelId: value === noneModel ? '' : value },
                   })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='可选' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={noneModel}>不指定</SelectItem>
+                  {(brand?.models ?? []).map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
-            <div className='grid grid-cols-2 gap-3'>
-              <Field label='端口'>
+            {(brand?.models.length ?? 0) === 0 ? (
+              <p className='text-xs text-muted-foreground'>该品牌在型号表里没有列出系列，控制器型号可以留空。</p>
+            ) : null}
+            <Field label='适配器'>
+              <Select
+                value={draft.spec.adapter}
+                disabled={!writable || adapters.length === 0}
+                onValueChange={(id) => {
+                  const next = adapters.find((item) => item.id === id)
+                  if (!next) return
+                  setDraft(applyAdapter(draft, next, brandId, draft.spec.pointTemplateId || standardTemplateId(brandId)))
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='选择适配器' />
+                </SelectTrigger>
+                <SelectContent>
+                  {adapters.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.displayName}（{item.id}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {adapter && adapter.phase > 1 ? (
+              <p className='text-xs text-muted-foreground'>
+                {adapter.note || '真实协议驱动在第二阶段实现。发布后这台设备会保持离线，请先用模拟器。'}
+              </p>
+            ) : null}
+            <Field label='点位模板'>
+              <Select
+                value={draft.spec.pointTemplateId || undefined}
+                disabled={!writable || brandTemplates.length === 0}
+                onValueChange={(pointTemplateId) =>
+                  setDraft({ ...draft, spec: { ...draft.spec, pointTemplateId } })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={brandTemplates.length === 0 ? '该品牌还没有模板' : '选择模板'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {brandTemplates.map((template) => (
+                    <SelectItem key={template.metadata.id} value={template.metadata.id}>
+                      {(template.metadata.displayName || template.metadata.id) + `（${template.metadata.id}）`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <p className='text-xs text-muted-foreground'>只列出当前品牌的模板。一类模板给多台同类设备用。</p>
+            {adapter?.parameters.some((param) => param.name === 'host') ? (
+              <Field label='主机'>
                 <Input
-                  type='number'
-                  value={draft.spec.connection.port}
+                  value={draft.spec.connection.host}
+                  disabled={!writable}
+                  onChange={(event) => setConnection({ host: event.target.value })}
+                />
+              </Field>
+            ) : null}
+            <div className='grid grid-cols-2 gap-3'>
+              {adapter?.parameters.some((param) => param.name === 'port') ? (
+                <Field label='端口'>
+                  <Input
+                    type='number'
+                    value={draft.spec.connection.port}
+                    disabled={!writable}
+                    onChange={(event) => setConnection({ port: Number(event.target.value) })}
+                  />
+                </Field>
+              ) : null}
+              {adapter?.parameters.some((param) => param.name === 'timeoutMs') ? (
+                <Field label='超时 ms'>
+                  <Input
+                    type='number'
+                    value={timeoutValue}
+                    disabled={!writable}
+                    onChange={(event) => {
+                      const timeout = Number(event.target.value)
+                      setConnection({ timeoutMs: timeout, focasTimeoutMs: timeout })
+                    }}
+                  />
+                </Field>
+              ) : null}
+            </div>
+            {adapter?.parameters.some((param) => param.name === 'path') ? (
+              <Field label='路径'>
+                <Input
+                  value={draft.spec.connection.path ?? ''}
+                  disabled={!writable}
+                  onChange={(event) => setConnection({ path: event.target.value })}
+                />
+              </Field>
+            ) : null}
+            {adapter?.parameters.some((param) => param.name === 'namespace') ? (
+              <Field label='命名空间'>
+                <Input
+                  value={draft.spec.connection.namespace ?? ''}
+                  disabled={!writable}
+                  onChange={(event) => setConnection({ namespace: event.target.value })}
+                />
+              </Field>
+            ) : null}
+            <div className='grid grid-cols-2 gap-3'>
+              <Field label='车间'>
+                <Input
+                  value={draft.spec.workshop ?? ''}
                   disabled={!writable}
                   onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      spec: {
-                        ...draft.spec,
-                        connection: {
-                          ...draft.spec.connection,
-                          port: Number(event.target.value),
-                        },
-                      },
-                    })
+                    setDraft({ ...draft, spec: { ...draft.spec, workshop: event.target.value } })
                   }
                 />
               </Field>
-              <Field label='扫描周期 ms'>
+              <Field label='产线'>
                 <Input
-                  type='number'
-                  value={draft.spec.intervalMs}
+                  value={draft.spec.line ?? ''}
                   disabled={!writable}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      spec: { ...draft.spec, intervalMs: Number(event.target.value) },
-                    })
-                  }
+                  onChange={(event) => setDraft({ ...draft, spec: { ...draft.spec, line: event.target.value } })}
                 />
               </Field>
             </div>
+            <Field label='扫描周期 ms'>
+              <Input
+                type='number'
+                value={draft.spec.intervalMs}
+                disabled={!writable}
+                onChange={(event) =>
+                  setDraft({ ...draft, spec: { ...draft.spec, intervalMs: Number(event.target.value) } })
+                }
+              />
+            </Field>
             <div className='flex items-center justify-between'>
               <Label>启用</Label>
               <Switch
                 checked={draft.spec.enabled}
                 disabled={!writable}
-                onCheckedChange={(enabled) =>
-                  setDraft({ ...draft, spec: { ...draft.spec, enabled } })
-                }
+                onCheckedChange={(enabled) => setDraft({ ...draft, spec: { ...draft.spec, enabled } })}
               />
             </div>
             <div className='flex gap-2'>
@@ -350,9 +512,7 @@ export function DevicesPage() {
               <Button
                 variant='destructive'
                 disabled={!writable || !draft.metadata.id}
-                onClick={() =>
-                  void remove(draft.metadata.id).catch(fail)
-                }
+                onClick={() => void remove(draft.metadata.id).catch(fail)}
               >
                 删除
               </Button>

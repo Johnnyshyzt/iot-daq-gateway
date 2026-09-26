@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
+import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/live'
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
 import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated/points'
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
@@ -35,9 +37,19 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMqttRoute = AuthenticatedMqttRouteImport.update({
@@ -80,7 +92,9 @@ const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof authSignInRoute
+  '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
@@ -91,7 +105,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
+  '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
@@ -105,7 +121,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
+  '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
+  '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
   '/_authenticated/points': typeof AuthenticatedPointsRoute
   '/_authenticated/publish': typeof AuthenticatedPublishRoute
@@ -120,7 +138,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/catalog'
     | '/devices'
+    | '/live'
     | '/mqtt'
     | '/points'
     | '/publish'
@@ -131,7 +151,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
+    | '/catalog'
     | '/devices'
+    | '/live'
     | '/mqtt'
     | '/points'
     | '/publish'
@@ -144,7 +166,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/(auth)/sign-in'
+    | '/_authenticated/catalog'
     | '/_authenticated/devices'
+    | '/_authenticated/live'
     | '/_authenticated/mqtt'
     | '/_authenticated/points'
     | '/_authenticated/publish'
@@ -183,11 +207,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/catalog': {
+      id: '/_authenticated/catalog'
+      path: '/catalog'
+      fullPath: '/catalog'
+      preLoaderRoute: typeof AuthenticatedCatalogRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/devices': {
       id: '/_authenticated/devices'
       path: '/devices'
       fullPath: '/devices'
       preLoaderRoute: typeof AuthenticatedDevicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/live': {
+      id: '/_authenticated/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof AuthenticatedLiveRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/mqtt': {
@@ -243,7 +281,9 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
+  AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
   AuthenticatedPointsRoute: typeof AuthenticatedPointsRoute
   AuthenticatedPublishRoute: typeof AuthenticatedPublishRoute
@@ -255,7 +295,9 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
+  AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
   AuthenticatedPointsRoute: AuthenticatedPointsRoute,
   AuthenticatedPublishRoute: AuthenticatedPublishRoute,

@@ -18,6 +18,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host\Host.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Catalog\Cnc.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Adapters.Cnc\Adapters.Cnc.csproj" />
     <ProjectReference Include="..\..\src\Api\Management\Api.csproj" />
     <ProjectReference Include="..\..\src\Api\Contracts\Studio.Contracts.csproj" />
   </ItemGroup>

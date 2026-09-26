@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
     <ProjectReference Include="..\Adapters.Fanuc\Adapters.Fanuc.csproj" />
+    <ProjectReference Include="..\Adapters.Cnc\Adapters.Cnc.csproj" />
     <ProjectReference Include="..\Sinks.Mqtt\Sinks.Mqtt.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="YamlDotNet" />

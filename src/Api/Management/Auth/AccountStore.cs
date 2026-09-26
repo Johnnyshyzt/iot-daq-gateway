@@ -47,6 +47,8 @@ public sealed class AccountStore
 
     public string BootstrapPasswordPath { get; }
 
+    public static Action<string>? AccountsChanged { get; set; }
+
     public string Mode
     {
         get
@@ -399,6 +401,7 @@ public sealed class AccountStore
             Users = _users
         };
         WriteText(_accountsPath, JsonSerializer.Serialize(file, Json) + Environment.NewLine);
+        AccountsChanged?.Invoke(_accountsPath);
     }
 
     private static void WriteText(string path, string contents)

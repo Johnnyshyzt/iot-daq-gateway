@@ -22,6 +22,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     private readonly IReadOnlyList<ISouthboundAdapterFactory> _factories;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LiveGateway> _logger;
+    private readonly IReadOnlyList<ISampleWriter> _samples;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _stateLock = new();
     private readonly Queue<Observation> _observations = new();
@@ -34,13 +35,15 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         GatewayConfigHolder holder,
         IEnumerable<ISouthboundAdapterFactory> factories,
         ILoggerFactory loggerFactory,
-        ILogger<LiveGateway> logger)
+        ILogger<LiveGateway> logger,
+        IEnumerable<ISampleWriter> samples)
     {
         _source = source;
         _holder = holder;
         _factories = factories.ToList();
         _loggerFactory = loggerFactory;
         _logger = logger;
+        _samples = samples.ToList();
     }
 
     public string? ActiveRevision
@@ -308,6 +311,18 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         try
         {
             var observations = await adapter.CollectAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var writer in _samples)
+            {
+                try
+                {
+                    writer.Write(observations);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(ex, "Failed to store samples for {DeviceId}", adapter.DeviceId);
+                }
+            }
+
             foreach (var observation in observations)
             {
                 Remember(observation);
