@@ -48,20 +48,20 @@ docs/
 | Api | `src/Api` | 草稿、校验、发布、回滚 |
 | Web | `src/Web` | [shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT，见 [src/Web/README.md](src/Web/README.md)） |
 
-`src/Host` 把三者接在一起。浏览器打开 Host，改配置，发布 YAML，同一进程采集 Fanuc 并发布 MQTT。采集留在现场机器上，以便访问机床网络。
+`src/Host` 把三者接在一起。浏览器打开 Host，改配置，发布到数据库，同一进程采集 Fanuc 并发布 MQTT。采集留在现场机器上，以便访问机床网络。
 
 ```bash
 cd src/Web && npm ci && npm run build
 dotnet run --project src/Host
 ```
 
-然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动会把 `data/seed` 复制到 `data/published` 和 `data/draft`（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录），并在 `data/gateway.db` 创建 SQLite。没有配置文件时也会写入 19 个数控品牌的目录和每品牌一份标准点位模板。发布和回滚会在进程内重载采集，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
+然后打开 `http://127.0.0.1:5080`。`dotnet run` 是本机演示，登录页会写明 `admin` / `admin`（以及 engineer、viewer）只适合 localhost。第一次启动在 `data/gateway.db` 创建 SQLite（可用 `HOST_DATA` 或 `STUDIO_DATA` 改数据目录）。数据库还没有配置时，会导入已有的 `data/published`、`data/draft` 或 `data/seed`；没有这些文件时写入内置默认配置。目录里有 19 个数控品牌和每品牌一份标准点位模板。之后草稿、发布和回滚只写数据库，采集读已发布槽位，并在进程内重载，不需要第二个网关进程。现场 zip 不使用这些默认口令，见 [docs/windows-install.md](docs/windows-install.md)。
 
 目录、模拟器和数据库见 [docs/catalog/README.md](docs/catalog/README.md) 与 [docs/database.md](docs/database.md)。Studio 里可以按品牌新建模拟器设备，发布后在「实时值」查看最新值和历史。YAML / JSON 只作为导入导出。换成 PostgreSQL 时设置 `Database:Provider` 和连接字符串，见数据库文档。
 
 开发页面热更新：`cd src/Web && npm run dev`（`http://127.0.0.1:5173`，把 `/api` 代理到 5080）。CI 用 npm，本机也可以用 pnpm。
 
-只想不打开页面、直接跑一份单文件 YAML 时，仍可覆盖采集路径（页面发布的仍是 `data/published`，和这条路径不是同一份）：
+空数据库第一次启动时，可以用一份 YAML 作为导入来源。导入完成后采集仍读数据库；这份文件之后不再被监视：
 
 ```bash
 dotnet run --project src/Host --no-launch-profile -- --config configs/examples/gateway.yaml
@@ -128,16 +128,16 @@ dotnet run --project src/Host --no-launch-profile -- --config configs/examples/g
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`，改机床 IP / 设备列表不必重建镜像。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。
+镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`。容器里的数据库还是空的时候，`GATEWAY_CONFIG` 会把这份文件导入一次（Broker 主机名是 `mosquitto`）。数据库已经有已发布配置之后，改这个文件不会改变正在跑的采集；要改配置请用 Studio，或换掉数据卷里的数据库后再启动。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。
 
 ## 现场安装（Windows x64，无需 SDK）
 
-生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时、`Host.exe`、`wwwroot`、`data/seed` 和安装脚本）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。页面上发布后，同一进程重载 `data/published`。
+生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时、`Host.exe`、`wwwroot`、`data/seed` 和安装脚本）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。页面上发布后，同一进程从数据库重载已发布配置。
 
 1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载当前 Host 包：[v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 的 `iot-daq-gateway-0.4.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。以后的 Host 包沿用 `iot-daq-gateway-<version>-win-x64.zip`。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
 2. 解压到例如 `C:\iot-daq-gateway\`
 3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进 zip / 不进镜像）。复制 `service.env.example` 为 `service.env` 并填写 `MQTT_USER` / `MQTT_PASSWORD`
-4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。采集读的是同目录 `data/published`（由 `data/seed` 首次复制）
+4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。第一次启动把 `data/seed` 导入 `data/gateway.db`，之后采集只读数据库里的已发布配置
 5. 管理员运行 `install-service.bat` → 注入服务环境并让 `IotDaqGateway` 开机自启
 6. 日志：`logs\gateway-yyyyMMdd.log`（启动时打印版本号）
 

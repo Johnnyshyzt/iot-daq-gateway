@@ -43,9 +43,10 @@ public sealed class PointTemplateTests : IDisposable
         var publishedDevices = store.ReadPublished().Devices;
         Assert.Equal(2, publishedDevices.Count);
         Assert.All(publishedDevices, device => Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, device.Spec.PointTemplateId));
-        Assert.False(File.Exists(Path.Combine(_directory, "published", "points", "cnc-01.yaml")));
-        Assert.False(File.Exists(Path.Combine(_directory, "published", "points", "cnc-02.yaml")));
-        Assert.Contains("id: state", File.ReadAllText(Path.Combine(_directory, "published", "point-templates", "fanuc-standard.yaml")), StringComparison.Ordinal);
+        var publishedTemplate = store.ReadPublished().PointTemplates.Single(template => template.Metadata.Id == ConfigDefaults.DefaultFanucTemplateId);
+        Assert.Contains(publishedTemplate.Spec.Points, point => point.Id == "state");
+        Assert.DoesNotContain(store.ReadPublished().PointSets, set => set.Metadata.DeviceId is "cnc-01" or "cnc-02");
+        Assert.False(File.Exists(Path.Combine(_directory, "published", "point-templates", "fanuc-standard.yaml")));
     }
 
     [Fact]
@@ -205,7 +206,6 @@ public sealed class PointTemplateTests : IDisposable
         Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, store.GetDevice("cnc-01").Spec.PointTemplateId);
         Assert.Equal("Fanuc 标准三态", store.GetPointTemplate(ConfigDefaults.DefaultFanucTemplateId).Metadata.DisplayName);
         Assert.Empty(store.GetPoints("cnc-01").Spec.Points);
-        Assert.False(File.Exists(Path.Combine(_directory, "published", "points", "cnc-01.yaml")));
         var validation = store.Validate();
         Assert.True(validation.Valid, string.Join("; ", validation.Issues.Select(issue => issue.Message)));
 

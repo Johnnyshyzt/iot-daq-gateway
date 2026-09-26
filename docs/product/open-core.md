@@ -8,7 +8,7 @@ M1 已锁定的边界：
 | --- | --- |
 | Open Core | 三个模块都在本仓库开源。可选的后续拆仓不改变当前事实源 |
 | 一个进程 | `src/Host` 在进程内运行 Api 与 Collector，并托管 `src/Web` 的静态构建。浏览器打开 Host 地址即可配置并采集 |
-| 文件为源 | 配置以 YAML 为单一事实源。数据库只能做可选缓存，不能成为唯一副本 |
+| 数据库为源 | 草稿、已发布配置和回滚历史以数据库为单一事实源。YAML / JSON 只做空库导入和显式导入导出 |
 | 设备 | M1 只做透 Fanuc：`fanuc.fake` 与 `fanuc.focas`。其他品牌不进 schema |
 | 北向 | M1 只有 MQTT JSON。OPC UA 明确留到后续 |
 | 现场 | 采集必须跑在能访问机床的机器上，不是只放在云上的 API |
@@ -26,7 +26,7 @@ M1 已锁定的边界：
 │  Web   shadcn-admin 静态页                    │
 │  Api   /api/v1 草稿、发布、回滚               │
 │  Collector  Fanuc → MQTT                     │
-│       发布后进程内重载 data/published         │
+│       发布后进程内重载数据库里的已发布配置   │
 └────────────────────┬─────────────────────────┘
                      │ MQTT JSON
               ┌──────▼──────┐
@@ -48,7 +48,7 @@ cd src/Web && npm ci && npm run build
 dotnet run --project src/Host
 ```
 
-数据目录默认是仓库 `data/`（`HOST_DATA` 或 `STUDIO_DATA` 可改）。发布写入 `data/published`，同一进程立刻重载采集；目录监视只作为磁盘改动的备份。采集关掉时（`Host:Acquisition=off`）运行态退回模拟数据。`--config` 或 `GATEWAY_CONFIG` 会改采集所读的文件，那是无界面覆盖，主路径不要用。
+数据目录默认是仓库 `data/`（`HOST_DATA` 或 `STUDIO_DATA` 可改）。发布写入数据库的已发布槽位，同一进程立刻重载采集。采集关掉时（`Host:Acquisition=off`）运行态退回模拟数据。`--config` 或 `GATEWAY_CONFIG` 只在数据库还没有已发布配置时导入一次，主路径不要用。
 
 M3 的 Cloud / Fleet（远程下发多台网关）不在本期。
 
@@ -65,24 +65,23 @@ M3 的 Cloud / Fleet（远程下发多台网关）不在本期。
 
 ## 当前运行时与 v1 契约
 
-Host 默认采集 `data/published`。那棵树与 [configs/examples/v1/](../../configs/examples/v1/) 同一布局：加载器看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`point-templates/`、可选的 `points/` 本机覆盖、`sinks/mqtt.yaml`。设备通过 `spec.pointTemplateId` 共用一份点位模板，加载时展开成该设备启用的点位 id。Host 不读草稿。
+Host 采集数据库里的已发布配置。空库第一次启动可以导入 v1 目录（`data/published`、`data/seed`，或 `--config` 指向的目录）：看到 `apiVersion: daq.gateway/v1` 且 `kind: Gateway` 时，读取同目录的 `devices/`、`point-templates/`、可选的 `points/` 本机覆盖、`sinks/mqtt.yaml`。设备通过 `spec.pointTemplateId` 共用一份点位模板，加载时展开成该设备启用的点位 id。Host 不把草稿槽位交给采集。
 
-`--config` 或 `GATEWAY_CONFIG` 仍可指向单文件 YAML（例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)）或 v1 目录。这只覆盖采集来源，主路径是页面发布。
+`--config` 或 `GATEWAY_CONFIG` 仍可指向单文件 YAML（例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)）或 v1 目录。那只是空库导入，主路径是页面发布。
 
 字段对应关系写在 [配置目录说明](../config/README.md)。
 
 ## 配置与发布
 
 ```
-页面编辑草稿 (data/draft)
+页面编辑草稿（数据库 draft 槽位）
         │  POST /api/v1/config/validate
         ▼
    校验通过后 POST /api/v1/config/publish
-        │  CanonicalRevision → revisions/<hash>
+        │  CanonicalRevision → config_revisions
         ▼
-   data/published
+   数据库 published 槽位
         │  同一进程 ICollectorControl.TryReloadAsync
-        │  目录监视作为磁盘改动的备份
         └─ POST /api/v1/config/rollback 回到某一 hash
 ```
 
@@ -92,18 +91,19 @@ Host 默认采集 `data/published`。那棵树与 [configs/examples/v1/](../../c
 
 ## 许可证桩
 
-Runtime 读取 YAML 并采集时不检查许可证。Studio 的 `GET /api/v1/license` 返回未强制校验，管理 API 也不会因为缺少许可证而拒绝。许可证文件不参与 revision。
+Runtime 读取数据库并采集时不检查许可证。Studio 的 `GET /api/v1/license` 返回未强制校验，管理 API 也不会因为缺少许可证而拒绝。许可证文件不参与 revision。
 
 ## 配置接口
 
-`Gateway.Abstractions` 里的 `IConfigStore` / `IConfigPublisher` 是草稿与发布的边界草图。M1 真正写文件的是 Api 模块的 `ConfigStore`，它还没有实现这两个接口。Collector 不注册它们，采集循环直接读已发布 YAML。
+`Gateway.Abstractions` 里的 `IConfigStore` / `IConfigPublisher` 是草稿与发布的边界草图。正在运行的是 Api 模块的 `ConfigStore`，它把草稿和已发布配置写入数据库，还没有实现这两个接口。Collector 通过 `IRuntimeConfigSource` 读取已发布槽位。
 
 | 接口 | 职责 |
 | --- | --- |
-| `IConfigStore` | 读写草稿 YAML 文档；查询已发布 revision |
+| `IConfigStore` | 边界草图：按导入包里的相对路径描述草稿文档；查询已发布 revision |
 | `IConfigPublisher` | 校验草稿、发布为内容寻址 revision、按 hash 回滚 |
+| `IRuntimeConfigSource` | 采集实际使用的已发布配置 |
 
-字段级约束以 JSON Schema 为准。Studio 另外有自己的文档模型，用来序列化 YAML。
+字段级约束以 JSON Schema 为准。Studio 用同一套文档模型做 JSON 往返，并在导入导出时序列化 YAML。
 
 ## 明确不做（M1）
 

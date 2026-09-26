@@ -57,7 +57,7 @@ JSON 预览只在浏览器里用模板和一条样例点拼出载荷，不连 Br
 
 ### 发布 `/publish`
 
-展示草稿相对 `published/` 的差异、`POST /api/v1/config/validate` 的 issues、发布按钮和最近 N 个 revision。发布成功后草稿与已发布内容对齐。回滚会把已发布指针拨回所选 hash，并把草稿重置为那一版，避免界面留下过期草稿。
+展示草稿相对已发布槽位的差异、`POST /api/v1/config/validate` 的 issues、发布按钮和最近 N 个 revision。发布成功后草稿与已发布内容对齐。回滚会把已发布槽位拨回所选 hash，并把草稿重置为那一版，避免界面留下过期草稿。
 
 ### 运行态 `/runtime`
 

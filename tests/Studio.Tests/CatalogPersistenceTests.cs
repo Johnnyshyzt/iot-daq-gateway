@@ -5,6 +5,7 @@ using Adapters.Cnc;
 using Cnc.Catalog;
 using IotDaq.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Studio.Contracts;
 using Studio.Host.Config;
 using Xunit;
@@ -50,18 +51,28 @@ public sealed class CatalogPersistenceTests
     [Fact]
     public void Sqlite_seeds_catalog_and_imports_existing_yaml_when_the_database_is_empty()
     {
-        var source = Directory.CreateTempSubdirectory("catalog-yaml").FullName;
         var target = Directory.CreateTempSubdirectory("catalog-import").FullName;
         try
         {
-            var store = new ConfigStore(source);
+            WritePublishedDevice(target, "cnc-yaml", "迁移机床");
+            var store = new ConfigStore(target);
             store.EnsureInitialized();
             Assert.Equal(19, store.Database.CountBrands());
             Assert.Equal("Sqlite", store.Database.Provider);
 
-            store.UpsertDevice("cnc-yaml", new DeviceDocument
+            using (var dbContext = store.Database.CreateContext())
             {
-                Metadata = new DeviceMetadata { Id = "cnc-yaml", DisplayName = "迁移机床" },
+                Assert.Contains(dbContext.ConfigDevices, row => row.Slot == "published" && row.Id == "cnc-yaml");
+            }
+
+            Assert.Contains(store.ListPointTemplates(), template => template.Metadata.Id == "siemens-standard");
+            Assert.Contains(store.ListPointTemplates(), template =>
+                template.Metadata.Id == ConfigDefaults.DefaultFanucTemplateId
+                && template.Metadata.DisplayName == "Fanuc 标准三态");
+
+            store.UpsertDevice("cnc-later", new DeviceDocument
+            {
+                Metadata = new DeviceMetadata { Id = "cnc-later", DisplayName = "后加机床" },
                 Spec = new DeviceSpec
                 {
                     Adapter = "fanuc.fake",
@@ -72,29 +83,59 @@ public sealed class CatalogPersistenceTests
                     Connection = new DeviceConnection { Host = "127.0.0.1", Port = 8193, FocasTimeoutMs = 3000 }
                 }
             });
-            var published = store.Publish("migrate");
-            Assert.False(string.IsNullOrWhiteSpace(published.Revision));
-
-            CopyTree(source, target);
-            foreach (var db in Directory.GetFiles(target, "gateway.db*"))
-            {
-                File.Delete(db);
-            }
+            var published = store.Publish("db only");
+            Assert.True(published.Published, string.Join("; ", published.Issues.Select(issue => issue.Message)));
+            Assert.False(File.Exists(Path.Combine(target, "draft", "devices", "cnc-later.yaml")));
+            Assert.False(File.Exists(Path.Combine(target, "published", "devices", "cnc-later.yaml")));
+            Assert.Contains("id: cnc-yaml", File.ReadAllText(Path.Combine(target, "published", "devices", "cnc-yaml.yaml")), StringComparison.Ordinal);
 
             var again = new ConfigStore(target);
             again.EnsureInitialized();
-            using var dbContext = again.Database.CreateContext();
-            Assert.Contains(dbContext.ConfigDevices, row => row.Slot == "published" && row.Id == "cnc-yaml");
+            Assert.Contains(again.ReadPublished().Devices, device => device.Metadata.Id == "cnc-yaml");
+            Assert.Contains(again.ReadPublished().Devices, device => device.Metadata.Id == "cnc-later");
             Assert.Equal(19, again.Database.CountBrands());
-            Assert.Contains(again.ListPointTemplates(), template => template.Metadata.Id == "siemens-standard");
-            Assert.Contains(again.ListPointTemplates(), template =>
-                template.Metadata.Id == ConfigDefaults.DefaultFanucTemplateId
-                && template.Metadata.DisplayName == "Fanuc 标准三态");
         }
         finally
         {
-            TryDelete(source);
             TryDelete(target);
+        }
+    }
+
+    [Fact]
+    public void Sqlite_rebuilds_revision_history_when_the_old_primary_key_is_still_present()
+    {
+        var dir = Directory.CreateTempSubdirectory("catalog-revision-key").FullName;
+        try
+        {
+            var store = new ConfigStore(dir);
+            store.EnsureInitialized();
+            using (var db = store.Database.CreateContext())
+            {
+                db.Database.ExecuteSqlRaw("DROP TABLE config_revisions");
+                db.Database.ExecuteSqlRaw(
+                    """
+                    CREATE TABLE config_revisions (
+                        Revision TEXT NOT NULL CONSTRAINT PK_config_revisions PRIMARY KEY,
+                        CreatedUnixMs INTEGER NOT NULL,
+                        Action TEXT NOT NULL,
+                        Note TEXT NULL,
+                        BundleJson TEXT NOT NULL
+                    )
+                    """);
+            }
+
+            var again = new ConfigStore(dir);
+            again.EnsureInitialized();
+            var device = again.GetDevice("cnc-01");
+            device.Metadata.DisplayName = "修订主键";
+            again.UpsertDevice("cnc-01", device);
+            var published = again.Publish("new key");
+            Assert.True(published.Published, string.Join("; ", published.Issues.Select(issue => issue.Message)));
+            Assert.Contains(again.ListRevisions(10), item => item.Revision == published.Revision && item.Action == "publish");
+        }
+        finally
+        {
+            TryDelete(dir);
         }
     }
 
@@ -204,15 +245,66 @@ public sealed class CatalogPersistenceTests
         Assert.All(ids, id => Assert.Contains(id, siemens.ItemIds));
     }
 
-    private static void CopyTree(string source, string destination)
+    private static void WritePublishedDevice(string dataDirectory, string id, string displayName)
     {
-        foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(source, file);
-            var target = Path.Combine(destination, relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(file, target, overwrite: true);
-        }
+        var published = Path.Combine(dataDirectory, "published");
+        Directory.CreateDirectory(Path.Combine(published, "devices"));
+        Directory.CreateDirectory(Path.Combine(published, "sinks"));
+        File.WriteAllText(
+            Path.Combine(published, "gateway.yaml"),
+            """
+            apiVersion: daq.gateway/v1
+            kind: Gateway
+            metadata:
+              siteId: plant-a
+              name: Plant A Gateway
+            spec:
+              logLevel: Information
+              features:
+                programWrite: false
+              acquisition:
+                defaultIntervalMs: 1000
+                changeOnly: true
+            """);
+        File.WriteAllText(
+            Path.Combine(published, "devices", id + ".yaml"),
+            $$"""
+            apiVersion: daq.gateway/v1
+            kind: Device
+            metadata:
+              id: {{id}}
+              displayName: {{displayName}}
+            spec:
+              adapter: fanuc.fake
+              brandId: fanuc
+              enabled: true
+              intervalMs: 1000
+              pointTemplateId: fanuc-standard
+              connection:
+                host: 127.0.0.1
+                port: 8193
+                focasTimeoutMs: 3000
+            """);
+        File.WriteAllText(
+            Path.Combine(published, "sinks", "mqtt.yaml"),
+            """
+            apiVersion: daq.gateway/v1
+            kind: MqttSink
+            metadata:
+              id: mqtt-main
+            spec:
+              broker:
+                host: 127.0.0.1
+                port: 1883
+                clientId: iot-daq-gateway
+                usernameFromEnv: MQTT_USER
+                passwordFromEnv: MQTT_PASSWORD
+                tls: false
+              topicTemplate: daq/{site}/{deviceId}/{point}
+              qos: 1
+              retain: false
+              statusTopic: daq/{site}/{deviceId}/$status
+            """);
     }
 
     private static void TryDelete(string path)

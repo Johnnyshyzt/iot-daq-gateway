@@ -28,7 +28,7 @@
 
 `service.env` 和 `data\auth` 要备份，但不要提交进仓库。安装脚本在控制台只打印变量名，不打印值。日志会写引导密码 **文件路径**，不写密码本身；改密日志只有用户名。
 
-忘记现场密码：停服务，删 `data\auth`，再启动，会重新生成引导文件。`data\published` 还在。
+忘记现场密码：停服务，删 `data\auth`，再启动，会重新生成引导文件。`data\gateway.db` 还在。
 
 ## 厂商库不在包里
 
@@ -36,9 +36,9 @@ git、镜像和 win-x64 zip 都没有 `Fwlib64.dll`。客户把授权的 64 位�
 
 ## 配置在文件里
 
-事实来源是 `data\published` 下的 YAML。草稿在 `data\draft`，回滚靠 `data\revisions`。升级时这些目录、`data\auth`、`service.env` 和 `Fwlib64.dll` 都要留下。步骤见 [ops-field.md](../ops-field.md)。不要先删安装目录再解压。
+事实来源是 `data\gateway.db`。草稿、已发布配置和回滚历史都在这一个库里。升级时留下这个文件、`data\auth`、`service.env` 和 `Fwlib64.dll`。步骤见 [ops-field.md](../ops-field.md)。不要先删安装目录再解压。
 
-产品不会在磁盘快满时报警。发布是直接写 YAML。备份建议见同一篇运维说明。
+产品不会在磁盘快满时报警。发布写入 SQLite。备份建议见同一篇运维说明。
 
 ## 日志里有什么
 

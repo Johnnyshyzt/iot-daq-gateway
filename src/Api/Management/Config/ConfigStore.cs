@@ -8,19 +8,12 @@ namespace Studio.Host.Config;
 
 public sealed partial class ConfigStore
 {
-    private const int MaxRevisions = 30;
     private readonly object _gate = new();
     private readonly string _seed;
     private readonly string _draft;
     private readonly string _published;
-    private readonly string _revisions;
     private readonly string _runtime;
     private readonly GatewayPersistence _database;
-
-    private static readonly JsonSerializerOptions IndexOptions = new(StudioJson.Options)
-    {
-        WriteIndented = true
-    };
 
     public ConfigStore(string dataDirectory, GatewayPersistence? database = null)
     {
@@ -28,7 +21,6 @@ public sealed partial class ConfigStore
         _seed = Path.Combine(dataDirectory, "seed");
         _draft = Path.Combine(dataDirectory, "draft");
         _published = Path.Combine(dataDirectory, "published");
-        _revisions = Path.Combine(dataDirectory, "revisions");
         _runtime = Path.Combine(dataDirectory, "runtime");
         _database = database ?? GatewayPersistence.Open(dataDirectory, null);
     }
@@ -37,70 +29,32 @@ public sealed partial class ConfigStore
 
     public GatewayPersistence Database => _database;
 
-    public void EnsureInitialized()
+    public void EnsureInitialized(string? importPath = null)
     {
         lock (_gate)
         {
-            Directory.CreateDirectory(_draft);
-            Directory.CreateDirectory(_published);
-            Directory.CreateDirectory(_revisions);
             Directory.CreateDirectory(_runtime);
             _database.EnsureReady();
 
-            var legacy = Path.Combine(DataDirectory, "config");
-            if (!File.Exists(GatewayPath(_published)) && File.Exists(GatewayPath(legacy)))
+            if (!_database.HasSlot("published"))
             {
-                CopyBundleFiles(legacy, _published);
+                var published = LoadInitialBundle(importPath);
+                PrepareImported(published);
+                SaveSlot("published", published);
+                var hash = CanonicalRevision.Compute(published);
+                _database.AppendRevision(hash, DateTimeOffset.UtcNow, "seed", "初始配置", published, hash);
             }
 
-            if (!File.Exists(GatewayPath(_published)))
+            if (!_database.HasSlot("draft"))
             {
-                if (File.Exists(GatewayPath(_seed)))
-                {
-                    CopyBundleFiles(_seed, _published);
-                    CopyBundleFiles(_seed, _draft);
-                }
-                else
-                {
-                    var defaults = ConfigDefaults.Create();
-                    WriteBundle(_published, defaults);
-                    WriteBundle(_draft, defaults);
-                }
-            }
-            else if (!File.Exists(GatewayPath(_draft)))
-            {
-                CopyBundleFiles(_published, _draft);
+                var draft = File.Exists(GatewayPath(_draft)) && string.IsNullOrWhiteSpace(importPath)
+                    ? ReadBundle(_draft)
+                    : CloneBundle(ReadSlot("published"));
+                PrepareImported(draft);
+                SaveSlot("draft", draft);
             }
 
             EnsureBrandTemplatesUnlocked();
-
-            var published = ReadWorking(_published);
-            ReadWorking(_draft);
-            var hash = CanonicalRevision.Compute(published);
-            var revisionFile = RevisionPath(_published);
-            var recorded = File.Exists(revisionFile) ? File.ReadAllText(revisionFile).Trim() : "";
-            if (!string.Equals(recorded, hash, StringComparison.Ordinal))
-            {
-                File.WriteAllText(revisionFile, hash + "\n");
-            }
-
-            var index = ReadIndex();
-            if (index.Items.All(item => item.Revision != hash))
-            {
-                WriteBundle(SnapshotDir(hash), published);
-                index.Items.Insert(0, new RevisionInfo
-                {
-                    Revision = hash,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    Action = recorded.Length == 0 ? "seed" : "sync",
-                    Note = recorded.Length == 0 ? "初始配置" : "与已发布文件对齐"
-                });
-                Trim(index, hash);
-                WriteIndex(index);
-            }
-
-            ImportSlotsIfEmpty();
-            SyncRevisionIndex();
             AppendLogUnlocked("Config Studio 已启动");
         }
     }
@@ -109,8 +63,8 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var draft = ReadWorking(_draft);
-            var published = ReadWorking(_published);
+            var draft = ReadSlot("draft");
+            var published = ReadSlot("published");
             var draftHash = CanonicalRevision.Compute(draft);
             var active = CanonicalRevision.Compute(published);
             return new ConfigView
@@ -128,7 +82,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ConfigDiffer.Compare(ReadWorking(_published), ReadWorking(_draft));
+            return ConfigDiffer.Compare(ReadSlot("published"), ReadSlot("draft"));
         }
     }
 
@@ -136,7 +90,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadWorking(_draft).Devices
+            return ReadSlot("draft").Devices
                 .OrderBy(device => device.Metadata.Id, StringComparer.Ordinal)
                 .ToList();
         }
@@ -146,7 +100,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return FindDevice(ReadWorking(_draft), id);
+            return FindDevice(ReadSlot("draft"), id);
         }
     }
 
@@ -172,7 +126,7 @@ public sealed partial class ConfigStore
                 ? null
                 : document.Spec.PointTemplateId.Trim();
 
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             var brandId = CncCatalog.Current.BrandOfAdapter(document.Spec.Adapter);
             if (string.IsNullOrWhiteSpace(brandId))
             {
@@ -223,7 +177,7 @@ public sealed partial class ConfigStore
                 bundle.Devices.Add(document);
             }
 
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新设备 {id}");
             return document;
         }
@@ -234,7 +188,7 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             EnsureSafeId(id);
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             var removed = bundle.Devices.RemoveAll(device => string.Equals(device.Metadata.Id, id, StringComparison.Ordinal));
             if (removed == 0)
             {
@@ -242,7 +196,7 @@ public sealed partial class ConfigStore
             }
 
             bundle.PointSets.RemoveAll(set => string.Equals(set.Metadata.DeviceId, id, StringComparison.Ordinal));
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已删除设备 {id}");
         }
     }
@@ -251,7 +205,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadWorking(_draft).PointTemplates
+            return ReadSlot("draft").PointTemplates
                 .OrderBy(template => template.Metadata.Id, StringComparer.Ordinal)
                 .ToList();
         }
@@ -261,7 +215,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return FindTemplate(ReadWorking(_draft), id);
+            return FindTemplate(ReadSlot("draft"), id);
         }
     }
 
@@ -298,7 +252,7 @@ public sealed partial class ConfigStore
                 PointCatalogNormalizer.TryNormalize(document.Spec.Adapter, point);
             }
 
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             var index = bundle.PointTemplates.FindIndex(template =>
                 string.Equals(template.Metadata.Id, id, StringComparison.OrdinalIgnoreCase));
             if (index >= 0 && !string.Equals(bundle.PointTemplates[index].Metadata.Id, id, StringComparison.Ordinal))
@@ -315,7 +269,7 @@ public sealed partial class ConfigStore
                 bundle.PointTemplates.Add(document);
             }
 
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新点位模板 {id}");
             return document;
         }
@@ -326,7 +280,7 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             EnsureSafeId(id);
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             var template = bundle.PointTemplates.FirstOrDefault(item =>
                 string.Equals(item.Metadata.Id, id, StringComparison.Ordinal));
             if (template is null)
@@ -347,7 +301,7 @@ public sealed partial class ConfigStore
             }
 
             bundle.PointTemplates.Remove(template);
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已删除点位模板 {id}");
         }
     }
@@ -356,7 +310,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             FindDevice(bundle, deviceId);
             return bundle.PointSets.FirstOrDefault(set => string.Equals(set.Metadata.DeviceId, deviceId, StringComparison.Ordinal))
                 ?? ConfigDefaults.EmptyPoints(deviceId);
@@ -368,7 +322,7 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             EnsureSafeId(deviceId);
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             var device = FindDevice(bundle, deviceId);
             document.ApiVersion = StudioApi.Version;
             document.Kind = "PointSet";
@@ -397,7 +351,7 @@ public sealed partial class ConfigStore
                 bundle.PointSets.Add(document);
             }
 
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新点位 {deviceId}");
             return document;
         }
@@ -407,7 +361,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadWorking(_draft).Mqtt;
+            return ReadSlot("draft").Mqtt;
         }
     }
 
@@ -427,9 +381,9 @@ public sealed partial class ConfigStore
             document.Spec.Broker ??= new MqttBrokerSpec();
             document.Spec.Broker.UsernameFromEnv = BlankToNull(document.Spec.Broker.UsernameFromEnv);
             document.Spec.Broker.PasswordFromEnv = BlankToNull(document.Spec.Broker.PasswordFromEnv);
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             bundle.Mqtt = document;
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked("草稿已更新 MQTT");
             return document;
         }
@@ -439,7 +393,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadWorking(_draft).Gateway;
+            return ReadSlot("draft").Gateway;
         }
     }
 
@@ -456,9 +410,9 @@ public sealed partial class ConfigStore
             document.Metadata.SiteId = (document.Metadata.SiteId ?? "").Trim();
             document.Metadata.Name = (document.Metadata.Name ?? "").Trim();
             document.Spec.LogLevel = CanonicalLogLevel(document.Spec.LogLevel);
-            var bundle = ReadWorking(_draft);
+            var bundle = ReadSlot("draft");
             bundle.Gateway = document;
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked("草稿已更新网关设置");
             return document;
         }
@@ -468,7 +422,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ConfigValidator.Validate(ReadWorking(_draft));
+            return ConfigValidator.Validate(ReadSlot("draft"));
         }
     }
 
@@ -476,7 +430,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var draft = ReadWorking(_draft);
+            var draft = ReadSlot("draft");
             var validation = ConfigValidator.Validate(draft);
             if (!validation.Valid)
             {
@@ -485,9 +439,9 @@ public sealed partial class ConfigStore
 
             // Fanuc catalog ids get a fixed internal address. Persist that into the draft
             // so a successful publish does not leave a hand-edited address behind.
-            WriteBundle(_draft, draft);
+            SaveSlot("draft", draft);
             var hash = CanonicalRevision.Compute(draft);
-            var current = CanonicalRevision.Compute(ReadWorking(_published));
+            var current = CanonicalRevision.Compute(ReadSlot("published"));
             var now = DateTimeOffset.UtcNow;
             if (hash == current)
             {
@@ -501,21 +455,15 @@ public sealed partial class ConfigStore
                 };
             }
 
-            WriteBundle(SnapshotDir(hash), draft);
-            WriteBundle(_published, draft);
-            File.WriteAllText(RevisionPath(_published), hash + "\n");
-            var index = ReadIndex();
-            index.Items.Insert(0, new RevisionInfo
-            {
-                Revision = hash,
-                CreatedAt = now,
-                Action = "publish",
-                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
-            });
-            Trim(index, hash);
-            WriteIndex(index);
+            SaveSlot("published", draft);
+            _database.AppendRevision(
+                hash,
+                now,
+                "publish",
+                string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                draft,
+                hash);
             AppendLogUnlocked($"已发布配置 {hash[..12]}");
-            SyncRevisionIndex();
             return new PublishOutcome
             {
                 Published = true,
@@ -530,8 +478,15 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            take = Math.Clamp(take, 1, 100);
-            return ReadIndex().Items.Take(take).ToList();
+            return _database.ListRevisions(take)
+                .Select(item => new RevisionInfo
+                {
+                    Revision = item.Revision,
+                    CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(item.CreatedUnixMs),
+                    Action = item.Action,
+                    Note = item.Note
+                })
+                .ToList();
         }
     }
 
@@ -540,36 +495,29 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             var hash = NormalizeRevision(revision);
-            var directory = SnapshotDir(hash);
-            if (!File.Exists(GatewayPath(directory)))
+            var bundle = _database.TryLoadRevision(hash);
+            if (bundle is null)
             {
                 throw new ConfigStoreException("revision_not_found", "找不到该修订", StatusCodes.Status404NotFound);
             }
 
-            var bundle = ReadBundle(directory);
             var migrated = PointTemplateMigration.Apply(bundle);
             if (migrated)
             {
                 hash = CanonicalRevision.Compute(bundle);
-                WriteBundle(SnapshotDir(hash), bundle);
             }
 
-            WriteBundle(_published, bundle);
-            WriteBundle(_draft, bundle);
-            File.WriteAllText(RevisionPath(_published), hash + "\n");
+            SaveSlot("published", bundle);
+            SaveSlot("draft", bundle);
             var now = DateTimeOffset.UtcNow;
-            var index = ReadIndex();
-            index.Items.Insert(0, new RevisionInfo
-            {
-                Revision = hash,
-                CreatedAt = now,
-                Action = "rollback",
-                Note = migrated ? "回滚到该修订，并迁移为点位模板" : "回滚到该修订"
-            });
-            Trim(index, hash);
-            WriteIndex(index);
+            _database.AppendRevision(
+                hash,
+                now,
+                "rollback",
+                migrated ? "回滚到该修订，并迁移为点位模板" : "回滚到该修订",
+                bundle,
+                hash);
             AppendLogUnlocked($"已回滚到 {hash[..12]}");
-            SyncRevisionIndex();
             return new RollbackOutcome { Revision = hash, RolledBackAt = now };
         }
     }
@@ -578,7 +526,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return ReadWorking(_published);
+            return ReadSlot("published");
         }
     }
 
@@ -586,7 +534,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            return CanonicalRevision.Compute(ReadWorking(_published));
+            return CanonicalRevision.Compute(ReadSlot("published"));
         }
     }
 
@@ -642,7 +590,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var bundle = published ? ReadWorking(_published) : ReadWorking(_draft);
+            var bundle = published ? ReadSlot("published") : ReadSlot("draft");
             return JsonSerializer.Serialize(bundle, StudioJson.Options);
         }
     }
@@ -651,7 +599,7 @@ public sealed partial class ConfigStore
     {
         lock (_gate)
         {
-            var bundle = published ? ReadWorking(_published) : ReadWorking(_draft);
+            var bundle = published ? ReadSlot("published") : ReadSlot("draft");
             return YamlFiles.Serialize(bundle);
         }
     }
@@ -692,53 +640,202 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             YamlFiles.Normalize(bundle);
-            WriteBundle(_draft, bundle);
+            SaveSlot("draft", bundle);
             AppendLogUnlocked("已导入草稿");
         }
     }
 
     private void EnsureBrandTemplatesUnlocked()
     {
-        var published = ReadWorking(_published);
-        var draft = ReadWorking(_draft);
+        var published = ReadSlot("published");
+        var draft = ReadSlot("draft");
         if (BrandTemplateSeeder.Ensure(published))
         {
-            WriteBundle(_published, published);
+            SaveSlot("published", published);
         }
 
         if (BrandTemplateSeeder.Ensure(draft))
         {
-            WriteBundle(_draft, draft);
+            SaveSlot("draft", draft);
         }
     }
 
-    private void ImportSlotsIfEmpty()
+    private ConfigBundle LoadInitialBundle(string? importPath)
     {
-        if (!_database.HasSlot("published"))
+        var imported = TryReadImport(importPath);
+        if (imported is not null)
         {
-            var published = ReadWorking(_published);
-            _database.SaveBundle("published", published, CanonicalRevision.Compute(published));
+            return imported;
         }
 
-        if (!_database.HasSlot("draft"))
+        var legacy = Path.Combine(DataDirectory, "config");
+        if (File.Exists(GatewayPath(_published)))
         {
-            var draft = ReadWorking(_draft);
-            _database.SaveBundle("draft", draft, CanonicalRevision.Compute(draft));
+            return ReadBundle(_published);
         }
+
+        if (File.Exists(GatewayPath(legacy)))
+        {
+            return ReadBundle(legacy);
+        }
+
+        if (File.Exists(GatewayPath(_seed)))
+        {
+            return ReadBundle(_seed);
+        }
+
+        return ConfigDefaults.Create();
     }
 
-    private void SyncRevisionIndex()
+    private static ConfigBundle? TryReadImport(string? importPath)
     {
-        foreach (var item in ReadIndex().Items)
+        if (string.IsNullOrWhiteSpace(importPath))
         {
-            var directory = SnapshotDir(item.Revision);
-            if (!File.Exists(GatewayPath(directory)))
+            return null;
+        }
+
+        var full = Path.GetFullPath(importPath);
+        if (Directory.Exists(full) && File.Exists(GatewayPath(full)))
+        {
+            return ReadBundle(full);
+        }
+
+        if (!File.Exists(full))
+        {
+            return null;
+        }
+
+        var head = File.ReadLines(full).Take(40);
+        var text = string.Join('\n', head);
+        if (text.Contains("apiVersion:", StringComparison.Ordinal) && text.Contains("kind: Gateway", StringComparison.Ordinal))
+        {
+            var directory = Path.GetDirectoryName(full);
+            return directory is null ? null : ReadBundle(directory);
+        }
+
+        return FromLegacyYaml(full);
+    }
+
+    private static ConfigBundle FromLegacyYaml(string path)
+    {
+        var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+        var config = deserializer.Deserialize<Gateway.Abstractions.Configuration.GatewayConfiguration>(File.ReadAllText(path))
+            ?? throw new ConfigStoreException("config_unreadable", $"无法解析 {path}", StatusCodes.Status500InternalServerError);
+        var interval = (int)Math.Clamp(config.Pipeline.SweepInterval.TotalMilliseconds, 100, 86_400_000);
+        var site = config.Gateway.Site;
+        var bundle = new ConfigBundle
+        {
+            Gateway = new GatewayDocument
             {
-                continue;
-            }
-
-            _database.SaveRevision(item.Revision, item.CreatedAt, item.Action, item.Note, ReadBundle(directory));
+                Metadata = new GatewayMetadata { SiteId = site, Name = string.IsNullOrWhiteSpace(config.Gateway.Id) ? site : config.Gateway.Id },
+                Spec = new GatewaySpec
+                {
+                    LogLevel = "Information",
+                    Features = new GatewayFeatures { ProgramWrite = config.ProgramTransfer.Enabled },
+                    Acquisition = new AcquisitionSpec { DefaultIntervalMs = interval, ChangeOnly = config.Pipeline.ChangeOnly }
+                }
+            },
+            Mqtt = new MqttSinkDocument
+            {
+                Spec = new MqttSinkSpec
+                {
+                    Broker = new MqttBrokerSpec
+                    {
+                        Host = config.Mqtt.Host,
+                        Port = config.Mqtt.Port,
+                        ClientId = config.Mqtt.ClientId,
+                        Tls = config.Mqtt.Tls
+                    },
+                    Qos = config.Mqtt.Qos,
+                    Retain = config.Mqtt.Retain,
+                    TopicTemplate = config.Mqtt.TopicTemplate,
+                    StatusTopic = config.Mqtt.StatusTopic
+                }
+            },
+            Devices = config.Devices.Select(device => new DeviceDocument
+            {
+                Metadata = new DeviceMetadata
+                {
+                    Id = device.Id,
+                    DisplayName = Option(device, "displayName") ?? device.Id
+                },
+                Spec = new DeviceSpec
+                {
+                    Adapter = device.Adapter,
+                    Enabled = device.Enabled,
+                    IntervalMs = interval,
+                    PointTemplateId = device.Adapter.StartsWith("fanuc.", StringComparison.OrdinalIgnoreCase)
+                        ? ConfigDefaults.DefaultFanucTemplateId
+                        : null,
+                    Connection = new DeviceConnection
+                    {
+                        Host = Option(device, "host") ?? "127.0.0.1",
+                        Port = OptionInt(device, "port") ?? 8193,
+                        TimeoutMs = OptionInt(device, "timeoutMs"),
+                        FocasTimeoutMs = OptionInt(device, "timeoutMs")
+                    }
+                }
+            }).ToList()
+        };
+        if (bundle.PointTemplates.Count == 0
+            && bundle.Devices.Any(device => device.Spec.PointTemplateId == ConfigDefaults.DefaultFanucTemplateId))
+        {
+            bundle.PointTemplates.Add(ConfigDefaults.FanucTemplate());
         }
+
+        return bundle;
+    }
+
+    private static string? Option(Gateway.Abstractions.Configuration.DeviceBinding device, string key)
+    {
+        if (!device.Options.TryGetValue(key, out var value) || value is null)
+        {
+            return null;
+        }
+
+        return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static int? OptionInt(Gateway.Abstractions.Configuration.DeviceBinding device, string key)
+    {
+        var text = Option(device, key);
+        return int.TryParse(text, out var number) ? number : null;
+    }
+
+    private static void PrepareImported(ConfigBundle bundle)
+    {
+        PointTemplateMigration.Apply(bundle);
+        BrandTemplateSeeder.Ensure(bundle);
+    }
+
+    private static ConfigBundle CloneBundle(ConfigBundle bundle)
+    {
+        var json = JsonSerializer.Serialize(bundle, StudioJson.Options);
+        return JsonSerializer.Deserialize<ConfigBundle>(json, StudioJson.Options) ?? new ConfigBundle();
+    }
+
+    private ConfigBundle ReadSlot(string slot)
+    {
+        if (!_database.TryLoadBundle(slot, out var bundle, out _))
+        {
+            throw new ConfigStoreException("config_unreadable", "数据库里没有这份配置", StatusCodes.Status500InternalServerError);
+        }
+
+        if (PointTemplateMigration.Apply(bundle))
+        {
+            SaveSlot(slot, bundle);
+        }
+
+        return bundle;
+    }
+
+    private void SaveSlot(string slot, ConfigBundle bundle)
+    {
+        YamlFiles.Normalize(bundle);
+        _database.SaveBundle(slot, bundle, CanonicalRevision.Compute(bundle));
     }
 
     private static void EnsureSafeId(string id)
@@ -759,18 +856,7 @@ public sealed partial class ConfigStore
         return revision.ToLowerInvariant();
     }
 
-    private ConfigBundle ReadWorking(string root)
-    {
-        var bundle = ReadBundle(root);
-        if (PointTemplateMigration.Apply(bundle))
-        {
-            WriteBundle(root, bundle);
-        }
-
-        return bundle;
-    }
-
-    private ConfigBundle ReadBundle(string root)
+    private static ConfigBundle ReadBundle(string root)
     {
         var gateway = YamlFiles.Normalize(new ConfigBundle
         {
@@ -798,132 +884,6 @@ public sealed partial class ConfigStore
             .ToList();
     }
 
-    private void WriteBundle(string root, ConfigBundle bundle)
-    {
-        YamlFiles.Normalize(bundle);
-        WriteBundleFiles(root, bundle);
-        if (string.Equals(root, _draft, StringComparison.Ordinal))
-        {
-            _database.SaveBundle("draft", bundle, CanonicalRevision.Compute(bundle));
-        }
-        else if (string.Equals(root, _published, StringComparison.Ordinal))
-        {
-            _database.SaveBundle("published", bundle, CanonicalRevision.Compute(bundle));
-        }
-    }
-
-    private static void WriteBundleFiles(string root, ConfigBundle bundle)
-    {
-        Directory.CreateDirectory(root);
-        YamlFiles.Write(GatewayPath(root), bundle.Gateway);
-        ReplaceYaml(Path.Combine(root, "devices"), bundle.Devices.Select(device => (device.Metadata.Id, device)));
-        ReplaceYaml(Path.Combine(root, "point-templates"), bundle.PointTemplates.Select(template => (template.Metadata.Id, template)));
-        ReplaceYaml(Path.Combine(root, "points"), bundle.PointSets.Select(set => (set.Metadata.DeviceId, set)));
-        YamlFiles.Write(MqttPath(root), bundle.Mqtt);
-    }
-
-    private static void ReplaceYaml<T>(string directory, IEnumerable<(string Id, T Document)> documents)
-    {
-        Directory.CreateDirectory(directory);
-        var keep = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (id, document) in documents)
-        {
-            if (!ConfigValidator.IsSafeId(id))
-            {
-                throw new ConfigStoreException("id_invalid", "配置里有不能作为文件名的标识", StatusCodes.Status400BadRequest);
-            }
-
-            var name = id + ".yaml";
-            keep.Add(name);
-            YamlFiles.Write(Path.Combine(directory, name), document);
-        }
-
-        foreach (var file in Directory.GetFiles(directory, "*.yaml"))
-        {
-            if (!keep.Contains(Path.GetFileName(file)))
-            {
-                File.Delete(file);
-            }
-        }
-    }
-
-    private static void CopyBundleFiles(string from, string to)
-    {
-        Directory.CreateDirectory(to);
-        File.Copy(GatewayPath(from), GatewayPath(to), overwrite: true);
-        CopyYamlDirectory(Path.Combine(from, "devices"), Path.Combine(to, "devices"));
-        CopyYamlDirectory(Path.Combine(from, "point-templates"), Path.Combine(to, "point-templates"));
-        CopyYamlDirectory(Path.Combine(from, "points"), Path.Combine(to, "points"));
-        Directory.CreateDirectory(Path.Combine(to, "sinks"));
-        if (File.Exists(MqttPath(from)))
-        {
-            File.Copy(MqttPath(from), MqttPath(to), overwrite: true);
-        }
-    }
-
-    private static void CopyYamlDirectory(string from, string to)
-    {
-        Directory.CreateDirectory(to);
-        foreach (var file in Directory.Exists(to) ? Directory.GetFiles(to, "*.yaml") : [])
-        {
-            File.Delete(file);
-        }
-
-        if (!Directory.Exists(from))
-        {
-            return;
-        }
-
-        foreach (var file in Directory.GetFiles(from, "*.yaml"))
-        {
-            File.Copy(file, Path.Combine(to, Path.GetFileName(file)), overwrite: true);
-        }
-    }
-
-    private RevisionIndex ReadIndex()
-    {
-        var path = Path.Combine(_revisions, "index.json");
-        if (!File.Exists(path))
-        {
-            return new RevisionIndex();
-        }
-
-        try
-        {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<RevisionIndex>(json, IndexOptions) ?? new RevisionIndex();
-        }
-        catch (Exception ex)
-        {
-            throw new ConfigStoreException("config_unreadable", $"无法读取修订索引: {ex.Message}", StatusCodes.Status500InternalServerError);
-        }
-    }
-
-    private void WriteIndex(RevisionIndex index)
-    {
-        var path = Path.Combine(_revisions, "index.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(index, IndexOptions) + "\n");
-    }
-
-    private void Trim(RevisionIndex index, string active)
-    {
-        index.Items = index.Items.Take(MaxRevisions).ToList();
-        var referenced = index.Items.Select(item => item.Revision).Append(active).ToHashSet(StringComparer.Ordinal);
-        if (!Directory.Exists(_revisions))
-        {
-            return;
-        }
-
-        foreach (var directory in Directory.GetDirectories(_revisions))
-        {
-            var name = Path.GetFileName(directory);
-            if (!referenced.Contains(name))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-    }
-
     private void AppendLogUnlocked(string message)
     {
         var clean = message.Replace('\r', ' ').Replace('\n', ' ');
@@ -931,15 +891,11 @@ public sealed partial class ConfigStore
         File.AppendAllText(LogPath(), line + "\n");
     }
 
-    private string SnapshotDir(string hash) => Path.Combine(_revisions, hash);
-
     private string LogPath() => Path.Combine(_runtime, "studio.log");
 
     private static string GatewayPath(string root) => Path.Combine(root, "gateway.yaml");
 
     private static string MqttPath(string root) => Path.Combine(root, "sinks", "mqtt.yaml");
-
-    private static string RevisionPath(string root) => Path.Combine(root, ".revision");
 
     private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -953,10 +909,6 @@ public sealed partial class ConfigStore
     [GeneratedRegex("^[a-fA-F0-9]{64}$")]
     private static partial Regex RevisionPattern();
 
-    private sealed class RevisionIndex
-    {
-        public List<RevisionInfo> Items { get; set; } = [];
-    }
 }
 
 public sealed class PublishOutcome

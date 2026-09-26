@@ -17,7 +17,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     private const int MaxObservations = 200;
     private const int MaxErrors = 8;
 
-    private readonly GatewayConfigSource _source;
+    private readonly IRuntimeConfigSource _configs;
     private readonly GatewayConfigHolder _holder;
     private readonly IReadOnlyList<ISouthboundAdapterFactory> _factories;
     private readonly ILoggerFactory _loggerFactory;
@@ -31,14 +31,14 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     private Session? _session;
 
     public LiveGateway(
-        GatewayConfigSource source,
+        IRuntimeConfigSource configs,
         GatewayConfigHolder holder,
         IEnumerable<ISouthboundAdapterFactory> factories,
         ILoggerFactory loggerFactory,
         ILogger<LiveGateway> logger,
         IEnumerable<ISampleWriter> samples)
     {
-        _source = source;
+        _configs = configs;
         _holder = holder;
         _factories = factories.ToList();
         _loggerFactory = loggerFactory;
@@ -70,7 +70,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var loaded = GatewayConfigLoader.Load(_source.Path);
+        var loaded = Load();
         await ApplyAsync(loaded, cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "Gateway session ready source={Path} revision={Revision} devices={Count}",
@@ -126,7 +126,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         LoadedGateway loaded;
         try
         {
-            loaded = GatewayConfigLoader.Load(_source.Path);
+            loaded = Load();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -150,6 +150,17 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             NoteError(ex.Message);
             return false;
         }
+    }
+
+    private LoadedGateway Load()
+    {
+        var snapshot = _configs.Load();
+        return new LoadedGateway(
+            snapshot.Configuration,
+            snapshot.Source,
+            snapshot.Revision,
+            snapshot.DisplayName,
+            IsBundle: true);
     }
 
     public async Task SweepAsync(CancellationToken cancellationToken)

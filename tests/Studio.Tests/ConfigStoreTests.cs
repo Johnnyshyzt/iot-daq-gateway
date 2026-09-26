@@ -32,21 +32,18 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Equal("cnc-02", created.Metadata.Id);
         Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, created.Spec.PointTemplateId);
         Assert.Empty(store.GetPoints("cnc-02").Spec.Points);
-        Assert.True(File.Exists(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")));
-        Assert.False(File.Exists(Path.Combine(_directory, "draft", "points", "cnc-02.yaml")));
-        Assert.Contains(
-            "pointTemplateId: fanuc-standard",
-            File.ReadAllText(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")),
-            StringComparison.Ordinal);
+        Assert.Equal(ConfigDefaults.DefaultFanucTemplateId, store.GetDevice("cnc-02").Spec.PointTemplateId);
+        Assert.False(File.Exists(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")));
 
         var mqtt = store.GetMqtt();
         mqtt.Spec.Broker.UsernameFromEnv = "MQTT_USER";
         mqtt.Spec.Broker.PasswordFromEnv = "MQTT_PASSWORD";
         mqtt.Spec.Broker.ClientId = "studio-line";
         store.UpsertMqtt(mqtt);
-        var mqttYaml = File.ReadAllText(Path.Combine(_directory, "draft", "sinks", "mqtt.yaml"));
+        var mqttYaml = store.ExportYaml(published: false);
         Assert.Contains("passwordFromEnv: MQTT_PASSWORD", mqttYaml, StringComparison.Ordinal);
         Assert.DoesNotContain("\npassword:", mqttYaml, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_directory, "draft", "sinks", "mqtt.yaml")));
 
         var device = store.GetDevice("cnc-01");
         device.Spec.Adapter = "modbus";
@@ -65,7 +62,8 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.False(published.Unchanged);
         Assert.NotEqual(initial, published.Revision);
         Assert.Equal(published.Revision, store.ActiveRevision());
-        Assert.Contains("cnc-02", File.ReadAllText(Path.Combine(_directory, "published", "devices", "cnc-02.yaml")), StringComparison.Ordinal);
+        Assert.Contains(store.ReadPublished().Devices, device => device.Metadata.Id == "cnc-02");
+        Assert.False(File.Exists(Path.Combine(_directory, "published", "devices", "cnc-02.yaml")));
 
         var again = store.Publish("noop");
         Assert.True(again.Unchanged);
@@ -75,8 +73,7 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Equal(initial, store.ActiveRevision());
         Assert.Equal("Lathe 01", store.GetDevice("cnc-01").Metadata.DisplayName);
         Assert.Throws<ConfigStoreException>(() => store.GetDevice("cnc-02"));
-        Assert.False(File.Exists(Path.Combine(_directory, "published", "devices", "cnc-02.yaml")));
-        Assert.False(File.Exists(Path.Combine(_directory, "draft", "devices", "cnc-02.yaml")));
+        Assert.DoesNotContain(store.ReadPublished().Devices, device => device.Metadata.Id == "cnc-02");
 
         var revisions = store.ListRevisions(10);
         Assert.Contains(revisions, item => item.Revision == published.Revision && item.Action == "publish");

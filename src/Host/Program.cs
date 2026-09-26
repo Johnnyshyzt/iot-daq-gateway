@@ -32,17 +32,17 @@ builder.Logging.AddCollectorFileLog();
 
 var dataDirectory = HostPaths.ResolveDataDirectory(builder.Environment, builder.Configuration);
 var acquisitionOn = !string.Equals(builder.Configuration["Host:Acquisition"], "off", StringComparison.OrdinalIgnoreCase);
-string? collectorPath = null;
-if (acquisitionOn)
-{
-    var published = Path.Combine(dataDirectory, "published");
-    collectorPath = CollectorHost.ResolveConfigPath(args, published);
-    builder.Services.AddCollector(collectorPath);
-}
-
+var importPath = CollectorHost.UsesPublishedDirectory(args)
+    ? null
+    : CollectorHost.ResolveConfigPath(args, Path.Combine(dataDirectory, "published"));
 var store = new ConfigStore(dataDirectory);
 builder.Services.AddSingleton(store);
+builder.Services.AddSingleton<IRuntimeConfigSource>(_ => new DatabaseRuntimeConfigSource(store));
 builder.Services.AddGatewayData(store);
+if (acquisitionOn)
+{
+    builder.Services.AddCollector();
+}
 AccountStore.AccountsChanged = path => store.Database.SyncUsers(path);
 builder.Services.AddSingleton(sp => new AccountStore(
     dataDirectory,
@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-app.Services.GetRequiredService<ConfigStore>().EnsureInitialized();
+app.Services.GetRequiredService<ConfigStore>().EnsureInitialized(importPath);
 var accounts = app.Services.GetRequiredService<AccountStore>();
 accounts.EnsureInitialized();
 store.Database.SyncUsers(Path.Combine(dataDirectory, "auth", "accounts.json"));
@@ -132,18 +132,19 @@ logger.LogInformation(
     RuntimeInformation.RuntimeIdentifier,
     Environment.Is64BitProcess ? "x64" : "x86");
 logger.LogInformation("Config data directory {DataDirectory}", dataDirectory);
-if (collectorPath is null)
+logger.LogInformation("Database provider {Provider}", store.Database.Provider);
+if (!acquisitionOn)
 {
     logger.LogInformation("Acquisition is off");
 }
 else
 {
-    logger.LogInformation("Acquisition config {Path}", collectorPath);
-    if (!CollectorHost.UsesPublishedDirectory(args))
+    logger.LogInformation("Acquisition reads the published configuration from the database");
+    if (importPath is not null)
     {
-        logger.LogWarning(
-            "GATEWAY_CONFIG or --config overrides data/published. UI publish still writes {Published} and reloads the override path.",
-            Path.Combine(dataDirectory, "published"));
+        logger.LogInformation(
+            "GATEWAY_CONFIG or --config {Path} is imported only when the database has no published configuration yet",
+            importPath);
     }
 }
 

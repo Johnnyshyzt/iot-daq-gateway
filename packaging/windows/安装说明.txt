@@ -11,10 +11,10 @@ IoT 采集网关 — Windows x64 现场包
    页面和 YAML 只写这两个变量名，不要写密码。
 4. 双击 run-console.bat。它会加载 service.env 再启动 Host.exe
 5. 浏览器打开 http://127.0.0.1:5080
-   第一次启动会把 data\seed 复制到 data\published 和 data\draft
+   第一次启动会把 data\seed 导入 data\gateway.db。之后不再写 YAML
    打开 data\auth\bootstrap-password.txt，用一次性密码登录，然后立刻修改密码
    不要使用 admin/admin。角色仍是本机的 admin、engineer、viewer
-6. 在页面里配置设备和 MQTT，发布。采集读取 data\published
+6. 在页面里配置设备和 MQTT，发布。采集读取数据库里的已发布配置
    fanuc.focas 的连接测试会做真实握手。缺库、位数不对或连不上时显示中文原因
 7. 确认后，右键 install-service.bat → 以管理员身份运行
    脚本把 service.env 写入服务环境（MQTT_USER / MQTT_PASSWORD），并设置开机自启

@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-一台放在机床旁边的 Windows 采集机：一个 Host 进程里有采集、管理 API 和浏览器里的 Studio。南向是发那科（`fanuc.fake` 或 `fanuc.focas`），北向是 MQTT JSON（`daq/{site}/{deviceId}/{point}` 和 `$status`）。配置在页面里改，发布后的 YAML（`data/published`）是事实来源。工程师打开本机 `http://127.0.0.1:5080`，不用手写文件。
+一台放在机床旁边的 Windows 采集机：一个 Host 进程里有采集、管理 API 和浏览器里的 Studio。南向是发那科（`fanuc.fake` 或 `fanuc.focas`），北向是 MQTT JSON（`daq/{site}/{deviceId}/{point}` 和 `$status`）。配置在页面里改，发布后的数据库记录是事实来源。工程师打开本机 `http://127.0.0.1:5080`，不用手写文件。
 
 ## 为什么是 Open Core
 

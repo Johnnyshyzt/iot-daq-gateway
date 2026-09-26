@@ -263,6 +263,8 @@ public sealed class ConfigMqttRow
 
 public sealed class ConfigRevisionRow
 {
+    public string Id { get; set; } = "";
+
     public string Revision { get; set; } = "";
 
     public long CreatedUnixMs { get; set; }

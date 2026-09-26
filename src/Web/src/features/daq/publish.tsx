@@ -118,7 +118,7 @@ export function PublishPage() {
   return (
     <PageShell
       title='发布'
-      description='校验草稿后发布。数据库保存发布快照，YAML 仍可导入导出。同一 Host 进程会立刻重新加载采集。'
+      description='校验草稿后发布。草稿、已发布配置和回滚历史都在数据库里，采集只读已发布版本。YAML 和 JSON 只用于导入导出。同一 Host 进程会立刻重新加载采集。'
       actions={
         <div className='flex flex-wrap gap-2'>
           <Button variant='outline' onClick={() => void download('yaml').catch(fail)}>

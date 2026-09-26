@@ -10,8 +10,8 @@ using Studio.Contracts;
 namespace IotDaq.Persistence;
 
 /// <summary>
-/// Opens the edge database, seeds the CNC catalog, mirrors draft/published config,
-/// and stores samples. SQLite is the default file under the data directory.
+/// Opens the edge database, seeds the CNC catalog, stores draft and published
+/// configuration, and stores samples. SQLite is the default file under the data directory.
 /// PostgreSQL is selected with Database:Provider=Postgres.
 /// </summary>
 public sealed class GatewayPersistence : ISampleWriter
@@ -93,8 +93,82 @@ public sealed class GatewayPersistence : ISampleWriter
                 db.SaveChanges();
             }
 
+            if (_sqlite)
+            {
+                RepairRevisionIdentity(db);
+            }
+
             SeedCatalog(db);
         }
+    }
+
+    /// <summary>
+    /// Earlier unreleased builds used the revision hash as the primary key, so a
+    /// later publish of the same content could not record another history row.
+    /// Drop that table and recreate it from the current model. History from that
+    /// build is not migrated.
+    /// </summary>
+    private static void RepairRevisionIdentity(GatewayDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            connection.Open();
+        }
+
+        var missingIdentity = false;
+        try
+        {
+            using var table = connection.CreateCommand();
+            table.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'config_revisions'";
+            if (table.ExecuteScalar() is null)
+            {
+                return;
+            }
+
+            using var column = connection.CreateCommand();
+            column.CommandText = "SELECT 1 FROM pragma_table_info('config_revisions') WHERE lower(name) = 'id'";
+            missingIdentity = column.ExecuteScalar() is null;
+            if (!missingIdentity)
+            {
+                return;
+            }
+
+            using var drop = connection.CreateCommand();
+            drop.CommandText = "DROP TABLE config_revisions";
+            drop.ExecuteNonQuery();
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                connection.Close();
+            }
+        }
+
+        if (!missingIdentity)
+        {
+            return;
+        }
+
+        var script = db.Database.GenerateCreateScript();
+        var marker = "CREATE TABLE \"config_revisions\"";
+        var start = script.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            marker = "CREATE TABLE config_revisions";
+            start = script.IndexOf(marker, StringComparison.Ordinal);
+        }
+
+        if (start < 0)
+        {
+            return;
+        }
+
+        var next = script.IndexOf("CREATE TABLE", start + marker.Length, StringComparison.Ordinal);
+        var piece = (next < 0 ? script[start..] : script[start..next]).Trim();
+        db.Database.ExecuteSqlRaw(piece);
     }
 
     public bool HasSlot(string slot)
@@ -119,7 +193,27 @@ public sealed class GatewayPersistence : ISampleWriter
         }
     }
 
-    public void SaveRevision(string revision, DateTimeOffset createdAt, string action, string? note, ConfigBundle bundle)
+    public bool TryLoadBundle(string slot, out ConfigBundle bundle, out string hash)
+    {
+        bundle = new ConfigBundle();
+        hash = "";
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var row = db.ConfigBundles.AsNoTracking().FirstOrDefault(item => item.Slot == slot);
+            if (row is null || string.IsNullOrWhiteSpace(row.Json))
+            {
+                return false;
+            }
+
+            bundle = JsonSerializer.Deserialize<ConfigBundle>(row.Json, Json) ?? new ConfigBundle();
+            hash = row.Hash;
+            return true;
+        }
+    }
+
+    public void AppendRevision(string revision, DateTimeOffset createdAt, string action, string? note, ConfigBundle bundle, string? keepRevision)
     {
         if (string.IsNullOrWhiteSpace(revision))
         {
@@ -130,31 +224,66 @@ public sealed class GatewayPersistence : ISampleWriter
         lock (_gate)
         {
             using var db = CreateContext();
-            var existing = db.ConfigRevisions.FirstOrDefault(row => row.Revision == revision);
-            if (existing is null)
+            db.ConfigRevisions.Add(new ConfigRevisionRow
             {
-                db.ConfigRevisions.Add(new ConfigRevisionRow
-                {
-                    Revision = revision,
-                    CreatedUnixMs = createdAt.ToUnixTimeMilliseconds(),
-                    Action = action,
-                    Note = note,
-                    BundleJson = JsonSerializer.Serialize(bundle, Json)
-                });
+                Id = Guid.NewGuid().ToString("N"),
+                Revision = revision,
+                CreatedUnixMs = createdAt.ToUnixTimeMilliseconds(),
+                Action = action,
+                Note = note,
+                BundleJson = JsonSerializer.Serialize(bundle, Json)
+            });
+            db.SaveChanges();
+            var overflow = db.ConfigRevisions
+                .OrderByDescending(row => row.CreatedUnixMs)
+                .Skip(30)
+                .ToList()
+                .Where(row => !string.Equals(row.Revision, keepRevision, StringComparison.Ordinal))
+                .ToList();
+            if (overflow.Count > 0)
+            {
+                db.ConfigRevisions.RemoveRange(overflow);
+                db.SaveChanges();
             }
-            else if (!string.Equals(existing.Action, action, StringComparison.Ordinal))
-            {
-                db.ConfigRevisions.Add(new ConfigRevisionRow
+        }
+    }
+
+    public IReadOnlyList<StoredRevision> ListRevisions(int take)
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.ConfigRevisions.AsNoTracking()
+                .OrderByDescending(row => row.CreatedUnixMs)
+                .Take(Math.Clamp(take, 1, 100))
+                .Select(row => new StoredRevision
                 {
-                    Revision = revision + ":" + action + ":" + createdAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture),
-                    CreatedUnixMs = createdAt.ToUnixTimeMilliseconds(),
-                    Action = action,
-                    Note = note,
-                    BundleJson = existing.BundleJson
-                });
+                    Revision = row.Revision,
+                    CreatedUnixMs = row.CreatedUnixMs,
+                    Action = row.Action,
+                    Note = row.Note
+                })
+                .ToList();
+        }
+    }
+
+    public ConfigBundle? TryLoadRevision(string revision)
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            var row = db.ConfigRevisions.AsNoTracking()
+                .Where(item => item.Revision == revision)
+                .OrderBy(item => item.CreatedUnixMs)
+                .FirstOrDefault();
+            if (row is null || string.IsNullOrWhiteSpace(row.BundleJson))
+            {
+                return null;
             }
 
-            db.SaveChanges();
+            return JsonSerializer.Deserialize<ConfigBundle>(row.BundleJson, Json);
         }
     }
 
@@ -877,6 +1006,17 @@ public sealed class GatewayPersistence : ISampleWriter
 
         public bool MustChangePassword { get; set; }
     }
+}
+
+public sealed class StoredRevision
+{
+    public string Revision { get; set; } = "";
+
+    public long CreatedUnixMs { get; set; }
+
+    public string Action { get; set; } = "";
+
+    public string? Note { get; set; }
 }
 
 public sealed class CatalogOverview

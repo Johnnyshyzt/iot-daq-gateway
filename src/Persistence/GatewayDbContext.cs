@@ -73,7 +73,8 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<ConfigPointSetRow>().ToTable("config_point_sets")
             .HasKey(row => new { row.Slot, row.DeviceId, row.PointId });
         modelBuilder.Entity<ConfigMqttRow>().ToTable("config_mqtt").HasKey(row => row.Slot);
-        modelBuilder.Entity<ConfigRevisionRow>().ToTable("config_revisions").HasKey(row => row.Revision);
+        modelBuilder.Entity<ConfigRevisionRow>().ToTable("config_revisions").HasKey(row => row.Id);
+        modelBuilder.Entity<ConfigRevisionRow>().HasIndex(row => row.Revision);
         modelBuilder.Entity<ConfigRevisionRow>().HasIndex(row => row.CreatedUnixMs);
 
         modelBuilder.Entity<SampleLatestRow>().ToTable("sample_latest").HasKey(row => new { row.DeviceId, row.PointId });

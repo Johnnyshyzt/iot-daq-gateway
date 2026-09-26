@@ -11,7 +11,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
 # Headless Fake demo. Compose overlays gateway.yaml and sets GATEWAY_CONFIG.
-# The primary field path is Host without this override, serving Web and reading data/published.
+# That file is imported only when the database has no published configuration.
+# The field path is Host serving Web and reading the published slot from the database.
 # Never COPY Fwlib*.dll / libfwlib32.so — vendor FOCAS binaries stay off image layers.
 COPY configs/examples/gateway.docker.yaml /app/gateway.yaml
 ENV GATEWAY_CONFIG=/app/gateway.yaml
