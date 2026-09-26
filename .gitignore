@@ -55,5 +55,7 @@ data/draft/
 data/revisions/
 data/runtime/
 data/auth/
+data/*.db
+data/*.db-*
 service.env
 packaging/windows/service.env

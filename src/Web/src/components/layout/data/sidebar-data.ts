@@ -1,6 +1,8 @@
 import {
   Activity,
+  BookOpen,
   Command,
+  Gauge,
   LayoutDashboard,
   Radio,
   KeyRound,
@@ -31,6 +33,8 @@ export const sidebarData: SidebarData = {
         { title: '概览', url: '/', icon: LayoutDashboard },
         { title: '设备', url: '/devices', icon: Cpu },
         { title: '点位模板', url: '/points', icon: Activity },
+        { title: '品牌目录', url: '/catalog', icon: BookOpen },
+        { title: '实时值', url: '/live', icon: Gauge },
         { title: '北向 MQTT', url: '/sinks/mqtt', icon: Share2 },
         { title: '发布', url: '/publish', icon: Upload },
         { title: '运行态', url: '/runtime', icon: Radio },

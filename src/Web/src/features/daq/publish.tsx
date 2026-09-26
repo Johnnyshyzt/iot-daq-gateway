@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { actionLabel, canWrite, describeError, studioApi, StudioApiError, type ValidationIssue } from '@/lib/studio-api'
+import { actionLabel, canWrite, describeError, studioApi, studioText, StudioApiError, type ValidationIssue } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { PageShell } from './page-shell'
 
@@ -34,6 +34,7 @@ export function PublishPage() {
   const [note, setNote] = useState('')
   const [issues, setIssues] = useState<ValidationIssue[]>([])
   const [message, setMessage] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   function fail(error: unknown) {
     if (error instanceof StudioApiError) {
@@ -81,6 +82,30 @@ export function PublishPage() {
     await reload()
   }
 
+  async function download(format: 'yaml' | 'json') {
+    const text = await studioText(`/api/v1/config/export?format=${format}&slot=draft`)
+    const blob = new Blob([text], { type: format === 'yaml' ? 'application/yaml' : 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = format === 'yaml' ? 'gateway-draft.yaml' : 'gateway-draft.json'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importFile(file: File) {
+    const text = await file.text()
+    const format = file.name.endsWith('.json') ? 'json' : 'yaml'
+    await studioApi(`/api/v1/config/import?format=${format}`, {
+      method: 'POST',
+      body: text,
+      headers: { 'Content-Type': format === 'json' ? 'application/json' : 'text/yaml' },
+    })
+    toast.success('已导入到草稿')
+    setMessage('导入内容已写入草稿。校验通过后再发布。')
+    await reload()
+  }
+
   async function rollback(revision: string) {
     await studioApi('/api/v1/config/rollback', {
       method: 'POST',
@@ -93,7 +118,31 @@ export function PublishPage() {
   return (
     <PageShell
       title='发布'
-      description='校验草稿后发布到 data/published。同一 Host 进程会立刻重新加载采集。'
+      description='校验草稿后发布。草稿、已发布配置和回滚历史都在数据库里，采集只读已发布版本。YAML 和 JSON 只用于导入导出。同一 Host 进程会立刻重新加载采集。'
+      actions={
+        <div className='flex flex-wrap gap-2'>
+          <Button variant='outline' onClick={() => void download('yaml').catch(fail)}>
+            导出 YAML
+          </Button>
+          <Button variant='outline' onClick={() => void download('json').catch(fail)}>
+            导出 JSON
+          </Button>
+          <Button variant='outline' disabled={!writable} onClick={() => fileRef.current?.click()}>
+            导入
+          </Button>
+          <input
+            ref={fileRef}
+            type='file'
+            accept='.yaml,.yml,.json,text/yaml,application/json'
+            className='hidden'
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file) void importFile(file).catch(fail)
+            }}
+          />
+        </div>
+      }
     >
       <div className='grid gap-4 lg:grid-cols-2'>
         <Card>

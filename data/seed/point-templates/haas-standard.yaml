@@ -1,0 +1,127 @@
+apiVersion: daq.gateway/v1
+kind: PointTemplate
+metadata:
+  id: haas-standard
+  displayName: 哈斯 标准目录
+spec:
+  adapter: haas
+  points:
+    - id: serialNumber
+      address: catalog/serialNumber
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: softwareVersion
+      address: catalog/softwareVersion
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: haas_machineModel
+      address: catalog/haas_machineModel
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: workMode
+      address: catalog/workMode
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: state
+      address: catalog/state
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: haas_toolChangeCount
+      address: catalog/haas_toolChangeCount
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: toolNumber
+      address: catalog/toolNumber
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCount
+      address: catalog/partCount
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: partCountTotal
+      address: catalog/partCountTotal
+      dataType: number
+      unit: pcs
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: spindleSpeed
+      address: catalog/spindleSpeed
+      dataType: number
+      unit: rpm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: servoLoad
+      address: catalog/servoLoad
+      dataType: number
+      unit: "%"
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: alarm
+      address: catalog/alarm
+      dataType: string
+      unit: ""
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: machinePosition
+      address: catalog/machinePosition
+      dataType: string
+      unit: mm
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: powerOnTime
+      address: catalog/powerOnTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: runTime
+      address: catalog/runTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: cycleTime
+      address: catalog/cycleTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true
+    - id: haas_previousCycleTime
+      address: catalog/haas_previousCycleTime
+      dataType: number
+      unit: s
+      scale: 1
+      deadband: 0
+      enabled: true

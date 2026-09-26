@@ -84,18 +84,22 @@ public sealed class FanucPointCatalogTests : IDisposable
 
         Assert.Equal("cnc/statinfo", saved.Spec.Points[0].Address);
         Assert.Equal("mode", saved.Spec.Points[0].Unit);
-        var yamlPath = Path.Combine(_directory, "draft", "point-templates", "fanuc-standard.yaml");
-        Assert.Contains("address: cnc/statinfo", File.ReadAllText(yamlPath), StringComparison.Ordinal);
-        Assert.DoesNotContain("typed-wrong", File.ReadAllText(yamlPath), StringComparison.Ordinal);
+        Assert.Equal("cnc/statinfo", store.GetPointTemplate(ConfigDefaults.DefaultFanucTemplateId).Spec.Points[0].Address);
+        Assert.False(File.Exists(Path.Combine(_directory, "draft", "point-templates", "fanuc-standard.yaml")));
 
-        File.WriteAllText(yamlPath, File.ReadAllText(yamlPath).Replace("cnc/alarm", "MW100", StringComparison.Ordinal));
+        var alarm = store.GetPointTemplate(ConfigDefaults.DefaultFanucTemplateId);
+        alarm.Spec.Points.Single(point => point.Id == "alarm").Address = "MW100";
+        store.UpsertPointTemplate(ConfigDefaults.DefaultFanucTemplateId, alarm);
+        var decoy = Path.Combine(_directory, "draft", "point-templates");
+        Directory.CreateDirectory(decoy);
+        File.WriteAllText(Path.Combine(decoy, "fanuc-standard.yaml"), "address: MW100\n");
         var published = store.Publish("normalize address");
 
         Assert.True(published.Published, string.Join("; ", published.Issues.Select(issue => issue.Message)));
-        var publishedYaml = File.ReadAllText(Path.Combine(_directory, "published", "point-templates", "fanuc-standard.yaml"));
-        Assert.Contains("address: cnc/alarm", publishedYaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("MW100", publishedYaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("MW100", File.ReadAllText(yamlPath), StringComparison.Ordinal);
+        var publishedTemplate = store.ReadPublished().PointTemplates.Single(template => template.Metadata.Id == ConfigDefaults.DefaultFanucTemplateId);
+        Assert.Contains(publishedTemplate.Spec.Points, point => point.Id == "alarm" && point.Address == "cnc/alarm");
+        Assert.DoesNotContain(publishedTemplate.Spec.Points, point => point.Address == "MW100");
+        Assert.Contains("address: MW100", File.ReadAllText(Path.Combine(decoy, "fanuc-standard.yaml")), StringComparison.Ordinal);
     }
 
     public void Dispose()

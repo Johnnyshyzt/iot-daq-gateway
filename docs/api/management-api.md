@@ -2,7 +2,7 @@
 
 Config Studio 通过本 API 编辑配置并查看运行态。M1 的实现在 `src/Api`，由 `src/Host` 挂到 `http://127.0.0.1:5080`，并和采集在同一个进程。发布或回滚后 Api 调用 `ICollectorControl.TryReloadAsync`。采集未启动时运行态退回模拟数据。
 
-本文对齐现有 Host 的模型：`Observation`、`DeviceHealth`、`AdapterStatus`、`DaqTopics`，以及滚动日志。草稿读写的边界草图是 `IConfigStore` / `IConfigPublisher`。M1 写文件的是 Api 的 `ConfigStore`，它还没有实现这两个接口。字段形状以 `schemas/` 为准。
+本文对齐现有 Host 的模型：`Observation`、`DeviceHealth`、`AdapterStatus`、`DaqTopics`，以及滚动日志。草稿读写的边界草图是 `IConfigStore` / `IConfigPublisher`。正在运行的 `ConfigStore` 把草稿和已发布配置写进数据库，还没有实现这两个接口。字段形状以 `schemas/` 为准。YAML / JSON 只用于导入导出，以及空库第一次启动时的导入。
 
 下面有些状态码仍是合同草案，和当前 Studio 不完全一致：发布校验失败返回 `400 validation_failed`，许可证桩不拦截请求。
 
@@ -13,7 +13,7 @@ Config Studio 通过本 API 编辑配置并查看运行态。M1 的实现在 `sr
 - 只监听本机回环地址。机床网与办公网不能直接访问管理端口
 - 请求与响应体：`application/json; charset=utf-8`
 - 资源 JSON 使用与 YAML 相同的 camelCase 字段（`apiVersion`、`kind`、`metadata`、`spec`）
-- 服务端把 JSON 写成 YAML。revision 对解析后的文档哈希，因此 JSON 与 YAML 的排版不影响 hash
+- 服务端把 JSON 写入数据库。revision 对解析后的文档哈希，因此 JSON 与 YAML 的排版不影响 hash
 
 Studio 页面与路径的对应关系见 [studio-ia.md](../product/studio-ia.md)。目录与哈希见 [配置说明](../config/README.md)。
 
@@ -78,7 +78,7 @@ viewer 调用写接口返回 `403 forbidden`。
 
 ## 许可证桩
 
-Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
+Runtime 读取数据库里的已发布配置并采集时不看许可证。Management API 需要：
 
 - 环境变量 `IOT_DAQ_LICENSE` 指向的文件，或工作区根的 `license.json`
 - 桩实现：文件可解析，且 `id` 非空即可，例如 `{ "id": "dev-stub", "licensee": "local", "expires": "2099-01-01" }`
@@ -114,7 +114,7 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
 | `GET` | `/api/v1/config/gateway` | 草稿中的 Gateway |
 | `PUT` | `/api/v1/config/gateway` | 替换草稿。正文 `kind` 必须是 `Gateway` |
 
-站点名在系统页修改，仍要发布后才进入 `published/`。这两条是冻结草案里设备 / 点位 / MQTT 之外、Gateway 资源所需要的配套。
+站点名在系统页修改，仍要发布后才进入已发布槽位。这两条是冻结草案里设备 / 点位 / MQTT 之外、Gateway 资源所需要的配套。
 
 ### 设备
 
@@ -157,8 +157,15 @@ Runtime 读取 YAML 并采集时不看许可证。Management API 需要：
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `GET` | `/api/v1/catalog/points?adapter=fanuc.fake` | 发那科目录。`fanuc.focas` 返回同一份 |
-| `GET` | `/api/v1/catalog/points?adapter=` 其他值 | `404 catalog_unsupported`。M1 没有别的品牌目录 |
+| `GET` | `/api/v1/catalog/points?adapter=fanuc.fake` | 发那科三态目录。`fanuc.focas` 返回同一份。历史接口，仍然只含 `state` / `alarm` / `program` |
+| `GET` | `/api/v1/catalog/points?adapter=` 其他值 | `404 catalog_unsupported` |
+| `GET` | `/api/v1/catalog/brands` | 19 个品牌、型号、适配器、每品牌数据项，以及标准项 |
+| `GET` | `/api/v1/catalog/items` | 标准数据项 |
+| `GET` | `/api/v1/devices/{id}/latest` | 该设备最新采样 |
+| `GET` | `/api/v1/samples/history?deviceId=&items=&from=&to=&bucketMs=` | 历史。`from` / `to` 为 Unix 毫秒或 ISO。`bucketMs` 大于 0 时按桶取最后一条 |
+| `GET` | `/api/v1/alarms?deviceId=&limit=` | 报警 |
+| `GET` | `/api/v1/config/export?format=yaml\|json&slot=draft\|published` | 导出 |
+| `POST` | `/api/v1/config/import?format=yaml\|json` | 把正文导入草稿 |
 
 ### MQTT
 
@@ -167,7 +174,7 @@ M1 只有一个北向 MQTT。
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `GET` | `/api/v1/config/sinks/mqtt` | MqttSink |
-| `PUT` | `/api/v1/config/sinks/mqtt` | 写入 `draft/sinks/mqtt.yaml` |
+| `PUT` | `/api/v1/config/sinks/mqtt` | 写入数据库草稿 |
 
 Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未知字段，因此带明文 `password` 的 `PUT` 返回 `422 validation_failed`。`POST /config/validate` 用 200 和 `valid: false` 报告同一问题；`POST /config/publish` 在失败时返回 422。单份资源的 `PUT` 只检查该文档的 schema 与路径身份，跨文件规则留给 validate / publish，这样草稿可以分步保存。
 
@@ -196,9 +203,9 @@ Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未�
 无正文。先执行与 validate 相同的检查。通过后：
 
 1. 计算 revision
-2. 若 `revisions/<hash>/` 尚不存在，写入不可变快照
-3. 将快照复制为 `published/`，并写 `published/.revision`
-4. 把草稿重置为该快照，使界面与运行内容一致
+2. 把通过校验的草稿写入已发布槽位
+3. 若内容有变化，向 `config_revisions` 追加一条 `publish` 记录（最多保留 30 条）
+4. 通知同一进程的采集重新读取已发布槽位
 
 `200`
 
@@ -209,7 +216,7 @@ Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未�
 }
 ```
 
-内容相同的再次发布得到同一个 revision，并仍返回 200。校验失败返回 `422 validation_failed`，`published/` 保持原样。热加载 `published/`；失败则用上一份成功的 revision 重启采集循环，并在运行态报告错误，进程不退出。
+内容相同的再次发布得到同一个 revision，并仍返回 200，且不追加历史。校验失败返回 `422 validation_failed`，已发布槽位保持原样。采集重载失败时继续用上一份已经跑起来的会话，并在运行态报告错误，进程不退出。
 
 ### `GET /api/v1/config/revisions?limit=20`
 
@@ -232,7 +239,7 @@ Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未�
 { "revision": "…" }
 ```
 
-目标必须是已存在的快照。成功后 `published/` 与草稿都变为该快照，响应与 publish 相同。回滚到当前已发布 hash 返回 200，不新写历史。未知 hash 返回 `404 revision_not_found`。
+目标必须是已存在的快照。成功后已发布槽位和草稿都变为该快照，并追加一条 `rollback` 记录，然后重载采集。未知 hash 返回 `404 revision_not_found`。
 
 ## 设备测试
 
@@ -258,7 +265,7 @@ Broker 密码只允许 `passwordFromEnv` / `usernameFromEnv`。schema 拒绝未�
 
 ## 运行态
 
-运行态读的是本进程采集会话，不是配置草稿。`mode` 为 `live` 表示数据来自 Collector；采集未启动时为 `mock`。`activeRevision` 来自已发布目录的 `.revision`；单文件配置没有这个文件时为空。
+运行态读的是本进程采集会话，不是配置草稿。`mode` 为 `live` 表示数据来自 Collector；采集未启动时为 `mock`。`activeRevision` 是数据库里已发布配置的内容哈希；还没有已发布槽位时为空。
 
 ### `GET /api/v1/runtime/status`
 
@@ -328,4 +335,4 @@ MQTT 上的 JSON 另含 `gatewayId`、`site`，时间字段名为 `ts`，主题�
 
 ### `POST /api/v1/runtime/reload`
 
-无正文。只在网关回环上提供。重新读取 `--config` 指向的文件或目录，换上一份新的采集会话。失败时保留上一份会话，响应仍是 `200`：`{ "reloaded": false }`。Studio 在发布和回滚之后调用它；目录监视会再触发一次。
+无正文。只在网关回环上提供。重新读取数据库里的已发布配置，换上一份新的采集会话。失败时保留上一份会话，响应仍是 `200`：`{ "reloaded": false }`。同一进程里，Studio 在发布和回滚之后直接调用采集重载，不经过这个回环。

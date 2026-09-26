@@ -1,6 +1,6 @@
 # 配置目录与 revision
 
-配置的单一事实源是 YAML 文件。Api 通过 Management API 改草稿，校验后发布；Collector 只读已发布的那一棵树。数据库可以缓存，不能作为唯一副本。启动方式见 [README](../../README.md) 和 [open-core.md](../product/open-core.md)。
+配置的单一事实源是数据库。草稿和已发布配置都存在 `config_bundles`（以及规范化的 `config_*` 行）里，发布历史在 `config_revisions`。Studio 的保存、校验、发布和回滚都写数据库。Collector 只读已发布槽位，发布或回滚后同一进程重载。YAML / JSON 只用于两件事：数据库还没有对应槽位时，第一次启动导入已有的 `data/draft`、`data/published` 或 `--config` / `GATEWAY_CONFIG`；以及 Studio 和 API 上的显式导入导出。正常保存和发布不再写 YAML 文件。启动方式见 [README](../../README.md) 和 [open-core.md](../product/open-core.md)。数据库细节见 [database.md](../database.md)。
 
 JSON Schema（draft 2020-12）在仓库 `schemas/`：
 
@@ -16,12 +16,14 @@ JSON Schema（draft 2020-12）在仓库 `schemas/`：
 
 ## Host 读什么
 
-主路径是数据目录里的 `published/`（v1 目录）。`--config` 或 `GATEWAY_CONFIG` 可以改成下面两种形状，那是无界面覆盖：
+采集始终读取数据库里的已发布槽位，不监视磁盘。Host 不把 `draft/` 或 `published/` 当作运行副本。
 
-- **单文件**：例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)。
-- **v1 目录**：目录本身，或其中带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。加载器读取同目录的 `devices/`、`point-templates/`、可选的 `points/`、`sinks/mqtt.yaml`。页面发布出的 `data/published` 就是这种目录。
+下面两种文件只在**已发布槽位还是空的**时候导入一次：
 
-Host 不读 `draft/`。`mappings/` 里如果有文件，加载直接失败。
+- **v1 目录**：`data/published`、`data/draft`（仅当没有单独指定导入路径时）、`data/seed`，或 `--config` / `GATEWAY_CONFIG` 指向的目录。目录里要有带 `apiVersion: daq.gateway/v1` 与 `kind: Gateway` 的 `gateway.yaml`。导入读取同目录的 `devices/`、`point-templates/`、可选的 `points/`、`sinks/mqtt.yaml`。
+- **单文件**：例如 [configs/examples/gateway.yaml](../../configs/examples/gateway.yaml)，或 Docker 挂载的 `gateway.docker.yaml`。这是旧的单文件形状，导入后同样写入数据库。
+
+数据库里已经有已发布配置时，这些文件保持原样，后续启动不再读取。显式导入走 `POST /api/v1/config/import`，只覆盖草稿。`mappings/` 不进入导入包；校验仍拒绝独立映射。
 
 ## 包（bundle）
 
@@ -61,25 +63,26 @@ M1 点位主题只由 MqttSink 的 `topicTemplate` 生成。`mappings/` 里若�
 - 覆盖不能新增目录以外的 id。目录里有、模板里没有的 id 可以追加（一台机床多开一个目录点）。
 - 覆盖里没写到的模板点保持模板原样。要关掉某个点，必须写 `enabled: false`。
 
-发布时校验把模板和覆盖展开成每台设备的有效点位。采集加载已发布目录时做同样的展开，把启用的点位 id 交给适配器。北向主题仍然按设备 id 发布。旧的「每台一份完整 PointSet、设备上没有 `pointTemplateId`」会在 Studio 读取时迁到默认发那科模板上：与模板相同的点表删掉，有差异的留下覆盖。没有模板、也没有点表文件时，Fake 仍只发内置的三个点。
+发布时校验把模板和覆盖展开成每台设备的有效点位。采集加载已发布槽位时做同样的展开，把启用的点位 id 交给适配器。北向主题仍然按设备 id 发布。旧的「每台一份完整 PointSet、设备上没有 `pointTemplateId`」会在导入或读取时迁到默认发那科模板上：与模板相同的点表删掉，有差异的留下覆盖。没有模板、也没有点表时，Fake 仍只发内置的三个点。
 
 `alarm` 在采集模型里仍是整数。目录以外的 id 不能通过 Studio 发布。
 
 ## 工作区（草稿 / 发布 / 回滚）
 
-Studio 需要同时留下草稿和历史。工作区把多份 bundle 套在一起：
+Studio 的草稿、已发布配置和历史都在数据库里。数据目录只放种子、日志和可选的一次性导入文件：
 
 ```
 data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
-  seed/                         # 进 git，首次启动复制
-  draft/                        # PUT 写这里
-  published/                    # Host 默认从这里采集
-    .revision                   # CanonicalRevision 的 sha256
-  revisions/<sha256>/           # 不可变快照
+  gateway.db                    # SQLite：草稿、已发布、修订、目录、采样
+  seed/                         # 进 git。数据库为空时导入，不会在运行中被改写
+  draft/                        # 可选。仅空库首次启动导入，运行中不写
+  published/                    # 可选。仅空库首次启动导入，运行中不写
   runtime/studio.log
 ```
 
-`configs/examples/v1/` 是同一套 bundle，可 `--config configs/examples/v1` 做无界面覆盖。
+`config_revisions` 最多保留 30 条，每条有自己的行 Id，因此同一次内容哈希可以同时留下「初始导入」和后来的「回滚」。页面回滚按哈希取最早的那份快照，写回草稿和已发布槽位，并追加一条 rollback 记录。
+
+`configs/examples/v1/` 仍是同一套 bundle，可在空库上用 `--config configs/examples/v1` 导入一次。导入之后采集读的是数据库。
 
 `secrets.env`、`license.json`、以 `.` 开头的文件都不进入 Studio 的 revision。回滚配置不会回滚密钥或许可证。M1 许可证桩不读取 `license.json`。
 
@@ -113,9 +116,9 @@ data/                           # HOST_DATA 或 STUDIO_DATA 可改掉
 2. 用 camelCase JSON 序列化，忽略 null。对象键按 Unicode 码点递归排序。数组保持排序后的顺序。
 3. 紧凑 JSON，UTF-8，不做 `\u` 转义，末尾不加换行。
 4. revision 是该字节的 SHA-256，小写十六进制。
-5. `published/.revision` 的内容是 `<hex>\n`。这个文件不参与下一轮哈希。
+5. 哈希写入数据库的已发布槽位和 `config_revisions`。没有 `published/.revision` 文件。
 
-相同内容再次发布得到同一个 revision。`configs/examples/v1/.revision` 来自更早的「文件列表」草案，数值和 CanonicalRevision 不一定相同。采集只把该文件当作当前标签读出来；从页面发布之后，文件会被写成 CanonicalRevision。
+相同内容再次发布得到同一个 revision，并且不会再追加一条历史。`configs/examples/v1/.revision` 来自更早的「文件列表」草案，数值和 CanonicalRevision 不一定相同。采集使用数据库里的哈希，不读这个文件。
 
 ## 发布时的跨文件校验
 
@@ -130,4 +133,4 @@ JSON Schema 约束单个文档。`POST /api/v1/config/validate` 在此之上检�
 - 适配器只能是 `fanuc.fake` 或 `fanuc.focas`
 - `mappings/` 下没有文件（M1 不发布独立映射）。Collector 加载时会拒绝这个目录。Api 的校验器还不会扫描它
 
-校验失败不写入 `published/`。
+校验失败不改已发布槽位。

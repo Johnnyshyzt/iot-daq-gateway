@@ -1,3 +1,4 @@
+using IotDaq.Persistence;
 using Studio.Contracts;
 using Studio.Host.Auth;
 using Studio.Host.Config;
@@ -64,6 +65,84 @@ public static class StudioEndpoints
         {
             store.DeletePointTemplate(id);
             return Results.NoContent();
+        }).RequireWriter();
+
+        api.MapGet("/catalog/brands", (GatewayPersistence database) => ApiResults.Ok(database.ReadCatalog()));
+        api.MapGet("/catalog/items", (GatewayPersistence database) => ApiResults.Ok(database.ReadCatalog().Items));
+        api.MapGet("/groups", (GatewayPersistence database) => ApiResults.Ok(database.ListGroups()));
+        api.MapPut("/groups/{id}", (string id, GroupWrite body, GatewayPersistence database) =>
+        {
+            if (!ConfigValidator.IsSafeId(id))
+            {
+                return ApiResults.Error(StatusCodes.Status400BadRequest, "id_invalid", "分组 Id 不合法");
+            }
+
+            return ApiResults.Ok(database.UpsertGroup(id, body.Name ?? id, body.Workshop ?? "", body.Line ?? ""));
+        }).RequireWriter();
+        api.MapDelete("/groups/{id}", (string id, GatewayPersistence database) =>
+        {
+            database.DeleteGroup(id);
+            return Results.NoContent();
+        }).RequireWriter();
+
+        api.MapGet("/devices/{id}/latest", (string id, ConfigStore store) =>
+        {
+            store.GetDevice(id);
+            return ApiResults.Ok(new { deviceId = id, samples = store.Database.Latest(id) });
+        });
+        api.MapGet("/samples/history", (string? deviceId, string? items, string? from, string? to, long? bucketMs, ConfigStore store) =>
+        {
+            if (string.IsNullOrWhiteSpace(deviceId))
+            {
+                return ApiResults.Error(StatusCodes.Status400BadRequest, "device_required", "请指定 deviceId");
+            }
+
+            store.GetDevice(deviceId);
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var start = ParseTime(from, now - (long)TimeSpan.FromHours(1).TotalMilliseconds);
+            var end = ParseTime(to, now);
+            var names = string.IsNullOrWhiteSpace(items)
+                ? Array.Empty<string>()
+                : items.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return ApiResults.Ok(new
+            {
+                deviceId,
+                from = start,
+                to = end,
+                bucketMs = bucketMs ?? 0,
+                samples = store.Database.History(deviceId, names, start, end, bucketMs ?? 0)
+            });
+        });
+        api.MapGet("/alarms", (string? deviceId, int? limit, GatewayPersistence database) =>
+            ApiResults.Ok(new { alarms = database.ListAlarms(deviceId, limit ?? 100) }));
+
+        api.MapGet("/config/export", (string? format, string? slot, ConfigStore store) =>
+        {
+            var published = string.Equals(slot, "published", StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(format, "yaml", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Text(store.ExportYaml(published), "application/yaml; charset=utf-8");
+            }
+
+            return Results.Text(store.ExportJson(published), "application/json; charset=utf-8");
+        });
+        api.MapPost("/config/import", async (HttpRequest request, string? format, ConfigStore store) =>
+        {
+            using var reader = new StreamReader(request.Body);
+            var body = await reader.ReadToEndAsync();
+            var yaml = string.Equals(format, "yaml", StringComparison.OrdinalIgnoreCase)
+                || body.TrimStart().StartsWith("apiVersion:", StringComparison.Ordinal)
+                || body.TrimStart().StartsWith("gateway:", StringComparison.OrdinalIgnoreCase);
+            if (yaml)
+            {
+                store.ImportYaml(body);
+            }
+            else
+            {
+                store.ImportJson(body);
+            }
+
+            return ApiResults.Ok(store.GetView());
         }).RequireWriter();
 
         api.MapGet("/catalog/points", (string? adapter) =>
@@ -194,6 +273,21 @@ public static class StudioEndpoints
         };
     }
 
+    private static long ParseTime(string? text, long fallback)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return fallback;
+        }
+
+        if (long.TryParse(text, out var unix))
+        {
+            return unix;
+        }
+
+        return DateTimeOffset.TryParse(text, out var parsed) ? parsed.ToUnixTimeMilliseconds() : fallback;
+    }
+
     private static RouteHandlerBuilder RequireWriter(this RouteHandlerBuilder builder) =>
         builder.AddEndpointFilter(async (context, next) =>
         {
@@ -205,6 +299,15 @@ public static class StudioEndpoints
 
             return await next(context);
         });
+}
+
+public sealed class GroupWrite
+{
+    public string? Name { get; set; }
+
+    public string? Workshop { get; set; }
+
+    public string? Line { get; set; }
 }
 
 public static class ApiResults

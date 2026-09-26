@@ -80,6 +80,15 @@ export async function studioApi<T>(
   return (await response.json()) as T
 }
 
+export async function studioText(path: string, init: RequestInit = {}): Promise<string> {
+  const token = useAuthStore.getState().auth.accessToken
+  const headers = new Headers(init.headers)
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const response = await fetch(path, { ...init, headers })
+  if (!response.ok) throw await readError(response)
+  return response.text()
+}
+
 async function readError(response: Response) {
   let message = statusText[response.status] ?? '请求失败'
   let issues: ValidationIssue[] = []
@@ -135,8 +144,88 @@ export type DeviceDocument = {
     enabled: boolean
     intervalMs: number
     pointTemplateId?: string | null
-    connection: { host: string; port: number; focasTimeoutMs?: number | null }
+    brandId?: string | null
+    controllerModelId?: string | null
+    workshop?: string | null
+    line?: string | null
+    groupId?: string | null
+    connection: {
+      host: string
+      port: number
+      focasTimeoutMs?: number | null
+      timeoutMs?: number | null
+      path?: string | null
+      namespace?: string | null
+    }
   }
+}
+
+export type CatalogParameter = {
+  name: string
+  type: string
+  label: string
+  required: boolean
+  default?: string | number | boolean | null
+}
+
+export type CatalogAdapter = {
+  id: string
+  brandId?: string | null
+  kind: string
+  protocol: string
+  phase: number
+  displayName: string
+  note?: string | null
+  parameters: CatalogParameter[]
+}
+
+export type CatalogModel = { id: string; name: string }
+
+export type CatalogItem = {
+  id: string
+  nameZh: string
+  dataType: string
+  unit: string
+  category: string
+  brandSpecific: boolean
+  sources: string[]
+}
+
+export type CatalogBrand = {
+  id: string
+  nameZh: string
+  nameEn: string
+  models: CatalogModel[]
+  adapters: CatalogAdapter[]
+  items: CatalogItem[]
+}
+
+export type CatalogOverview = {
+  version: string
+  source: string
+  brands: CatalogBrand[]
+  items: CatalogItem[]
+  genericAdapters: CatalogAdapter[]
+}
+
+export type SampleRow = {
+  deviceId: string
+  pointId: string
+  value?: string | null
+  numericValue?: number | null
+  quality: string
+  unit?: string | null
+  timestampUnixMs: number
+}
+
+export type AlarmRow = {
+  id: string
+  deviceId: string
+  pointId: string
+  message: string
+  severity: string
+  active: boolean
+  raisedUnixMs: number
 }
 
 export type PointCatalogEntry = {
@@ -146,6 +235,7 @@ export type PointCatalogEntry = {
   scale: number
   deadband: number
   address: string
+  unit?: string
 }
 
 export type PointCatalogDocument = {
@@ -288,4 +378,41 @@ export function roleLabel(role: string) {
 
 export function canWrite(role: string | undefined) {
   return role === 'admin' || role === 'engineer'
+}
+
+const categoryLabels: Record<string, string> = {
+  state: '状态',
+  program: '程序',
+  spindle: '主轴',
+  feed: '进给',
+  axis: '坐标',
+  counter: '计数',
+  time: '时间',
+  alarm: '报警',
+  tool: '刀具',
+  temperature: '温度',
+  load: '负载',
+  'system-info': '系统信息',
+}
+
+export function categoryLabel(category: string) {
+  return categoryLabels[category] ?? category
+}
+
+export function catalogAddress(brandId: string, itemId: string) {
+  if (brandId === 'fanuc') {
+    if (itemId === 'state') return 'cnc/statinfo'
+    if (itemId === 'alarm') return 'cnc/alarm'
+    if (itemId === 'program') return 'cnc/program'
+  }
+  return `catalog/${itemId}`
+}
+
+export function brandOfAdapter(catalog: CatalogOverview | null, adapterId: string | undefined) {
+  if (!catalog || !adapterId) return undefined
+  return catalog.brands.find((brand) => brand.adapters.some((adapter) => adapter.id === adapterId))
+}
+
+export function standardTemplateId(brandId: string) {
+  return brandId === 'fanuc' ? 'fanuc-catalog' : `${brandId}-standard`
 }

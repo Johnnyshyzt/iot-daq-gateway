@@ -12,7 +12,7 @@
 - [x] 点位模板按发那科目录添加和启用（`state` / `alarm` / `program`），设备只选择模板，不手填协议地址。CSV 只接受目录中的点位 Id，并可改单位、倍率、死区、启用
 - [x] MQTT：Broker、环境变量名、QoS、保留消息、TLS、主题模板，以及浏览器内 JSON / 主题预览
 - [x] 校验、发布、回滚；失败时页面展示中文问题列表（含路径）
-- [x] 发布写入 `data/published` 后，同一进程重载采集
+- [x] 发布写入数据库的已发布槽位后，同一进程重载采集
 - [x] 运行态在 `live` 下显示在线状态、最近观测，以及实际 MQTT 点位主题和状态主题
 - [x] 采集按 `topicTemplate` / `statusTopic` 发布，默认仍是 `daq/{site}/{deviceId}/{point}` 与 `daq/{site}/{deviceId}/$status`
 - [x] 接口失败有中文说明：网络不通、未登录、角色不够、校验 issues
@@ -26,7 +26,7 @@
 - [x] 发版：推送 `v*` 标签后，用与 CI `pack-win-x64` 相同的脚本把 `iot-daq-gateway-<version>-win-x64.zip` 挂到 GitHub Release（不含 `Fwlib64.dll`）。`git tag vX.Y.Z && git push origin vX.Y.Z`。合并 PR 不会自动打标签。当前 Host 包标签是 `v0.4.0`。
 - [x] 密钥：MQTT 密码只走环境变量。`service.env` 由 `install-service.bat` 注入服务的 `MQTT_USER` / `MQTT_PASSWORD`（与 YAML 的 `usernameFromEnv` / `passwordFromEnv` 同名）
 - [x] 账号：本机演示仍可用 `admin` / `admin` 等桩账号，页面标明只限 localhost。现场包生成一次性引导密码，首次登录必须修改。角色仍是本地 admin / engineer / viewer
-- [x] 运维：升级时保留 `data/published`、备份与恢复、日志位置、磁盘写满时的已知行为，见 [ops-field.md](../ops-field.md)、[field-fault-guide.md](../field-fault-guide.md)、[pilot-acceptance.md](pilot-acceptance.md)
+- [x] 运维：升级时保留 `data/gateway.db`、备份与恢复、日志位置、磁盘写满时的已知行为，见 [ops-field.md](../ops-field.md)、[field-fault-guide.md](../field-fault-guide.md)、[pilot-acceptance.md](pilot-acceptance.md)
 
 ## 以后（不在 M1）
 

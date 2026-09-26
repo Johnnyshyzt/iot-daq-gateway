@@ -1,0 +1,5845 @@
+{
+  "version": "2026.09.26",
+  "source": "docs/catalog/cnc-data-template.xlsx",
+  "notes": [
+    "运行状态与工作模式/操作模式保持为两个标准项。同一品牌经常同时给出这两列，合并会丢掉一列。",
+    "主轴转速与实际主轴转速合并为 spindleSpeed；设定值单独为 spindleSpeedCmd。",
+    "机械坐标与机械位置合并为 machinePosition。",
+    "报警信息、告警状态、是否报警合并为 alarm。",
+    "加工件数、工件数、产量合并为 partCount。",
+    "fanuc-standard 仍是历史三态模板（state/alarm/program）。fanuc-catalog 才是发那科全量目录。",
+    "没有出现在 Sheet2 的品牌（兄弟、哈斯、法格、台达、西铁城、森精机）型号列表为空，设备上的控制器型号可留空。"
+  ],
+  "items": [
+    {
+      "id": "state",
+      "nameZh": "运行状态",
+      "dataType": "string",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "workMode",
+      "nameZh": "工作模式",
+      "dataType": "string",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "alarm",
+      "nameZh": "报警信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "alarm",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "alarmNumber",
+      "nameZh": "警报号",
+      "dataType": "string",
+      "unit": "",
+      "category": "alarm",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "estop",
+      "nameZh": "急停状态",
+      "dataType": "bool",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "isRunning",
+      "nameZh": "是否运行",
+      "dataType": "bool",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "isReset",
+      "nameZh": "是否复位",
+      "dataType": "bool",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "isCutting",
+      "nameZh": "是否切削",
+      "dataType": "bool",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "program",
+      "nameZh": "当前程序",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "programMain",
+      "nameZh": "主程序",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "programComment",
+      "nameZh": "程序注释",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "programBlock",
+      "nameZh": "当前程序段",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "programLine",
+      "nameZh": "程序行号",
+      "dataType": "number",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "programPath",
+      "nameZh": "程序路径",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "partCount",
+      "nameZh": "加工件数",
+      "dataType": "number",
+      "unit": "pcs",
+      "category": "counter",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "partCountTotal",
+      "nameZh": "总加工件数",
+      "dataType": "number",
+      "unit": "pcs",
+      "category": "counter",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "partCountTarget",
+      "nameZh": "目标件数",
+      "dataType": "number",
+      "unit": "pcs",
+      "category": "counter",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "cycleTime",
+      "nameZh": "循环时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "powerOnTime",
+      "nameZh": "上电时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "runTime",
+      "nameZh": "运行时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "cutTime",
+      "nameZh": "切削时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "remainTime",
+      "nameZh": "剩余加工时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "spindleSpeed",
+      "nameZh": "主轴转速",
+      "dataType": "number",
+      "unit": "rpm",
+      "category": "spindle",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "spindleSpeedCmd",
+      "nameZh": "设定主轴转速",
+      "dataType": "number",
+      "unit": "rpm",
+      "category": "spindle",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "spindleOverride",
+      "nameZh": "主轴倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "spindleLoad",
+      "nameZh": "主轴负载",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "spindleTemp",
+      "nameZh": "主轴温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "feedRate",
+      "nameZh": "进给速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "feedRateCmd",
+      "nameZh": "设定进给速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "feedOverride",
+      "nameZh": "进给倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "rapidOverride",
+      "nameZh": "快速倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "machinePosition",
+      "nameZh": "机械坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "relativePosition",
+      "nameZh": "相对坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "absolutePosition",
+      "nameZh": "绝对坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "distanceToGo",
+      "nameZh": "剩余坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "machinePositionX",
+      "nameZh": "机械坐标X",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "machinePositionY",
+      "nameZh": "机械坐标Y",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "machinePositionZ",
+      "nameZh": "机械坐标Z",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "absolutePositionX",
+      "nameZh": "绝对坐标X",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "absolutePositionY",
+      "nameZh": "绝对坐标Y",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "absolutePositionZ",
+      "nameZh": "绝对坐标Z",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "relativePositionX",
+      "nameZh": "相对坐标X",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "relativePositionY",
+      "nameZh": "相对坐标Y",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "relativePositionZ",
+      "nameZh": "相对坐标Z",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "distanceToGoX",
+      "nameZh": "剩余距离X",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "distanceToGoY",
+      "nameZh": "剩余距离Y",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "distanceToGoZ",
+      "nameZh": "剩余距离Z",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "axisLoadX",
+      "nameZh": "X轴负载",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "axisLoadY",
+      "nameZh": "Y轴负载",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "axisLoadZ",
+      "nameZh": "Z轴负载",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "toolNumber",
+      "nameZh": "刀具号",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "toolNext",
+      "nameZh": "下一把刀",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "serialNumber",
+      "nameZh": "序列号",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "softwareVersion",
+      "nameZh": "软件版本",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "systemType",
+      "nameZh": "系统类型",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "axisCount",
+      "nameZh": "有效轴数",
+      "dataType": "number",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "servoLoad",
+      "nameZh": "伺服负载",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": false,
+      "brandId": null
+    },
+    {
+      "id": "fanuc_fanSpeed",
+      "nameZh": "风扇转速",
+      "dataType": "number",
+      "unit": "rpm",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "fanuc"
+    },
+    {
+      "id": "fanuc_axisTempX",
+      "nameZh": "x轴温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "fanuc"
+    },
+    {
+      "id": "fanuc_axisTempY",
+      "nameZh": "y轴温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "fanuc"
+    },
+    {
+      "id": "fanuc_axisTempZ",
+      "nameZh": "z轴温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "fanuc"
+    },
+    {
+      "id": "fanuc_operatorMessage",
+      "nameZh": "操作信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "fanuc"
+    },
+    {
+      "id": "siemens_voltage",
+      "nameZh": "电压",
+      "dataType": "number",
+      "unit": "V",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "siemens"
+    },
+    {
+      "id": "siemens_current",
+      "nameZh": "电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "siemens"
+    },
+    {
+      "id": "siemens_motorTemp",
+      "nameZh": "电机温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "siemens"
+    },
+    {
+      "id": "siemens_driveTemp",
+      "nameZh": "驱动温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "siemens"
+    },
+    {
+      "id": "syntec_feedLimitCmd",
+      "nameZh": "设定进给超限",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "syntec"
+    },
+    {
+      "id": "syntec_spindleLimitCmd",
+      "nameZh": "设定主轴超限",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "syntec"
+    },
+    {
+      "id": "syntec_workStrokeCount",
+      "nameZh": "工作笔数",
+      "dataType": "number",
+      "unit": "pcs",
+      "category": "counter",
+      "brandSpecific": true,
+      "brandId": "syntec"
+    },
+    {
+      "id": "gsk_manualOverride",
+      "nameZh": "当前手动倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "gsk"
+    },
+    {
+      "id": "gsk_mpgOverride",
+      "nameZh": "当前手轮倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "gsk"
+    },
+    {
+      "id": "gsk_gModal",
+      "nameZh": "G 模态信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": true,
+      "brandId": "gsk"
+    },
+    {
+      "id": "gsk_mModal",
+      "nameZh": "M 模态信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": true,
+      "brandId": "gsk"
+    },
+    {
+      "id": "mazak-smart_servoAxisNames",
+      "nameZh": "伺服轴名称",
+      "dataType": "string",
+      "unit": "",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "mazak-smart"
+    },
+    {
+      "id": "knd_fpgaVersion",
+      "nameZh": "门阵版本",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "knd"
+    },
+    {
+      "id": "knd_ladderVersion",
+      "nameZh": "梯图版本",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "knd"
+    },
+    {
+      "id": "knd_manufacturer",
+      "nameZh": "制造商",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "knd"
+    },
+    {
+      "id": "heidenhain_systemInfo",
+      "nameZh": "系统信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_spindlePowerOnTime",
+      "nameZh": "主轴上电时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_spindleRunTime",
+      "nameZh": "主轴运行时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_quoteInfo",
+      "nameZh": "报价信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_dncMode",
+      "nameZh": "DNC模式",
+      "dataType": "string",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_toolInfo",
+      "nameZh": "刀具信息",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_editedFeed",
+      "nameZh": "编辑进给",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_maxFeedRate",
+      "nameZh": "最大进给速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "heidenhain_contourFeedRate",
+      "nameZh": "轮廓进给速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "heidenhain"
+    },
+    {
+      "id": "hnc_driveCurrent",
+      "nameZh": "驱动单元电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "hnc"
+    },
+    {
+      "id": "hnc_loadCurrent",
+      "nameZh": "负载电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "hnc"
+    },
+    {
+      "id": "hnc_ratedCurrent",
+      "nameZh": "额定电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "hnc"
+    },
+    {
+      "id": "fagor_feedRateActualX",
+      "nameZh": "X轴实际进给速率",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_feedRateActualY",
+      "nameZh": "Y轴实际进给速率",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_feedRateActualZ",
+      "nameZh": "Z轴实际进给速率",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_feedOverrideX",
+      "nameZh": "X轴进给率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_feedOverrideY",
+      "nameZh": "Y轴进给率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_feedOverrideZ",
+      "nameZh": "Z轴进给率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_actualPositionX",
+      "nameZh": "X轴实际位置",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_actualPositionY",
+      "nameZh": "Y轴实际位置",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "fagor_actualPositionZ",
+      "nameZh": "Z轴实际位置",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "fagor"
+    },
+    {
+      "id": "brother_feedOvertravelOverride",
+      "nameZh": "进给速度超程倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "brother"
+    },
+    {
+      "id": "brother_toolPot",
+      "nameZh": "刀槽号",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "brother"
+    },
+    {
+      "id": "haas_machineModel",
+      "nameZh": "机床型号",
+      "dataType": "string",
+      "unit": "",
+      "category": "system-info",
+      "brandSpecific": true,
+      "brandId": "haas"
+    },
+    {
+      "id": "haas_toolChangeCount",
+      "nameZh": "换刀次数",
+      "dataType": "number",
+      "unit": "pcs",
+      "category": "counter",
+      "brandSpecific": true,
+      "brandId": "haas"
+    },
+    {
+      "id": "haas_previousCycleTime",
+      "nameZh": "上一次循环时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "haas"
+    },
+    {
+      "id": "baoyuan_handwheelOverride",
+      "nameZh": "手轮倍率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "baoyuan_cycleTimeHours",
+      "nameZh": "循环时间小时值",
+      "dataType": "number",
+      "unit": "h",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "baoyuan_machiningTimeMs",
+      "nameZh": "加工时间毫秒值",
+      "dataType": "number",
+      "unit": "ms",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "baoyuan_machiningTimeHours",
+      "nameZh": "加工时间小时值",
+      "dataType": "number",
+      "unit": "h",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "baoyuan_warningNumber",
+      "nameZh": "警告号（",
+      "dataType": "string",
+      "unit": "",
+      "category": "alarm",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "baoyuan_mCode",
+      "nameZh": "M代码",
+      "dataType": "string",
+      "unit": "",
+      "category": "program",
+      "brandSpecific": true,
+      "brandId": "baoyuan"
+    },
+    {
+      "id": "kede_g00Speed",
+      "nameZh": "G00速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_g00RunTime",
+      "nameZh": "G00运行时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_g01RunTime",
+      "nameZh": "G01运行时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_programPosition",
+      "nameZh": "程序坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_axisNames",
+      "nameZh": "轴名称",
+      "dataType": "string",
+      "unit": "",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_commandVelocity",
+      "nameZh": "指令速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_actualVelocity",
+      "nameZh": "实际速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "feed",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_actualAcceleration",
+      "nameZh": "实际加速度",
+      "dataType": "number",
+      "unit": "mm/s2",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_actualJerk",
+      "nameZh": "实际加加速度",
+      "dataType": "number",
+      "unit": "mm/s3",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_backlashJumpComp",
+      "nameZh": "反向跃冲补偿值",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_logicalAxisCompensated",
+      "nameZh": "逻辑轴补偿后机床坐标系坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_logicalAxisRaw",
+      "nameZh": "逻辑轴补偿前机床坐标系坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_gantryError1",
+      "nameZh": "逻辑轴双驱轴误差1",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_gantryError2",
+      "nameZh": "逻辑轴双驱轴误差2",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_gantryError3",
+      "nameZh": "逻辑轴双驱轴误差3",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_contourError",
+      "nameZh": "轮廓误差",
+      "dataType": "number",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_toolTipCommandSpeed",
+      "nameZh": "刀尖点指令速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_toolHeadCommandSpeed",
+      "nameZh": "刀头点指令速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_driveState",
+      "nameZh": "驱动运行状态",
+      "dataType": "string",
+      "unit": "",
+      "category": "state",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_feedbackSpeed",
+      "nameZh": "实际反馈速度",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_fieldCurrent",
+      "nameZh": "实际励磁电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_torqueCurrent",
+      "nameZh": "实际转矩(推力)电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_outputTorque",
+      "nameZh": "实际输出转矩",
+      "dataType": "number",
+      "unit": "Nm",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_currentLoadRate",
+      "nameZh": "电流负载率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_currentLoadPeak",
+      "nameZh": "电流负载率峰值",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_speedTrackError",
+      "nameZh": "速度跟踪误差",
+      "dataType": "number",
+      "unit": "mm/min",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_torqueLoadRate",
+      "nameZh": "转矩(推力)负载率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "load",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "kede_toolList",
+      "nameZh": "刀具列表",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "kede"
+    },
+    {
+      "id": "citizen_programPosition",
+      "nameZh": "程序位置",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "citizen"
+    },
+    {
+      "id": "citizen_autoStartTime",
+      "nameZh": "自动启动时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "citizen"
+    },
+    {
+      "id": "jdsoft_spindleCurrent",
+      "nameZh": "主轴电流",
+      "dataType": "number",
+      "unit": "A",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_spindlePower",
+      "nameZh": "主轴功率",
+      "dataType": "number",
+      "unit": "kW",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_spindleTorque",
+      "nameZh": "主轴转矩",
+      "dataType": "number",
+      "unit": "Nm",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_spindle1CurrentLoad",
+      "nameZh": "主轴1电流负载率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_spindle1PowerLoad",
+      "nameZh": "主轴1功率负载率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_spindle1TorqueLoad",
+      "nameZh": "主轴1转矩负载率",
+      "dataType": "number",
+      "unit": "%",
+      "category": "spindle",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "jdsoft_cabinetTemp",
+      "nameZh": "电控柜温度",
+      "dataType": "number",
+      "unit": "°C",
+      "category": "temperature",
+      "brandSpecific": true,
+      "brandId": "jdsoft"
+    },
+    {
+      "id": "delta_dwellTime",
+      "nameZh": "暂停时间",
+      "dataType": "number",
+      "unit": "s",
+      "category": "time",
+      "brandSpecific": true,
+      "brandId": "delta"
+    },
+    {
+      "id": "delta_magazineTool",
+      "nameZh": "刀库刀号",
+      "dataType": "string",
+      "unit": "",
+      "category": "tool",
+      "brandSpecific": true,
+      "brandId": "delta"
+    },
+    {
+      "id": "delta_offsetPosition",
+      "nameZh": "偏移坐标",
+      "dataType": "string",
+      "unit": "mm",
+      "category": "axis",
+      "brandSpecific": true,
+      "brandId": "delta"
+    }
+  ],
+  "brands": [
+    {
+      "id": "fanuc",
+      "nameZh": "发那科",
+      "nameEn": "Fanuc",
+      "sheetHeader": "发那科",
+      "mappings": [
+        {
+          "source": "风扇转速",
+          "itemId": "fanuc_fanSpeed",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴温度",
+          "itemId": "spindleTemp",
+          "brandSpecific": false
+        },
+        {
+          "source": "x轴温度",
+          "itemId": "fanuc_axisTempX",
+          "brandSpecific": true
+        },
+        {
+          "source": "y轴温度",
+          "itemId": "fanuc_axisTempY",
+          "brandSpecific": true
+        },
+        {
+          "source": "z轴温度",
+          "itemId": "fanuc_axisTempZ",
+          "brandSpecific": true
+        },
+        {
+          "source": "x轴负载",
+          "itemId": "axisLoadX",
+          "brandSpecific": false
+        },
+        {
+          "source": "y轴负载",
+          "itemId": "axisLoadY",
+          "brandSpecific": false
+        },
+        {
+          "source": "z轴负载",
+          "itemId": "axisLoadZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工个数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "总加工个数",
+          "itemId": "partCountTotal",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序号",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序备注",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序备注",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "急停状态",
+          "itemId": "estop",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "有效轴数",
+          "itemId": "axisCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械位置",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对位置",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对位置",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余位置",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴负载",
+          "itemId": "spindleLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "上电时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前执行代码",
+          "itemId": "programBlock",
+          "brandSpecific": false
+        },
+        {
+          "source": "操作信息",
+          "itemId": "fanuc_operatorMessage",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "fanuc_fanSpeed",
+        "spindleTemp",
+        "fanuc_axisTempX",
+        "fanuc_axisTempY",
+        "fanuc_axisTempZ",
+        "axisLoadX",
+        "axisLoadY",
+        "axisLoadZ",
+        "spindleSpeed",
+        "runTime",
+        "partCount",
+        "partCountTotal",
+        "spindleOverride",
+        "feedOverride",
+        "feedRate",
+        "programMain",
+        "programComment",
+        "program",
+        "estop",
+        "alarm",
+        "workMode",
+        "state",
+        "axisCount",
+        "machinePosition",
+        "relativePosition",
+        "absolutePosition",
+        "distanceToGo",
+        "spindleLoad",
+        "toolNumber",
+        "powerOnTime",
+        "cutTime",
+        "cycleTime",
+        "programBlock",
+        "fanuc_operatorMessage"
+      ],
+      "models": [
+        {
+          "id": "fanuc-ethernet",
+          "name": "全系列网口"
+        },
+        {
+          "id": "fanuc-pcmcia",
+          "name": "无网口且支持扩展PCMCIA网口系列"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "fanuc.fake",
+          "brandId": "fanuc",
+          "kind": "simulator",
+          "protocol": "fake",
+          "phase": 1,
+          "displayName": "发那科模拟（兼容三态）",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "fanuc.sim",
+          "brandId": "fanuc",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "发那科模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "fanuc.focas",
+          "brandId": "fanuc",
+          "kind": "driver",
+          "protocol": "focas",
+          "phase": 1,
+          "displayName": "发那科 FOCAS",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.10"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "FOCAS 超时 (ms)",
+              "required": true,
+              "default": 3000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "siemens",
+      "nameZh": "西门子",
+      "nameEn": "Siemens",
+      "sheetHeader": "西门子",
+      "mappings": [
+        {
+          "source": "版本号",
+          "itemId": "softwareVersion",
+          "brandSpecific": false
+        },
+        {
+          "source": "系统类型",
+          "itemId": "systemType",
+          "brandSpecific": false
+        },
+        {
+          "source": "唯一标识",
+          "itemId": "serialNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "操作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余加工时间",
+          "itemId": "remainTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定进给速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定主轴速度",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际主轴速度",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工代码",
+          "itemId": "programBlock",
+          "brandSpecific": false
+        },
+        {
+          "source": "电压",
+          "itemId": "siemens_voltage",
+          "brandSpecific": true
+        },
+        {
+          "source": "电流",
+          "itemId": "siemens_current",
+          "brandSpecific": true
+        },
+        {
+          "source": "负载",
+          "itemId": "servoLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "电机温度",
+          "itemId": "siemens_motorTemp",
+          "brandSpecific": true
+        },
+        {
+          "source": "驱动温度",
+          "itemId": "siemens_driveTemp",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "softwareVersion",
+        "systemType",
+        "serialNumber",
+        "workMode",
+        "state",
+        "partCount",
+        "cycleTime",
+        "remainTime",
+        "program",
+        "feedRateCmd",
+        "feedRate",
+        "spindleSpeedCmd",
+        "spindleSpeed",
+        "feedOverride",
+        "spindleOverride",
+        "machinePosition",
+        "relativePosition",
+        "distanceToGo",
+        "toolNumber",
+        "programBlock",
+        "siemens_voltage",
+        "siemens_current",
+        "servoLoad",
+        "siemens_motorTemp",
+        "siemens_driveTemp"
+      ],
+      "models": [
+        {
+          "id": "siemens-828d",
+          "name": "828D"
+        },
+        {
+          "id": "siemens-840dsl",
+          "name": "840dsl"
+        },
+        {
+          "id": "siemens-808d",
+          "name": "808D"
+        },
+        {
+          "id": "siemens-840d-pcu50",
+          "name": "840d(PCU5.0)"
+        },
+        {
+          "id": "siemens-810d-pcu50",
+          "name": "810d(PCU5.0)"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "siemens.sim",
+          "brandId": "siemens",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "西门子模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "siemens.opcua",
+          "brandId": "siemens",
+          "kind": "stub",
+          "protocol": "opcua",
+          "phase": 2,
+          "displayName": "西门子 OPC UA",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.20"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 4840
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "端点路径",
+              "required": false,
+              "default": ""
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "label": "命名空间",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mitsubishi",
+      "nameZh": "三菱",
+      "nameEn": "Mitsubishi",
+      "sheetHeader": "三菱",
+      "mappings": [
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "伺服轴数",
+          "itemId": "axisCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序名称",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序段内容",
+          "itemId": "programBlock",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "上电时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "开机时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "state",
+        "workMode",
+        "axisCount",
+        "machinePosition",
+        "relativePosition",
+        "absolutePosition",
+        "distanceToGo",
+        "partCount",
+        "spindleSpeed",
+        "feedRate",
+        "programMain",
+        "program",
+        "programBlock",
+        "toolNumber",
+        "runTime",
+        "powerOnTime",
+        "cycleTime",
+        "programLine",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "mitsubishi-m70",
+          "name": "M70"
+        },
+        {
+          "id": "mitsubishi-m80",
+          "name": "M80"
+        },
+        {
+          "id": "mitsubishi-e70",
+          "name": "E70"
+        },
+        {
+          "id": "mitsubishi-e80",
+          "name": "E80"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "mitsubishi.sim",
+          "brandId": "mitsubishi",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "三菱模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "mitsubishi.custom",
+          "brandId": "mitsubishi",
+          "kind": "stub",
+          "protocol": "mitsubishi",
+          "phase": 2,
+          "displayName": "三菱协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "syntec",
+      "nameZh": "新代",
+      "nameEn": "Syntec",
+      "sheetHeader": "新代",
+      "mappings": [
+        {
+          "source": "主程序名",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前执行程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否急停",
+          "itemId": "estop",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定进给速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定主轴转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定进给超限",
+          "itemId": "syntec_feedLimitCmd",
+          "brandSpecific": true
+        },
+        {
+          "source": "设定主轴超限",
+          "itemId": "syntec_spindleLimitCmd",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "开机时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "需求工件数",
+          "itemId": "partCountTarget",
+          "brandSpecific": false
+        },
+        {
+          "source": "总工件数",
+          "itemId": "partCountTotal",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作笔数",
+          "itemId": "syntec_workStrokeCount",
+          "brandSpecific": true
+        },
+        {
+          "source": "执行行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "programMain",
+        "program",
+        "workMode",
+        "state",
+        "estop",
+        "machinePosition",
+        "absolutePosition",
+        "relativePosition",
+        "distanceToGo",
+        "feedRateCmd",
+        "spindleSpeedCmd",
+        "syntec_feedLimitCmd",
+        "syntec_spindleLimitCmd",
+        "feedRate",
+        "spindleSpeed",
+        "powerOnTime",
+        "cutTime",
+        "cycleTime",
+        "partCount",
+        "partCountTarget",
+        "partCountTotal",
+        "syntec_workStrokeCount",
+        "programLine",
+        "alarm",
+        "toolNumber"
+      ],
+      "models": [
+        {
+          "id": "syntec-116",
+          "name": "116.1X版本以上"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "syntec.sim",
+          "brandId": "syntec",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "新代模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "syntec.custom",
+          "brandId": "syntec",
+          "kind": "stub",
+          "protocol": "syntec",
+          "phase": 2,
+          "displayName": "新代协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gsk",
+      "nameZh": "广数",
+      "nameEn": "GSK",
+      "sheetHeader": "广数",
+      "mappings": [
+        {
+          "source": "工作方式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "CNC 程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "CNC 当前有效轴数",
+          "itemId": "axisCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前加工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "编程进给速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴编程转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴实际转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前快速倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前手动倍率",
+          "itemId": "gsk_manualOverride",
+          "brandSpecific": true
+        },
+        {
+          "source": "当前手轮倍率",
+          "itemId": "gsk_mpgOverride",
+          "brandSpecific": true
+        },
+        {
+          "source": "当前刀具刀补号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "G 模态信息",
+          "itemId": "gsk_gModal",
+          "brandSpecific": true
+        },
+        {
+          "source": "M 模态信息",
+          "itemId": "gsk_mModal",
+          "brandSpecific": true
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "workMode",
+        "state",
+        "program",
+        "axisCount",
+        "machinePosition",
+        "partCount",
+        "runTime",
+        "cutTime",
+        "feedRateCmd",
+        "feedRate",
+        "feedOverride",
+        "spindleSpeedCmd",
+        "spindleSpeed",
+        "spindleOverride",
+        "rapidOverride",
+        "gsk_manualOverride",
+        "gsk_mpgOverride",
+        "toolNumber",
+        "gsk_gModal",
+        "gsk_mModal",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "gsk-988ta",
+          "name": "988ta"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "gsk.sim",
+          "brandId": "gsk",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "广数模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "gsk.custom",
+          "brandId": "gsk",
+          "kind": "stub",
+          "protocol": "gsk",
+          "phase": 2,
+          "displayName": "广数协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mazak-smart",
+      "nameZh": "马扎克 smart/smooth",
+      "nameEn": "Mazak smart/smooth",
+      "sheetHeader": "马扎克（smart/smooth）",
+      "mappings": [
+        {
+          "source": "序列号",
+          "itemId": "serialNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "软件版本",
+          "itemId": "softwareVersion",
+          "brandSpecific": false
+        },
+        {
+          "source": "伺服负载",
+          "itemId": "servoLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "伺服轴数",
+          "itemId": "axisCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "伺服轴名称",
+          "itemId": "mazak-smart_servoAxisNames",
+          "brandSpecific": true
+        },
+        {
+          "source": "当前程序名称",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序注释",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序块号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序名",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序注释",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴负载",
+          "itemId": "spindleLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴温度",
+          "itemId": "spindleTemp",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "快进倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "操作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "开机时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工个数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否急停",
+          "itemId": "estop",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "serialNumber",
+        "softwareVersion",
+        "servoLoad",
+        "machinePosition",
+        "distanceToGo",
+        "axisCount",
+        "mazak-smart_servoAxisNames",
+        "program",
+        "programComment",
+        "programLine",
+        "programMain",
+        "toolNumber",
+        "spindleLoad",
+        "spindleTemp",
+        "spindleSpeed",
+        "spindleOverride",
+        "feedOverride",
+        "rapidOverride",
+        "workMode",
+        "state",
+        "cutTime",
+        "powerOnTime",
+        "partCount",
+        "alarm",
+        "estop"
+      ],
+      "models": [
+        {
+          "id": "mazak-smart",
+          "name": "smart"
+        },
+        {
+          "id": "mazak-smooth",
+          "name": "smooth"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "mazak-smart.sim",
+          "brandId": "mazak-smart",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "马扎克 smart/smooth 模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "mazak-smart.mtconnect",
+          "brandId": "mazak-smart",
+          "kind": "stub",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "马扎克 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mazak-matrix",
+      "nameZh": "马扎克 640/matrix",
+      "nameEn": "Mazak 640/matrix",
+      "sheetHeader": "马扎克（640/matrix）",
+      "mappings": [
+        {
+          "source": "设备类型",
+          "itemId": "systemType",
+          "brandSpecific": false
+        },
+        {
+          "source": "操作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序注释",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴负载",
+          "itemId": "spindleLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工数量",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "快速倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "systemType",
+        "workMode",
+        "state",
+        "program",
+        "programComment",
+        "spindleLoad",
+        "toolNumber",
+        "partCount",
+        "rapidOverride",
+        "spindleOverride",
+        "feedOverride",
+        "spindleSpeed",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "mazak-640",
+          "name": "640"
+        },
+        {
+          "id": "mazak-matrix",
+          "name": "matrix"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "mazak-matrix.sim",
+          "brandId": "mazak-matrix",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "马扎克 640/matrix 模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "mazak-matrix.mtconnect",
+          "brandId": "mazak-matrix",
+          "kind": "stub",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "马扎克 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "knd",
+      "nameZh": "凯恩帝",
+      "nameEn": "KND",
+      "sheetHeader": "凯恩第",
+      "mappings": [
+        {
+          "source": "软件版本",
+          "itemId": "softwareVersion",
+          "brandSpecific": false
+        },
+        {
+          "source": "门阵版本",
+          "itemId": "knd_fpgaVersion",
+          "brandSpecific": true
+        },
+        {
+          "source": "梯图版本",
+          "itemId": "knd_ladderVersion",
+          "brandSpecific": true
+        },
+        {
+          "source": "系统ID",
+          "itemId": "serialNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "制造商",
+          "itemId": "knd_manufacturer",
+          "brandSpecific": true
+        },
+        {
+          "source": "系统类型",
+          "itemId": "systemType",
+          "brandSpecific": false
+        },
+        {
+          "source": "有效轴数",
+          "itemId": "axisCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "单批目标件数",
+          "itemId": "partCountTarget",
+          "brandSpecific": false
+        },
+        {
+          "source": "总目标件数",
+          "itemId": "partCountTarget",
+          "brandSpecific": false
+        },
+        {
+          "source": "总件数",
+          "itemId": "partCountTotal",
+          "brandSpecific": false
+        },
+        {
+          "source": "单批件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械位置",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对位置",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对位置",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "快进倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "softwareVersion",
+        "knd_fpgaVersion",
+        "knd_ladderVersion",
+        "serialNumber",
+        "knd_manufacturer",
+        "systemType",
+        "axisCount",
+        "workMode",
+        "state",
+        "partCountTarget",
+        "partCountTotal",
+        "partCount",
+        "machinePosition",
+        "relativePosition",
+        "absolutePosition",
+        "cycleTime",
+        "runTime",
+        "program",
+        "spindleSpeed",
+        "feedRate",
+        "spindleOverride",
+        "feedOverride",
+        "rapidOverride",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "knd-5",
+          "name": "5.0版本以上"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "knd.sim",
+          "brandId": "knd",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "凯恩帝模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "knd.custom",
+          "brandId": "knd",
+          "kind": "stub",
+          "protocol": "knd",
+          "phase": 2,
+          "displayName": "凯恩帝协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heidenhain",
+      "nameZh": "海德汉",
+      "nameEn": "Heidenhain",
+      "sheetHeader": "海德汉",
+      "mappings": [
+        {
+          "source": "系统信息",
+          "itemId": "heidenhain_systemInfo",
+          "brandSpecific": true
+        },
+        {
+          "source": "轴位置",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械位置",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对位置",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴上电时间",
+          "itemId": "heidenhain_spindlePowerOnTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴运行时间",
+          "itemId": "heidenhain_spindleRunTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "机床上电时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "机床运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "快速进给倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "报价信息",
+          "itemId": "heidenhain_quoteInfo",
+          "brandSpecific": true
+        },
+        {
+          "source": "状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "DNC模式",
+          "itemId": "heidenhain_dncMode",
+          "brandSpecific": true
+        },
+        {
+          "source": "执行模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具信息",
+          "itemId": "heidenhain_toolInfo",
+          "brandSpecific": true
+        },
+        {
+          "source": "程序名称",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "编辑进给",
+          "itemId": "heidenhain_editedFeed",
+          "brandSpecific": true
+        },
+        {
+          "source": "编程主轴转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "最大进给速度",
+          "itemId": "heidenhain_maxFeedRate",
+          "brandSpecific": true
+        },
+        {
+          "source": "轮廓进给速度",
+          "itemId": "heidenhain_contourFeedRate",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "heidenhain_systemInfo",
+        "machinePosition",
+        "relativePosition",
+        "heidenhain_spindlePowerOnTime",
+        "heidenhain_spindleRunTime",
+        "powerOnTime",
+        "runTime",
+        "feedOverride",
+        "spindleOverride",
+        "rapidOverride",
+        "heidenhain_quoteInfo",
+        "state",
+        "heidenhain_dncMode",
+        "workMode",
+        "heidenhain_toolInfo",
+        "program",
+        "spindleSpeed",
+        "heidenhain_editedFeed",
+        "spindleSpeedCmd",
+        "heidenhain_maxFeedRate",
+        "heidenhain_contourFeedRate"
+      ],
+      "models": [
+        {
+          "id": "heidenhain-530",
+          "name": "530"
+        },
+        {
+          "id": "heidenhain-640",
+          "name": "640"
+        },
+        {
+          "id": "heidenhain-620",
+          "name": "620"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "heidenhain.sim",
+          "brandId": "heidenhain",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "海德汉模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "heidenhain.lsv2",
+          "brandId": "heidenhain",
+          "kind": "stub",
+          "protocol": "lsv2",
+          "phase": 2,
+          "displayName": "海德汉 LSV2",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.40"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 19000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hnc",
+      "nameZh": "华中数控",
+      "nameEn": "Huazhong HNC",
+      "sheetHeader": "华中数控",
+      "mappings": [
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前刀具",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "预选刀具",
+          "itemId": "toolNext",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴设定转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴实际转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定进给速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "急停状态",
+          "itemId": "estop",
+          "brandSpecific": false
+        },
+        {
+          "source": "选择程序编号",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行程序编号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "总加工件数",
+          "itemId": "partCountTotal",
+          "brandSpecific": false
+        },
+        {
+          "source": "驱动单元电流",
+          "itemId": "hnc_driveCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "负载电流",
+          "itemId": "hnc_loadCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "额定电流",
+          "itemId": "hnc_ratedCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "workMode",
+        "state",
+        "toolNumber",
+        "toolNext",
+        "spindleSpeedCmd",
+        "spindleSpeed",
+        "feedRateCmd",
+        "feedRate",
+        "estop",
+        "programMain",
+        "program",
+        "partCount",
+        "partCountTotal",
+        "hnc_driveCurrent",
+        "hnc_loadCurrent",
+        "hnc_ratedCurrent",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "hnc-8",
+          "name": "8系"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "hnc.sim",
+          "brandId": "hnc",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "华中数控模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "hnc.custom",
+          "brandId": "hnc",
+          "kind": "stub",
+          "protocol": "hnc",
+          "phase": 2,
+          "displayName": "华中数控协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fagor",
+      "nameZh": "法格",
+      "nameEn": "Fagor",
+      "sheetHeader": "法格",
+      "mappings": [
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "G94设定进给速率",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "前进的覆盖",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定主轴转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "操作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "X轴实际进给速率",
+          "itemId": "fagor_feedRateActualX",
+          "brandSpecific": true
+        },
+        {
+          "source": "Y轴实际进给速率",
+          "itemId": "fagor_feedRateActualY",
+          "brandSpecific": true
+        },
+        {
+          "source": "Z轴实际进给速率",
+          "itemId": "fagor_feedRateActualZ",
+          "brandSpecific": true
+        },
+        {
+          "source": "X轴进给率",
+          "itemId": "fagor_feedOverrideX",
+          "brandSpecific": true
+        },
+        {
+          "source": "Y轴进给率",
+          "itemId": "fagor_feedOverrideY",
+          "brandSpecific": true
+        },
+        {
+          "source": "Z轴进给率",
+          "itemId": "fagor_feedOverrideZ",
+          "brandSpecific": true
+        },
+        {
+          "source": "X轴实际位置",
+          "itemId": "fagor_actualPositionX",
+          "brandSpecific": true
+        },
+        {
+          "source": "Y轴实际位置",
+          "itemId": "fagor_actualPositionY",
+          "brandSpecific": true
+        },
+        {
+          "source": "Z轴实际位置",
+          "itemId": "fagor_actualPositionZ",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "feedRate",
+        "feedRateCmd",
+        "feedOverride",
+        "spindleSpeed",
+        "spindleSpeedCmd",
+        "spindleOverride",
+        "workMode",
+        "program",
+        "fagor_feedRateActualX",
+        "fagor_feedRateActualY",
+        "fagor_feedRateActualZ",
+        "fagor_feedOverrideX",
+        "fagor_feedOverrideY",
+        "fagor_feedOverrideZ",
+        "fagor_actualPositionX",
+        "fagor_actualPositionY",
+        "fagor_actualPositionZ"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "fagor.sim",
+          "brandId": "fagor",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "法格模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "fagor.custom",
+          "brandId": "fagor",
+          "kind": "stub",
+          "protocol": "fagor",
+          "phase": 2,
+          "displayName": "法格协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brother",
+      "nameZh": "兄弟",
+      "nameEn": "Brother",
+      "sheetHeader": "兄弟",
+      "mappings": [
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否急停",
+          "itemId": "estop",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度超程倍率",
+          "itemId": "brother_feedOvertravelOverride",
+          "brandSpecific": true
+        },
+        {
+          "source": "快速进给倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工程序",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工个数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "下一把刀具号",
+          "itemId": "toolNext",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀槽号",
+          "itemId": "brother_toolPot",
+          "brandSpecific": true
+        },
+        {
+          "source": "上电时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "state",
+        "workMode",
+        "estop",
+        "spindleSpeed",
+        "feedRate",
+        "spindleOverride",
+        "brother_feedOvertravelOverride",
+        "rapidOverride",
+        "program",
+        "partCount",
+        "toolNumber",
+        "toolNext",
+        "brother_toolPot",
+        "powerOnTime",
+        "cycleTime",
+        "runTime",
+        "cutTime",
+        "alarm"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "brother.sim",
+          "brandId": "brother",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "兄弟模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "brother.custom",
+          "brandId": "brother",
+          "kind": "stub",
+          "protocol": "brother",
+          "phase": 2,
+          "displayName": "兄弟协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "haas",
+      "nameZh": "哈斯",
+      "nameEn": "Haas",
+      "sheetHeader": "哈斯",
+      "mappings": [
+        {
+          "source": "机床序列号",
+          "itemId": "serialNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "软件版本",
+          "itemId": "softwareVersion",
+          "brandSpecific": false
+        },
+        {
+          "source": "机床型号",
+          "itemId": "haas_machineModel",
+          "brandSpecific": true
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "换刀次数",
+          "itemId": "haas_toolChangeCount",
+          "brandSpecific": true
+        },
+        {
+          "source": "刀具编号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "零件计数1",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "零件计数2",
+          "itemId": "partCountTotal",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "负载",
+          "itemId": "servoLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "坐标信息",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "总通电时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "总移动时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "最后一次循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "上一次循环时间",
+          "itemId": "haas_previousCycleTime",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "serialNumber",
+        "softwareVersion",
+        "haas_machineModel",
+        "workMode",
+        "state",
+        "haas_toolChangeCount",
+        "toolNumber",
+        "partCount",
+        "partCountTotal",
+        "spindleSpeed",
+        "servoLoad",
+        "alarm",
+        "machinePosition",
+        "powerOnTime",
+        "runTime",
+        "cycleTime",
+        "haas_previousCycleTime"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "haas.sim",
+          "brandId": "haas",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "哈斯模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "haas.mtconnect",
+          "brandId": "haas",
+          "kind": "stub",
+          "protocol": "mtconnect",
+          "phase": 2,
+          "displayName": "哈斯 MTConnect",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.30"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 5000
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 5000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": "/current"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "baoyuan",
+      "nameZh": "宝元",
+      "nameEn": "Baoyuan/LNC",
+      "sheetHeader": "宝元",
+      "mappings": [
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工件数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "快速倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "手轮倍率",
+          "itemId": "baoyuan_handwheelOverride",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标X",
+          "itemId": "machinePositionX",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标Y",
+          "itemId": "machinePositionY",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标Z",
+          "itemId": "machinePositionZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标X",
+          "itemId": "absolutePositionX",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标Y",
+          "itemId": "absolutePositionY",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标Z",
+          "itemId": "absolutePositionZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标X",
+          "itemId": "relativePositionX",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标Y",
+          "itemId": "relativePositionY",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标Z",
+          "itemId": "relativePositionZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余距离X",
+          "itemId": "distanceToGoX",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余距离Y",
+          "itemId": "distanceToGoY",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余距离Z",
+          "itemId": "distanceToGoZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间毫秒值",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间小时值",
+          "itemId": "baoyuan_cycleTimeHours",
+          "brandSpecific": true
+        },
+        {
+          "source": "加工时间毫秒值",
+          "itemId": "baoyuan_machiningTimeMs",
+          "brandSpecific": true
+        },
+        {
+          "source": "加工时间小时值",
+          "itemId": "baoyuan_machiningTimeHours",
+          "brandSpecific": true
+        },
+        {
+          "source": "告警状态",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "警报号",
+          "itemId": "alarmNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "警告号（",
+          "itemId": "baoyuan_warningNumber",
+          "brandSpecific": true
+        },
+        {
+          "source": "程序行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序名备注",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "M代码",
+          "itemId": "baoyuan_mCode",
+          "brandSpecific": true
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "state",
+        "partCount",
+        "rapidOverride",
+        "feedOverride",
+        "baoyuan_handwheelOverride",
+        "spindleSpeed",
+        "feedRate",
+        "machinePositionX",
+        "machinePositionY",
+        "machinePositionZ",
+        "absolutePositionX",
+        "absolutePositionY",
+        "absolutePositionZ",
+        "relativePositionX",
+        "relativePositionY",
+        "relativePositionZ",
+        "distanceToGoX",
+        "distanceToGoY",
+        "distanceToGoZ",
+        "cycleTime",
+        "baoyuan_cycleTimeHours",
+        "baoyuan_machiningTimeMs",
+        "baoyuan_machiningTimeHours",
+        "alarm",
+        "alarmNumber",
+        "baoyuan_warningNumber",
+        "programLine",
+        "program",
+        "programComment",
+        "baoyuan_mCode",
+        "toolNumber"
+      ],
+      "models": [
+        {
+          "id": "baoyuan-t5800",
+          "name": "T5800系列"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "baoyuan.sim",
+          "brandId": "baoyuan",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "宝元模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "baoyuan.custom",
+          "brandId": "baoyuan",
+          "kind": "stub",
+          "protocol": "baoyuan",
+          "phase": 2,
+          "displayName": "宝元协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kede",
+      "nameZh": "科德",
+      "nameEn": "KEDE",
+      "sheetHeader": "科德",
+      "mappings": [
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "快速移动倍率",
+          "itemId": "rapidOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "G00速度",
+          "itemId": "kede_g00Speed",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前NC程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前NC程序段号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "G00运行时间",
+          "itemId": "kede_g00RunTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "G01运行时间",
+          "itemId": "kede_g01RunTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "系统启动时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余加工时间",
+          "itemId": "remainTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "机床坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序坐标",
+          "itemId": "kede_programPosition",
+          "brandSpecific": true
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "轴名称",
+          "itemId": "kede_axisNames",
+          "brandSpecific": true
+        },
+        {
+          "source": "指令速度",
+          "itemId": "kede_commandVelocity",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际速度",
+          "itemId": "kede_actualVelocity",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际加速度",
+          "itemId": "kede_actualAcceleration",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际加加速度",
+          "itemId": "kede_actualJerk",
+          "brandSpecific": true
+        },
+        {
+          "source": "反向跃冲补偿值",
+          "itemId": "kede_backlashJumpComp",
+          "brandSpecific": true
+        },
+        {
+          "source": "逻辑轴补偿后机床坐标系坐标",
+          "itemId": "kede_logicalAxisCompensated",
+          "brandSpecific": true
+        },
+        {
+          "source": "逻辑轴补偿前机床坐标系坐标",
+          "itemId": "kede_logicalAxisRaw",
+          "brandSpecific": true
+        },
+        {
+          "source": "逻辑轴双驱轴误差1",
+          "itemId": "kede_gantryError1",
+          "brandSpecific": true
+        },
+        {
+          "source": "逻辑轴双驱轴误差2",
+          "itemId": "kede_gantryError2",
+          "brandSpecific": true
+        },
+        {
+          "source": "逻辑轴双驱轴误差3",
+          "itemId": "kede_gantryError3",
+          "brandSpecific": true
+        },
+        {
+          "source": "轮廓误差",
+          "itemId": "kede_contourError",
+          "brandSpecific": true
+        },
+        {
+          "source": "刀尖点指令速度",
+          "itemId": "kede_toolTipCommandSpeed",
+          "brandSpecific": true
+        },
+        {
+          "source": "刀头点指令速度",
+          "itemId": "kede_toolHeadCommandSpeed",
+          "brandSpecific": true
+        },
+        {
+          "source": "驱动运行状态",
+          "itemId": "kede_driveState",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际反馈速度",
+          "itemId": "kede_feedbackSpeed",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际励磁电流",
+          "itemId": "kede_fieldCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际转矩(推力)电流",
+          "itemId": "kede_torqueCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "实际输出转矩",
+          "itemId": "kede_outputTorque",
+          "brandSpecific": true
+        },
+        {
+          "source": "电流负载率",
+          "itemId": "kede_currentLoadRate",
+          "brandSpecific": true
+        },
+        {
+          "source": "电流负载率峰值",
+          "itemId": "kede_currentLoadPeak",
+          "brandSpecific": true
+        },
+        {
+          "source": "速度跟踪误差",
+          "itemId": "kede_speedTrackError",
+          "brandSpecific": true
+        },
+        {
+          "source": "转矩(推力)负载率",
+          "itemId": "kede_torqueLoadRate",
+          "brandSpecific": true
+        },
+        {
+          "source": "刀具列表",
+          "itemId": "kede_toolList",
+          "brandSpecific": true
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "state",
+        "workMode",
+        "feedOverride",
+        "rapidOverride",
+        "kede_g00Speed",
+        "spindleSpeed",
+        "spindleOverride",
+        "program",
+        "programLine",
+        "kede_g00RunTime",
+        "kede_g01RunTime",
+        "powerOnTime",
+        "runTime",
+        "remainTime",
+        "machinePosition",
+        "kede_programPosition",
+        "distanceToGo",
+        "kede_axisNames",
+        "kede_commandVelocity",
+        "kede_actualVelocity",
+        "kede_actualAcceleration",
+        "kede_actualJerk",
+        "kede_backlashJumpComp",
+        "kede_logicalAxisCompensated",
+        "kede_logicalAxisRaw",
+        "kede_gantryError1",
+        "kede_gantryError2",
+        "kede_gantryError3",
+        "kede_contourError",
+        "kede_toolTipCommandSpeed",
+        "kede_toolHeadCommandSpeed",
+        "kede_driveState",
+        "kede_feedbackSpeed",
+        "kede_fieldCurrent",
+        "kede_torqueCurrent",
+        "kede_outputTorque",
+        "kede_currentLoadRate",
+        "kede_currentLoadPeak",
+        "kede_speedTrackError",
+        "kede_torqueLoadRate",
+        "kede_toolList",
+        "alarm"
+      ],
+      "models": [
+        {
+          "id": "kede-gnc60",
+          "name": "GNC60"
+        },
+        {
+          "id": "kede-gnc62",
+          "name": "GNC62"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "kede.sim",
+          "brandId": "kede",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "科德模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "kede.custom",
+          "brandId": "kede",
+          "kind": "stub",
+          "protocol": "kede",
+          "phase": 2,
+          "displayName": "科德协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "citizen",
+      "nameZh": "三菱西铁城",
+      "nameEn": "Citizen (Mitsubishi)",
+      "sheetHeader": "三菱西铁城",
+      "mappings": [
+        {
+          "source": "操作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序注释",
+          "itemId": "programComment",
+          "brandSpecific": false
+        },
+        {
+          "source": "加工数量",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械位置",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序位置",
+          "itemId": "citizen_programPosition",
+          "brandSpecific": true
+        },
+        {
+          "source": "当前位置",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余位置",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "自动启动时间",
+          "itemId": "citizen_autoStartTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "累计开机时间",
+          "itemId": "powerOnTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴设定转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴实际转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给设定速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给实际速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴负载",
+          "itemId": "spindleLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴温度",
+          "itemId": "spindleTemp",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "workMode",
+        "state",
+        "program",
+        "programComment",
+        "partCount",
+        "cycleTime",
+        "machinePosition",
+        "citizen_programPosition",
+        "absolutePosition",
+        "distanceToGo",
+        "citizen_autoStartTime",
+        "powerOnTime",
+        "spindleSpeedCmd",
+        "spindleSpeed",
+        "feedRateCmd",
+        "feedRate",
+        "spindleLoad",
+        "feedOverride",
+        "toolNumber",
+        "spindleTemp"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "citizen.sim",
+          "brandId": "citizen",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "西铁城模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "citizen.mitsubishi",
+          "brandId": "citizen",
+          "kind": "stub",
+          "protocol": "mitsubishi",
+          "phase": 2,
+          "displayName": "西铁城（三菱）协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dmg-mori",
+      "nameZh": "三菱森精机",
+      "nameEn": "DMG Mori (Mitsubishi)",
+      "sheetHeader": "三菱森精机",
+      "mappings": [
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "程序号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "执行代码段",
+          "itemId": "programBlock",
+          "brandSpecific": false
+        },
+        {
+          "source": "产量",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否急停",
+          "itemId": "estop",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否运行",
+          "itemId": "isRunning",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否复位",
+          "itemId": "isReset",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否切削",
+          "itemId": "isCutting",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "执行行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "x轴负载",
+          "itemId": "axisLoadX",
+          "brandSpecific": false
+        },
+        {
+          "source": "y轴负载",
+          "itemId": "axisLoadY",
+          "brandSpecific": false
+        },
+        {
+          "source": "z轴负载",
+          "itemId": "axisLoadZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "state",
+        "workMode",
+        "program",
+        "programBlock",
+        "partCount",
+        "feedOverride",
+        "estop",
+        "isRunning",
+        "isReset",
+        "isCutting",
+        "toolNumber",
+        "alarm",
+        "feedRate",
+        "spindleSpeed",
+        "spindleOverride",
+        "machinePosition",
+        "programLine",
+        "axisLoadX",
+        "axisLoadY",
+        "axisLoadZ"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "dmg-mori.sim",
+          "brandId": "dmg-mori",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "森精机模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "dmg-mori.mitsubishi",
+          "brandId": "dmg-mori",
+          "kind": "stub",
+          "protocol": "mitsubishi",
+          "phase": 2,
+          "displayName": "森精机（三菱）协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jdsoft",
+      "nameZh": "精雕",
+      "nameEn": "JDSoft",
+      "sheetHeader": "精雕",
+      "mappings": [
+        {
+          "source": "机床坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀具号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前程序号",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前主程序号",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行时间",
+          "itemId": "runTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "切削时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "产量",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴电流",
+          "itemId": "jdsoft_spindleCurrent",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴功率",
+          "itemId": "jdsoft_spindlePower",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴转矩",
+          "itemId": "jdsoft_spindleTorque",
+          "brandSpecific": true
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "x轴负载",
+          "itemId": "axisLoadX",
+          "brandSpecific": false
+        },
+        {
+          "source": "y轴负载",
+          "itemId": "axisLoadY",
+          "brandSpecific": false
+        },
+        {
+          "source": "z轴负载",
+          "itemId": "axisLoadZ",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴1电流负载率",
+          "itemId": "jdsoft_spindle1CurrentLoad",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴1功率负载率",
+          "itemId": "jdsoft_spindle1PowerLoad",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴1转矩负载率",
+          "itemId": "jdsoft_spindle1TorqueLoad",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴温度",
+          "itemId": "spindleTemp",
+          "brandSpecific": false
+        },
+        {
+          "source": "电控柜温度",
+          "itemId": "jdsoft_cabinetTemp",
+          "brandSpecific": true
+        }
+      ],
+      "itemIds": [
+        "machinePosition",
+        "absolutePosition",
+        "relativePosition",
+        "spindleSpeed",
+        "feedRate",
+        "toolNumber",
+        "program",
+        "programMain",
+        "state",
+        "workMode",
+        "runTime",
+        "cutTime",
+        "cycleTime",
+        "partCount",
+        "spindleOverride",
+        "feedOverride",
+        "jdsoft_spindleCurrent",
+        "jdsoft_spindlePower",
+        "jdsoft_spindleTorque",
+        "alarm",
+        "axisLoadX",
+        "axisLoadY",
+        "axisLoadZ",
+        "jdsoft_spindle1CurrentLoad",
+        "jdsoft_spindle1PowerLoad",
+        "jdsoft_spindle1TorqueLoad",
+        "spindleTemp",
+        "jdsoft_cabinetTemp"
+      ],
+      "models": [
+        {
+          "id": "jdsoft-jd50",
+          "name": "JD50"
+        },
+        {
+          "id": "jdsoft-jd60",
+          "name": "JD60"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "jdsoft.sim",
+          "brandId": "jdsoft",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "精雕模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "jdsoft.custom",
+          "brandId": "jdsoft",
+          "kind": "stub",
+          "protocol": "jdsoft",
+          "phase": 2,
+          "displayName": "精雕协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delta",
+      "nameZh": "台达",
+      "nameEn": "Delta",
+      "sheetHeader": "台达",
+      "mappings": [
+        {
+          "source": "系统类型",
+          "itemId": "systemType",
+          "brandSpecific": false
+        },
+        {
+          "source": "序列号",
+          "itemId": "serialNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "版本信息",
+          "itemId": "softwareVersion",
+          "brandSpecific": false
+        },
+        {
+          "source": "主程序名",
+          "itemId": "programMain",
+          "brandSpecific": false
+        },
+        {
+          "source": "当前执行程序名",
+          "itemId": "program",
+          "brandSpecific": false
+        },
+        {
+          "source": "执行程序路径",
+          "itemId": "programPath",
+          "brandSpecific": false
+        },
+        {
+          "source": "执行行号",
+          "itemId": "programLine",
+          "brandSpecific": false
+        },
+        {
+          "source": "运行状态",
+          "itemId": "state",
+          "brandSpecific": false
+        },
+        {
+          "source": "工作模式",
+          "itemId": "workMode",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否报警",
+          "itemId": "alarm",
+          "brandSpecific": false
+        },
+        {
+          "source": "是否切削",
+          "itemId": "isCutting",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定主轴转速",
+          "itemId": "spindleSpeedCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "设定进给速度",
+          "itemId": "feedRateCmd",
+          "brandSpecific": false
+        },
+        {
+          "source": "主轴负载",
+          "itemId": "spindleLoad",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际主轴转速",
+          "itemId": "spindleSpeed",
+          "brandSpecific": false
+        },
+        {
+          "source": "实际进给速度",
+          "itemId": "feedRate",
+          "brandSpecific": false
+        },
+        {
+          "source": "暂停时间",
+          "itemId": "delta_dwellTime",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴刀号",
+          "itemId": "toolNumber",
+          "brandSpecific": false
+        },
+        {
+          "source": "刀库刀号",
+          "itemId": "delta_magazineTool",
+          "brandSpecific": true
+        },
+        {
+          "source": "主轴倍率",
+          "itemId": "spindleOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "进给倍率",
+          "itemId": "feedOverride",
+          "brandSpecific": false
+        },
+        {
+          "source": "G代码",
+          "itemId": "programBlock",
+          "brandSpecific": false
+        },
+        {
+          "source": "机械坐标",
+          "itemId": "machinePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "绝对坐标",
+          "itemId": "absolutePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "相对坐标",
+          "itemId": "relativePosition",
+          "brandSpecific": false
+        },
+        {
+          "source": "剩余坐标",
+          "itemId": "distanceToGo",
+          "brandSpecific": false
+        },
+        {
+          "source": "偏移坐标",
+          "itemId": "delta_offsetPosition",
+          "brandSpecific": true
+        },
+        {
+          "source": "累计加工时间",
+          "itemId": "cutTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "循环时间",
+          "itemId": "cycleTime",
+          "brandSpecific": false
+        },
+        {
+          "source": "目标加工数",
+          "itemId": "partCountTarget",
+          "brandSpecific": false
+        },
+        {
+          "source": "完成加工数",
+          "itemId": "partCount",
+          "brandSpecific": false
+        },
+        {
+          "source": "报警信息",
+          "itemId": "alarm",
+          "brandSpecific": false
+        }
+      ],
+      "itemIds": [
+        "systemType",
+        "serialNumber",
+        "softwareVersion",
+        "programMain",
+        "program",
+        "programPath",
+        "programLine",
+        "state",
+        "workMode",
+        "alarm",
+        "isCutting",
+        "spindleSpeedCmd",
+        "feedRateCmd",
+        "spindleLoad",
+        "spindleSpeed",
+        "feedRate",
+        "delta_dwellTime",
+        "toolNumber",
+        "delta_magazineTool",
+        "spindleOverride",
+        "feedOverride",
+        "programBlock",
+        "machinePosition",
+        "absolutePosition",
+        "relativePosition",
+        "distanceToGo",
+        "delta_offsetPosition",
+        "cutTime",
+        "cycleTime",
+        "partCountTarget",
+        "partCount"
+      ],
+      "models": [],
+      "adapters": [
+        {
+          "id": "delta.sim",
+          "brandId": "delta",
+          "kind": "simulator",
+          "protocol": "sim",
+          "phase": 1,
+          "displayName": "台达模拟器",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "127.0.0.1"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            }
+          ]
+        },
+        {
+          "id": "delta.custom",
+          "brandId": "delta",
+          "kind": "stub",
+          "protocol": "delta",
+          "phase": 2,
+          "displayName": "台达协议",
+          "parameters": [
+            {
+              "name": "host",
+              "type": "string",
+              "label": "主机",
+              "required": true,
+              "default": "192.168.1.60"
+            },
+            {
+              "name": "port",
+              "type": "int",
+              "label": "端口",
+              "required": true,
+              "default": 8193
+            },
+            {
+              "name": "timeoutMs",
+              "type": "int",
+              "label": "超时 (ms)",
+              "required": false,
+              "default": 3000
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "label": "路径",
+              "required": false,
+              "default": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "genericAdapters": [
+    {
+      "id": "generic.ftp",
+      "brandId": null,
+      "kind": "stub",
+      "protocol": "ftp",
+      "phase": 2,
+      "displayName": "通用 FTP / 共享",
+      "parameters": [
+        {
+          "name": "host",
+          "type": "string",
+          "label": "主机",
+          "required": true,
+          "default": "192.168.1.50"
+        },
+        {
+          "name": "port",
+          "type": "int",
+          "label": "端口",
+          "required": true,
+          "default": 21
+        },
+        {
+          "name": "timeoutMs",
+          "type": "int",
+          "label": "超时 (ms)",
+          "required": false,
+          "default": 8000
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "label": "路径或共享",
+          "required": false,
+          "default": "/"
+        }
+      ],
+      "note": "Sheet2「Other其他」列为 ftp/共享，不是第 20 个品牌。任何品牌都可以改用这个适配器，第二阶段再实现读取。"
+    }
+  ]
+}

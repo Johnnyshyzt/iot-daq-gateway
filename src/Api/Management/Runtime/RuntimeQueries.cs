@@ -192,17 +192,20 @@ public sealed class RuntimeQueries
     public async Task<DeviceTestResult> TestDeviceAsync(string id, CancellationToken cancellationToken)
     {
         var device = _store.GetDevice(id);
-        if (string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal))
+        if (string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal)
+            || device.Spec.Adapter.EndsWith(".sim", StringComparison.Ordinal))
         {
             var fake = new DeviceTestResult
             {
                 DeviceId = id,
                 Ok = true,
                 Adapter = device.Spec.Adapter,
-                Message = "Fake 适配器握手成功（未连接真实机床）",
+                Message = string.Equals(device.Spec.Adapter, "fanuc.fake", StringComparison.Ordinal)
+                    ? "Fake 适配器握手成功（未连接真实机床）"
+                    : "模拟器握手成功（未连接真实机床）",
                 LatencyMs = 1
             };
-            _store.AppendLog($"设备 {id} 连接测试成功：Fake");
+            _store.AppendLog($"设备 {id} 连接测试成功：{device.Spec.Adapter}");
             return fake;
         }
 
@@ -213,7 +216,7 @@ public sealed class RuntimeQueries
                 DeviceId = id,
                 Ok = false,
                 Adapter = device.Spec.Adapter,
-                Message = "M1 只支持 fanuc.fake 与 fanuc.focas"
+                Message = "该适配器的真实驱动在第二阶段实现，当前请使用模拟器。"
             };
         }
 
@@ -267,14 +270,16 @@ public sealed class RuntimeQueries
 
     private static DeviceHealthView ToHealth(DeviceDocument device, DateTimeOffset now, ConfigBundle published)
     {
+        var simulator = device.Spec.Adapter == "fanuc.fake"
+            || device.Spec.Adapter.EndsWith(".sim", StringComparison.Ordinal);
         var status = !device.Spec.Enabled
             ? "disabled"
-            : device.Spec.Adapter == "fanuc.fake"
+            : simulator
                 ? "online"
                 : "offline";
         var message = status switch
         {
-            "online" => "Fake 适配器模拟在线",
+            "online" => device.Spec.Adapter == "fanuc.fake" ? "Fake 适配器模拟在线" : "模拟器在线",
             "offline" => "采集未启动，当前是模拟运行态",
             _ => "设备已禁用"
         };

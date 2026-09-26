@@ -50,7 +50,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://127.0.0.1:5080 发布配置，同一进程会重新加载 data\published。现场不需要 .NET SDK。"
+sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://127.0.0.1:5080 发布配置，同一进程会重新加载数据库里的已发布配置。现场不需要 .NET SDK。"
 sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul
 
 if not exist "%~dp0service.env" (
@@ -77,7 +77,7 @@ echo 页面:   http://127.0.0.1:5080
 echo 登录:   现场模式不使用 admin/admin。一次性密码在 data\auth\bootstrap-password.txt
 echo         登录后必须修改密码。角色仍是本机 admin / engineer / viewer。
 echo MQTT:   密码只在 service.env。修改后重新以管理员运行本脚本。
-echo 改配置: 在页面发布。采集读取 data\published，不必为此重启服务。
+echo 改配置: 在页面发布。采集读取数据库里的已发布配置，不必为此重启服务。
 echo 日志:   %~dp0logs\
 echo 状态:   sc query %SERVICE_NAME%
 echo 卸载:   以管理员运行 uninstall-service.bat

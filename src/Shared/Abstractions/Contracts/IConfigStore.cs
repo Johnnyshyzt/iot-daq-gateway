@@ -3,11 +3,10 @@ using Gateway.Abstractions.Models;
 namespace Gateway.Abstractions.Contracts;
 
 /// <summary>
-/// File-backed draft configuration. YAML files are the source of truth;
-/// a database must not become the only copy. Each document's fields are
-/// defined by the JSON Schema files under <c>schemas/</c>.
-/// The Api module's ConfigStore is the M1 file store and does not implement this interface yet.
-/// Collector reads published YAML directly and does not register an implementation.
+/// Boundary sketch for draft documents. The running store keeps draft and published
+/// configuration in the database and does not implement this interface yet.
+/// Relative YAML paths describe the import/export bundle. Field shapes still follow
+/// the JSON Schema files under <c>schemas/</c>.
 /// </summary>
 public interface IConfigStore
 {

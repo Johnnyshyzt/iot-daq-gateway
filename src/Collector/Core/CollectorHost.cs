@@ -1,3 +1,4 @@
+using Adapters.Cnc;
 using Adapters.Fanuc;
 using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Contracts;
@@ -5,7 +6,6 @@ using Gateway.Host.Acquisition;
 using Gateway.Host.Configuration;
 using Gateway.Host.Logging;
 using Gateway.Host.Programs;
-using Gateway.Host.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -32,17 +32,15 @@ public static class CollectorHost
         return services;
     }
 
-    public static IServiceCollection AddCollector(this IServiceCollection services, string configPath)
+    public static IServiceCollection AddCollector(this IServiceCollection services)
     {
-        var fullPath = Path.GetFullPath(configPath);
-        services.AddSingleton(new GatewayConfigSource(fullPath));
-        services.AddSingleton(_ => new GatewayConfigHolder(GatewayConfigLoader.Load(fullPath).Configuration));
+        services.AddSingleton(sp => new GatewayConfigHolder(sp.GetRequiredService<IRuntimeConfigSource>().Load().Configuration));
         services.AddFanucAdapters();
+        services.AddCncAdapters();
         services.AddSingleton<LiveGateway>();
         services.AddSingleton<ICollectorControl>(sp => sp.GetRequiredService<LiveGateway>());
         services.AddHostedService(sp => sp.GetRequiredService<LiveGateway>());
         services.AddSingleton<IProgramService, FeatureGatedProgramService>();
-        services.AddHostedService<ConfigReloadWatcher>();
         services.AddHostedService<AcquisitionWorker>();
         return services;
     }

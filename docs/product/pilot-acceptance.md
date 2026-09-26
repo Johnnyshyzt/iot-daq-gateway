@@ -4,7 +4,7 @@ M1 是 Open Core：现场一台 Windows x64 Host，浏览器即 Studio。本仓�
 
 ## 没有机床时可以承诺的
 
-- 工程师只在 `http://127.0.0.1:5080` 里完成：`fanuc.fake` 设备、点位、MQTT、校验、发布、回滚。采集读 `data/published`，同一进程重载。
+- 工程师只在 `http://127.0.0.1:5080` 里完成：`fanuc.fake` 设备、点位、MQTT、校验、发布、回滚。采集读数据库里的已发布配置，同一进程重载。
 - 订阅 `daq/#` 能看到 Fake 的 `state` / `alarm` / `program` 和每轮 `$status`。`state` 按大约 60 秒相位在 `IDLE`、`RUNNING`、`ALARM` 之间变化，`program` 为 `O0001`。这是桩，不是机床。
 - Windows x64 包里 FOCAS 适配器已经接上。不放库时进程继续提供页面。设备测试对 `fanuc.focas` 走 `cnc_allclibhndl3`，缺库时中文失败（「未找到 Fwlib64.dll」），不会因为 TCP 通了就显示成功。这条用无库测试覆盖，没有机床握手记录。
 - 设备测试对 Fake 返回「Fake 适配器握手成功（未连接真实机床）」。
@@ -30,7 +30,7 @@ M1 是 Open Core：现场一台 Windows x64 Host，浏览器即 Studio。本仓�
 - [ ] MQTT 能订到 `daq/#`。`state` 随时间按相位变化，而不是停在某一台真实机床的值
 - [ ] Broker 要求账号时：`service.env` 里有 `MQTT_USER` / `MQTT_PASSWORD`，`run-console.bat` 或 `install-service.bat` 已加载它，日志出现 `MQTT connected to`。见 [ops-field.md](../ops-field.md)
 - [ ] 页面回滚一次，采集仍在跑
-- [ ] 按 [ops-field.md](../ops-field.md) 做一次升级演练：`data\published` 还在，版本号已变
+- [ ] 按 [ops-field.md](../ops-field.md) 做一次升级演练：`data\gateway.db` 还在，版本号已变
 - [ ] **不放置** `Fwlib64.dll`，把一台设备改成 `fanuc.focas` 并做连接测试：页面失败原文含「未找到 Fwlib64.dll」，进程不退出。发布后设备 offline。这一条只证明「缺库时诚实失败」
 
 出发前清单未全过，不去客户现场做 FOCAS。

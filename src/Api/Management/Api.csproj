@@ -11,6 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Contracts\Studio.Contracts.csproj" />
     <ProjectReference Include="..\..\Shared\Abstractions\Gateway.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Shared\Catalog\Cnc.Catalog.csproj" />
+    <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 </Project>

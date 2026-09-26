@@ -25,10 +25,10 @@
 
 范围内包括：
 
-- **Fake 路径。** `fanuc.fake` 设备、点位、MQTT、校验、发布、回滚、运行态。工程师在页面里完成，不手写 YAML。采集读 `data/published`，同一进程重载。
+- **Fake 路径。** `fanuc.fake` 设备、点位、MQTT、校验、发布、回滚、运行态。工程师在页面里完成，不手写 YAML。采集读数据库里的已发布配置，同一进程重载。
 - **MQTT 北向 JSON。** 点位主题 `daq/{site}/{deviceId}/{point}`，状态主题 `daq/{site}/{deviceId}/$status`。
 - **发那科南向适配器源码。** 设备适配器只能是 `fanuc.fake` 或 `fanuc.focas`。`fanuc.focas` 在 Windows x64 上对客户自备的 `Fwlib64.dll` 做 P/Invoke。缺库时进程继续跑，设备测试给出中文失败，不会因为 TCP 通了就显示成功。
-- **配置。** YAML 是单一事实源。页面改草稿（`data/draft`），校验通过后发布到 `data/published`。历史在 `data/revisions`。数据库不是配置的唯一副本。
+- **配置。** 数据库是单一事实源。页面改草稿槽位，校验通过后发布到已发布槽位。历史在 `config_revisions`。YAML / JSON 只用于空库导入和显式导入导出。
 
 本附件 **不出售许可证密钥**。M1 的许可证桩不拦截请求，也没有许可证服务器。商业部分是下面的实施与支持，金额见报价单。
 
@@ -90,7 +90,7 @@
 | 支持范围 | 已安装的这一台 Host：升级协助、故障通讯、版本说明 |
 | 不含 | 新品牌、OPC UA、Fleet、许可证服务器，以及第 2 节其余各项 |
 
-升级时保留 `data\published`（采集读这里），以及 `data\draft`、`data\revisions`、`data\auth`、`service.env` 和现场的 `Fwlib64.dll`。不要先删掉安装目录再解压。步骤见 [ops-field.md](../ops-field.md)。
+升级时保留 `data\gateway.db`（采集读这里），以及 `data\auth`、`service.env` 和现场的 `Fwlib64.dll`。不要先删掉安装目录再解压。步骤见 [ops-field.md](../ops-field.md)。
 
 ## 7. 责任与诚实
 
