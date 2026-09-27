@@ -143,8 +143,10 @@ public sealed class ModbusDriver : CatalogProtocolDriver
         var request = input
             ? ModbusCodec.ReadInput(1, (byte)Settings.UnitId, address, count)
             : ModbusCodec.ReadHolding(1, (byte)Settings.UnitId, address, count);
+        Trace("tx", request, "modbus fc=" + (input ? "04" : "03") + " unit=" + Settings.UnitId.ToString(System.Globalization.CultureInfo.InvariantCulture) + " addr=" + address.ToString(System.Globalization.CultureInfo.InvariantCulture));
         await stream.WriteAsync(request, cancellationToken).ConfigureAwait(false);
         var frame = await ReadResponseAsync(stream, cancellationToken).ConfigureAwait(false);
+        Trace("rx", frame, "modbus response");
         if (!ModbusCodec.TryRegisters(frame, out var registers))
         {
             throw new InvalidOperationException("Modbus 应答不是功能码 03/04 的寄存器数据");

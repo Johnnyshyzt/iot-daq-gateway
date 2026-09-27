@@ -20,8 +20,11 @@ import {
   Cpu,
   BadgeCheck,
   Package,
+  Stethoscope,
+  Users,
+  Lock,
 } from 'lucide-react'
-import { type SidebarData } from '../types'
+import { type NavGroup, type NavItem, type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
   user: {
@@ -50,12 +53,15 @@ export const sidebarData: SidebarData = {
         { title: 'OPC UA', url: '/integrate/opcua', icon: Cable },
         { title: '发布', url: '/publish', icon: Upload },
         { title: '运行态', url: '/runtime', icon: Radio },
+        { title: '现场调试', url: '/commission', icon: Stethoscope },
       ],
     },
     {
       title: '系统',
       items: [
         { title: '系统', url: '/settings', icon: Settings },
+        { title: '用户', url: '/users', icon: Users, adminOnly: true },
+        { title: 'HTTPS', url: '/https', icon: Lock, adminOnly: true },
         { title: '授权许可', url: '/license', icon: BadgeCheck },
         { title: '升级', url: '/upgrade', icon: Package },
         { title: '审计', url: '/audit', icon: ScrollText },
@@ -63,4 +69,25 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
+}
+
+export function sidebarForRole(role: string | undefined): SidebarData {
+  const admin = role === 'admin'
+  const navGroups: NavGroup[] = sidebarData.navGroups
+    .map((group) => ({ ...group, items: filterItems(group.items, admin) }))
+    .filter((group) => group.items.length > 0)
+  return { ...sidebarData, navGroups }
+}
+
+function filterItems(items: NavItem[], admin: boolean): NavItem[] {
+  const next: NavItem[] = []
+  for (const item of items) {
+    if (item.items) {
+      const children = item.items.filter((child) => admin || !child.adminOnly)
+      if (children.length > 0) next.push({ ...item, items: children })
+    } else if (admin || !item.adminOnly) {
+      next.push(item)
+    }
+  }
+  return next
 }

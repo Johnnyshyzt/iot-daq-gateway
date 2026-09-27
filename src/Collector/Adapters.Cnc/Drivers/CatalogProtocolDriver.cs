@@ -133,4 +133,7 @@ public abstract class CatalogProtocolDriver : ISouthboundAdapter, IConnectionPro
 
     protected string ItemUnit(string itemId) =>
         CncCatalog.Current.FindItem(itemId)?.Unit ?? "";
+
+    protected void Trace(string direction, ReadOnlySpan<byte> raw, string? decoded) =>
+        ProtocolTraceHub.Write(DeviceId, direction, raw, decoded);
 }

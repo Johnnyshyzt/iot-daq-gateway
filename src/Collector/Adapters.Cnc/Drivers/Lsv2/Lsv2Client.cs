@@ -21,8 +21,11 @@ public sealed class Lsv2Client : IAsyncDisposable
     {
         var stream = _stream ?? throw new InvalidOperationException("LSV2 尚未连接");
         var telegram = Lsv2Codec.Encode(command, payload);
+        ProtocolTraceHub.WriteCurrent("tx", telegram, "lsv2 " + command);
         await stream.WriteAsync(telegram, cancellationToken).ConfigureAwait(false);
-        return await ReadFrameAsync(stream, cancellationToken).ConfigureAwait(false);
+        var frame = await ReadFrameAsync(stream, cancellationToken).ConfigureAwait(false);
+        ProtocolTraceHub.WriteCurrent("rx", frame.Payload, "lsv2 " + frame.Command);
+        return frame;
     }
 
     public static async Task<Lsv2Frame> ReadFrameAsync(Stream stream, CancellationToken cancellationToken)

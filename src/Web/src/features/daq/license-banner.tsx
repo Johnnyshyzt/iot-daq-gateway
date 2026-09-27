@@ -25,6 +25,10 @@ export type LicenseSnapshot = {
   banner?: string | null
   collectionContinues: boolean
   demoMode: boolean
+  tamperCode?: string
+  tamperMessage?: string | null
+  blocksConfig?: boolean
+  fingerprintNote?: string
 }
 
 export function useLicense() {
@@ -41,7 +45,11 @@ export function LicenseBanner() {
   const license = useLicense()
   if (!license?.banner) return null
   return (
-    <div className='border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-950 dark:text-amber-100'>
+    <div
+      data-testid='license-banner'
+      data-tamper={license.tamperCode || ''}
+      className='border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-950 dark:text-amber-100'
+    >
       <span className='font-medium'>授权：</span>
       {license.banner}{' '}
       <Link to='/license' className='underline'>

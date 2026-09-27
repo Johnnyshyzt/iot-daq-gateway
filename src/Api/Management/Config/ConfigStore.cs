@@ -35,6 +35,11 @@ public sealed partial class ConfigStore
     /// </summary>
     public Func<int, int, int, int, string?>? LimitIncrease { get; set; }
 
+    /// <summary>
+    /// Returns a Chinese message when clock rollback or a broken license-state seal blocks configuration edits.
+    /// </summary>
+    public Func<string?>? SecurityBlock { get; set; }
+
     public (int Devices, int Points) CountUsage(string slot)
     {
         lock (_gate)
@@ -121,6 +126,7 @@ public sealed partial class ConfigStore
 
     public DeviceDocument UpsertDevice(string id, DeviceDocument document)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             EnsureSafeId(id);
@@ -203,6 +209,7 @@ public sealed partial class ConfigStore
 
     public void DeleteDevice(string id)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             EnsureSafeId(id);
@@ -239,6 +246,7 @@ public sealed partial class ConfigStore
 
     public PointTemplateDocument UpsertPointTemplate(string id, PointTemplateDocument document)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             EnsureSafeId(id);
@@ -298,6 +306,7 @@ public sealed partial class ConfigStore
 
     public void DeletePointTemplate(string id)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             EnsureSafeId(id);
@@ -340,6 +349,7 @@ public sealed partial class ConfigStore
 
     public PointSetDocument UpsertPoints(string deviceId, PointSetDocument document)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             EnsureSafeId(deviceId);
@@ -391,6 +401,7 @@ public sealed partial class ConfigStore
 
     public MqttSinkDocument UpsertMqtt(MqttSinkDocument document)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             document.ApiVersion = StudioApi.Version;
@@ -423,6 +434,7 @@ public sealed partial class ConfigStore
 
     public GatewayDocument UpsertGateway(GatewayDocument document)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             document.ApiVersion = StudioApi.Version;
@@ -444,6 +456,7 @@ public sealed partial class ConfigStore
 
     public CollectionResult SetCollectionEnabled(string id, bool enabled)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             var draft = ReadSlot("draft");
@@ -486,6 +499,7 @@ public sealed partial class ConfigStore
 
     public PublishOutcome Publish(string? note)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             var draft = ReadSlot("draft");
@@ -552,6 +566,7 @@ public sealed partial class ConfigStore
 
     public RollbackOutcome Rollback(string revision)
     {
+        EnsureSecurity();
         lock (_gate)
         {
             var hash = NormalizeRevision(revision);
@@ -668,6 +683,7 @@ public sealed partial class ConfigStore
 
     public void ImportJson(string json)
     {
+        EnsureSecurity();
         ConfigBundle bundle;
         try
         {
@@ -684,6 +700,7 @@ public sealed partial class ConfigStore
 
     public void ImportYaml(string yaml)
     {
+        EnsureSecurity();
         ConfigBundle bundle;
         try
         {
@@ -895,6 +912,15 @@ public sealed partial class ConfigStore
         }
 
         return bundle;
+    }
+
+    private void EnsureSecurity()
+    {
+        var message = SecurityBlock?.Invoke();
+        if (!string.IsNullOrEmpty(message))
+        {
+            throw new ConfigStoreException("security_block", message, StatusCodes.Status403Forbidden);
+        }
     }
 
     private void Guard(int beforeDevices, int afterDevices, int beforePoints, int afterPoints)

@@ -607,3 +607,29 @@ public sealed class InstalledLicenseRow
 
     public long ImportedUnixMs { get; set; }
 }
+
+public sealed class SecurityStateRow
+{
+    public int Id { get; set; } = 1;
+
+    public string Payload { get; set; } = "";
+
+    public long UpdatedUnixMs { get; set; }
+}
+
+public sealed class SelfTestRunRow
+{
+    public long Id { get; set; }
+
+    public string DeviceId { get; set; } = "";
+
+    public bool Passed { get; set; }
+
+    public string Summary { get; set; } = "";
+
+    public string StagesJson { get; set; } = "[]";
+
+    public long StartedUnixMs { get; set; }
+
+    public long FinishedUnixMs { get; set; }
+}

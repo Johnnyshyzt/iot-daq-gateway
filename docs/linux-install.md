@@ -39,6 +39,8 @@ curl -s http://127.0.0.1:5080/healthz
 
 返回版本、数据库种类、schema 版本、运行秒数、`mqttConnected`、`mqttSpoolDepth`、`mqttSpoolDropped`，没有路径、账号或报文。升级时保留 `/var/lib/iot-daq-gateway`（`gateway.db`、`auth`，以及还没发完的 `mqtt-spool`）。停服务后再拷贝数据库，见 [ops-field.md](ops-field.md)。
 
+HTTPS 不是默认。管理员在页面生成或导入证书后，执行 `sudo systemctl restart iot-daq-gateway`。没有 `data/https/binding.json` 时服务仍按 HTTP 启动。若打开了「监听所有网卡」，单元文件不必改地址；跳转打开后，浏览器访问 HTTP 端口会转到 HTTPS 端口。
+
 ## Docker Compose（Fake 演示）
 
 ```bash
@@ -49,4 +51,4 @@ docker compose -f docker/docker-compose.yml up --build
 
 命名卷 `gateway-data` 挂在 `/app/data`。第一次创建卷时，Docker 会带上镜像里的 `data/seed`。之后数据库留在卷里，改示例 YAML 不会改已经发布的配置。空目录 bind mount 盖住 `/app/data` 时看不到镜像里的种子，Host 会写入内置默认配置。
 
-这个 Compose 是 Fake 演示，Broker 主机名是 `mosquitto`。不要把它当成生产 FOCAS 路径，也不要把 5080 发布到 `0.0.0.0`。
+这个 Compose 是 Fake 演示，Broker 主机名是 `mosquitto`。不要把它当成生产 FOCAS 路径，也不要把 5080 发布到 `0.0.0.0`。`ASPNETCORE_URLS` 固定为 HTTP。页面里保存的 HTTPS 绑定只有在去掉这行并发布 HTTPS 端口、再重建容器之后才会被监听。

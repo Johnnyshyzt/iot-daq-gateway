@@ -8,10 +8,13 @@ public sealed class TokenService
     public const string DevSigningKey = "studio-m1-dev-signing-key";
     private readonly string _key;
     private readonly AccountStore _accounts;
+    private readonly IConfiguration _configuration;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> _lastSeen = new();
 
     public TokenService(IConfiguration configuration, AccountStore accounts, ILogger<TokenService> logger)
     {
         _accounts = accounts;
+        _configuration = configuration;
         _accounts.EnsureInitialized();
         _key = _accounts.SigningKey;
         if (string.Equals(_key, DevSigningKey, StringComparison.Ordinal)
@@ -24,19 +27,34 @@ public sealed class TokenService
 
     public bool MustChangePassword(string? username) => _accounts.MustChangePassword(username);
 
-    public bool TryLogin(string? username, string? password, out string token, out string role, out DateTimeOffset expiresAt)
+    public LoginOutcome Login(string? username, string? password)
     {
-        token = "";
-        role = "";
-        expiresAt = default;
-        if (!_accounts.TryAuthenticate(username, password, out role))
+        var attempt = _accounts.Authenticate(username, password);
+        if (!attempt.Ok)
         {
-            return false;
+            return new LoginOutcome { Code = attempt.Code, Message = attempt.Message };
         }
 
-        expiresAt = DateTimeOffset.UtcNow.AddHours(12);
-        token = Issue(username!.Trim(), role, expiresAt);
-        return true;
+        var minutes = SessionMinutes;
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(minutes);
+        var token = Issue(username!.Trim(), attempt.Role, expiresAt);
+        return new LoginOutcome
+        {
+            Ok = true,
+            Token = token,
+            Role = attempt.Role,
+            ExpiresAt = expiresAt,
+            Message = ""
+        };
+    }
+
+    public bool TryLogin(string? username, string? password, out string token, out string role, out DateTimeOffset expiresAt)
+    {
+        var outcome = Login(username, password);
+        token = outcome.Token;
+        role = outcome.Role;
+        expiresAt = outcome.ExpiresAt;
+        return outcome.Ok;
     }
 
     public bool TryRead(string token, out string username, out string role)
@@ -65,11 +83,6 @@ public sealed class TokenService
             return false;
         }
 
-        if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= exp)
-        {
-            return false;
-        }
-
         if (!Roles.Contains(fields[1]))
         {
             return false;
@@ -91,6 +104,15 @@ public sealed class TokenService
             return false;
         }
 
+        var key = fields[0] + ":" + fields[2];
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var seen = _lastSeen.GetOrAdd(key, now);
+        if (SessionRules.Expired(now, exp, seen, IdleMinutes))
+        {
+            return false;
+        }
+
+        _lastSeen[key] = now;
         username = fields[0];
         role = fields[1];
         return true;
@@ -102,6 +124,16 @@ public sealed class TokenService
         var sig = Convert.ToHexString(Sign(payload)).ToLowerInvariant();
         return $"{ToBase64Url(Encoding.UTF8.GetBytes(payload))}.{sig}";
     }
+
+    private int SessionMinutes =>
+        int.TryParse(_configuration["Studio:SessionMinutes"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var minutes)
+            ? Math.Clamp(minutes, 0, 10_080)
+            : 720;
+
+    private int IdleMinutes =>
+        int.TryParse(_configuration["Studio:IdleMinutes"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var minutes)
+            ? Math.Clamp(minutes, 0, 10_080)
+            : 120;
 
     private byte[] Sign(string payload) =>
         HMACSHA256.HashData(Encoding.UTF8.GetBytes(_key), Encoding.UTF8.GetBytes(payload));
@@ -121,7 +153,40 @@ public sealed class TokenService
         return Convert.FromBase64String(padded);
     }
 
-    private static readonly HashSet<string> Roles = new(StringComparer.Ordinal) { "admin", "engineer", "viewer" };
+    private static readonly HashSet<string> Roles = new(StringComparer.Ordinal) { "admin", "engineer", "operator", "viewer" };
+}
+
+public static class SessionRules
+{
+    public static bool Expired(long nowUnixSeconds, long expiresUnixSeconds, long lastSeenUnixSeconds, int idleMinutes)
+    {
+        if (nowUnixSeconds >= expiresUnixSeconds)
+        {
+            return true;
+        }
+
+        if (idleMinutes <= 0)
+        {
+            return false;
+        }
+
+        return nowUnixSeconds - lastSeenUnixSeconds >= idleMinutes * 60L;
+    }
+}
+
+public sealed class LoginOutcome
+{
+    public bool Ok { get; init; }
+
+    public string Token { get; set; } = "";
+
+    public string Role { get; set; } = "";
+
+    public DateTimeOffset ExpiresAt { get; set; }
+
+    public string Code { get; set; } = "";
+
+    public string Message { get; set; } = "";
 }
 
 public sealed class StudioAuthMiddleware(RequestDelegate next)

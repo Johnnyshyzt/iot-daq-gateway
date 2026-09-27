@@ -8,7 +8,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { sidebarData } from './data/sidebar-data'
+import { sidebarData, sidebarForRole } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { ProductMark } from './product-mark'
@@ -16,6 +16,7 @@ import { ProductMark } from './product-mark'
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const account = useAuthStore((state) => state.auth.user)
+  const nav = sidebarForRole(account?.role[0])
   const user = {
     name: account?.email || sidebarData.user.name,
     email: account?.role[0] ? roleLabel(account.role[0]) : sidebarData.user.email,
@@ -27,7 +28,7 @@ export function AppSidebar() {
         <ProductMark />
       </SidebarHeader>
       <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
+        {nav.navGroups.map((props) => (
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>

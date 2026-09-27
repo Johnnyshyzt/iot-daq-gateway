@@ -57,6 +57,13 @@ public static class LicenseEndpoints
             ConfigAudit.Write(http, store.Database, "license.remove", "license", "已移除许可证，恢复社区版。采集不停止。");
             return ApiResults.Ok(licensing.Describe(store));
         }).RequireAdmin();
+
+        api.MapPost("/license/security/ack", (HttpContext http, LicenseService licensing, ConfigStore store) =>
+        {
+            var result = licensing.AcknowledgeTamper();
+            ConfigAudit.Write(http, store.Database, "security.ack", "license", result.Code.Length == 0 ? "已清除授权状态异常标记" : result.Message);
+            return ApiResults.Ok(licensing.Describe(store));
+        }).RequireAdmin();
     }
 
     private static RouteHandlerBuilder RequireAdmin(this RouteHandlerBuilder builder) =>

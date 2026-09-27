@@ -240,9 +240,9 @@ public static class LicenseCodec
         if (!string.IsNullOrWhiteSpace(payload.MachineFingerprint))
         {
             var fingerprint = payload.MachineFingerprint.Trim().ToLowerInvariant();
-            if (fingerprint.Length is < 8 or > 128 || fingerprint.Any(ch => !Uri.IsHexDigit(ch)))
+            if (!MachineFingerprint.IsWellFormed(fingerprint))
             {
-                return "机器指纹必须是 8 到 128 位十六进制。留空表示不绑定机器。";
+                return "机器指纹必须是 8 到 128 位十六进制，或 fp2. 开头的组合指纹。留空表示不绑定机器。";
             }
         }
 

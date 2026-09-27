@@ -16,8 +16,10 @@ import { Route as AuthenticatedAlarmsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
+import { Route as AuthenticatedCommissionRouteImport } from './routes/_authenticated/commission'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedHttpsRouteImport } from './routes/_authenticated/https'
 import { Route as AuthenticatedLicenseRouteImport } from './routes/_authenticated/license'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/live'
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
@@ -27,6 +29,7 @@ import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedUpgradeRouteImport } from './routes/_authenticated/upgrade'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
 import { Route as AuthenticatedIntegrateOpcuaRouteImport } from './routes/_authenticated/integrate/opcua'
@@ -71,6 +74,11 @@ const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommissionRoute = AuthenticatedCommissionRouteImport.update({
+  id: '/commission',
+  path: '/commission',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
@@ -79,6 +87,11 @@ const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHttpsRoute = AuthenticatedHttpsRouteImport.update({
+  id: '/https',
+  path: '/https',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedLicenseRoute = AuthenticatedLicenseRouteImport.update({
@@ -124,6 +137,11 @@ const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
 const AuthenticatedUpgradeRoute = AuthenticatedUpgradeRouteImport.update({
   id: '/upgrade',
   path: '/upgrade',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUtilizationRoute =
@@ -186,8 +204,10 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
+  '/commission': typeof AuthenticatedCommissionRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/https': typeof AuthenticatedHttpsRoute
   '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
@@ -197,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
   '/integrate/opcua': typeof AuthenticatedIntegrateOpcuaRoute
@@ -213,8 +234,10 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
+  '/commission': typeof AuthenticatedCommissionRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/https': typeof AuthenticatedHttpsRoute
   '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
@@ -224,6 +247,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -243,8 +267,10 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/board': typeof AuthenticatedBoardRoute
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
+  '/_authenticated/commission': typeof AuthenticatedCommissionRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/https': typeof AuthenticatedHttpsRoute
   '/_authenticated/license': typeof AuthenticatedLicenseRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
@@ -254,6 +280,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/upgrade': typeof AuthenticatedUpgradeRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -274,8 +301,10 @@ export interface FileRouteTypes {
     | '/audit'
     | '/board'
     | '/catalog'
+    | '/commission'
     | '/devices'
     | '/history'
+    | '/https'
     | '/license'
     | '/live'
     | '/mqtt'
@@ -285,6 +314,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/upgrade'
+    | '/users'
     | '/utilization'
     | '/account/password'
     | '/integrate/opcua'
@@ -301,8 +331,10 @@ export interface FileRouteTypes {
     | '/audit'
     | '/board'
     | '/catalog'
+    | '/commission'
     | '/devices'
     | '/history'
+    | '/https'
     | '/license'
     | '/live'
     | '/mqtt'
@@ -312,6 +344,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/upgrade'
+    | '/users'
     | '/utilization'
     | '/'
     | '/account/password'
@@ -330,8 +363,10 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/board'
     | '/_authenticated/catalog'
+    | '/_authenticated/commission'
     | '/_authenticated/devices'
     | '/_authenticated/history'
+    | '/_authenticated/https'
     | '/_authenticated/license'
     | '/_authenticated/live'
     | '/_authenticated/mqtt'
@@ -341,6 +376,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/setup'
     | '/_authenticated/upgrade'
+    | '/_authenticated/users'
     | '/_authenticated/utilization'
     | '/_authenticated/'
     | '/_authenticated/account/password'
@@ -409,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCatalogRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/commission': {
+      id: '/_authenticated/commission'
+      path: '/commission'
+      fullPath: '/commission'
+      preLoaderRoute: typeof AuthenticatedCommissionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/devices': {
       id: '/_authenticated/devices'
       path: '/devices'
@@ -421,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/https': {
+      id: '/_authenticated/https'
+      path: '/https'
+      fullPath: '/https'
+      preLoaderRoute: typeof AuthenticatedHttpsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/license': {
@@ -484,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/upgrade'
       fullPath: '/upgrade'
       preLoaderRoute: typeof AuthenticatedUpgradeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/utilization': {
@@ -557,8 +614,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
+  AuthenticatedCommissionRoute: typeof AuthenticatedCommissionRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedHttpsRoute: typeof AuthenticatedHttpsRoute
   AuthenticatedLicenseRoute: typeof AuthenticatedLicenseRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
@@ -568,6 +627,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedUpgradeRoute: typeof AuthenticatedUpgradeRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
@@ -585,8 +645,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedBoardRoute: AuthenticatedBoardRoute,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
+  AuthenticatedCommissionRoute: AuthenticatedCommissionRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedHttpsRoute: AuthenticatedHttpsRoute,
   AuthenticatedLicenseRoute: AuthenticatedLicenseRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
@@ -596,6 +658,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedUpgradeRoute: AuthenticatedUpgradeRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,

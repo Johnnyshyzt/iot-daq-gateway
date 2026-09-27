@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\docs\contract\**\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="contract\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="..\..\docs\manual\现场调试清单.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="docs\现场调试清单.md" />
   </ItemGroup>
   <ItemGroup Condition="Exists('..\Web\dist\index.html')">
     <Content Include="..\Web\dist\**\*" CopyToPublishDirectory="PreserveNewest" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" />

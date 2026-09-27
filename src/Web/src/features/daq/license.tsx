@@ -107,6 +107,21 @@ export function LicensePage() {
                   }}
                 />
               </div>
+              {admin && view.blocksConfig ? (
+                <Button
+                  variant='outline'
+                  onClick={() =>
+                    void studioApi<LicenseSnapshot>('/api/v1/license/security/ack', { method: 'POST' })
+                      .then((next) => {
+                        setLicense(next)
+                        setMessage(next.tamperCode === 'clock_rollback' ? '时钟仍落后于上次记录，确认不会清除回拨。' : '已确认。')
+                      })
+                      .catch((error: unknown) => setMessage(describeError(error)))
+                  }
+                >
+                  确认已检查
+                </Button>
+              ) : null}
               {!admin ? <p className='text-muted-foreground'>只有管理员可以导入或移除。</p> : null}
             </CardContent>
           </Card>
@@ -143,7 +158,9 @@ export function LicensePage() {
               <CardTitle>机器指纹</CardTitle>
             </CardHeader>
             <CardContent className='space-y-3 text-sm'>
-              <p className='text-muted-foreground'>把下面的指纹发给厂商，用于可选的机器绑定。它是哈希，不是可信平台模块证明。</p>
+              <p className='text-muted-foreground'>
+                {view.fingerprintNote || '把下面的指纹发给厂商，用于可选的机器绑定。它是哈希，不是可信平台模块证明。'}
+              </p>
               <code className='block break-all rounded-md bg-muted px-3 py-2 font-mono text-xs'>{view.machineFingerprint}</code>
               <Button variant='outline' onClick={() => void copyFingerprint()}>
                 复制指纹

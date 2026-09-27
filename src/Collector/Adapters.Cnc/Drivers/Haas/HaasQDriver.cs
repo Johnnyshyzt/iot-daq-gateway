@@ -76,8 +76,10 @@ public sealed class HaasQDriver : CatalogProtocolDriver
         foreach (var code in HaasQCodec.DefaultQueries)
         {
             var query = Encoding.ASCII.GetBytes(HaasQCodec.Query(code));
+            Trace("tx", query, "haas " + code);
             await stream.WriteAsync(query, linked.Token).ConfigureAwait(false);
             var reply = await ReadUntilPromptAsync(stream, linked.Token).ConfigureAwait(false);
+            Trace("rx", Encoding.ASCII.GetBytes(reply), "haas " + code);
             HaasQCodec.Apply(code, reply, values);
         }
 
