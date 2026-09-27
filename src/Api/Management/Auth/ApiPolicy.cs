@@ -55,6 +55,11 @@ public static class ApiPolicy
             return ApiKey;
         }
 
+        if (route.StartsWith("/api/central/v1", StringComparison.OrdinalIgnoreCase))
+        {
+            return Anonymous;
+        }
+
         if (verb == "POST" && route.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
         {
             return Anonymous;
@@ -83,7 +88,9 @@ public static class ApiPolicy
 
         if (verb == "POST" && (route.Equals("/api/v1/downtime/assign", StringComparison.OrdinalIgnoreCase)
             || route.Equals("/api/v1/downtime/bulk", StringComparison.OrdinalIgnoreCase)
-            || route.Equals("/api/v1/oee/scrap", StringComparison.OrdinalIgnoreCase)))
+            || route.Equals("/api/v1/oee/scrap", StringComparison.OrdinalIgnoreCase)
+            || route.Equals("/api/v1/tools/change", StringComparison.OrdinalIgnoreCase)
+            || route.Equals("/api/v1/tools/count", StringComparison.OrdinalIgnoreCase)))
         {
             return Operate;
         }
@@ -102,7 +109,8 @@ public static class ApiPolicy
         if (route.Contains("/self-test", StringComparison.OrdinalIgnoreCase)
             || route.Contains("/trace", StringComparison.OrdinalIgnoreCase)
             || route.EndsWith("/ops/diagnose", StringComparison.OrdinalIgnoreCase)
-            || route.Contains("/auth/", StringComparison.OrdinalIgnoreCase))
+            || route.Contains("/auth/", StringComparison.OrdinalIgnoreCase)
+            || route.Contains("/agent/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -144,6 +152,22 @@ public static class ApiPolicy
         }
 
         if (path.Equals("/api/v1/license/security/ack", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (method == "POST" && path.StartsWith("/api/v1/programs/", StringComparison.OrdinalIgnoreCase)
+            && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (path.StartsWith("/api/v1/central/tokens", StringComparison.OrdinalIgnoreCase) && method != "GET")
+        {
+            return true;
+        }
+
+        if (path.StartsWith("/api/v1/central/rollouts", StringComparison.OrdinalIgnoreCase) && method != "GET")
         {
             return true;
         }

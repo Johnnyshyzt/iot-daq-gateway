@@ -14,6 +14,9 @@ public static class LicenseFeatures
     public const string QueryApi = "query-api";
     public const string Rules = "rules";
     public const string Oee = "oee";
+    public const string ToolLife = "tool-life";
+    public const string NcPrograms = "nc-programs";
+    public const string Central = "central";
     public const string All = "*";
 
     public static readonly string[] DefaultGated =
@@ -24,7 +27,10 @@ public static class LicenseFeatures
         ScheduledReports,
         QueryApi,
         Rules,
-        Oee
+        Oee,
+        ToolLife,
+        NcPrograms,
+        Central
     ];
 
     public static string Title(string feature) => feature switch
@@ -36,6 +42,9 @@ public static class LicenseFeatures
         QueryApi => "只读查询接口",
         Rules => "边缘规则引擎",
         Oee => "OEE 与停机原因",
+        ToolLife => "刀具寿命",
+        NcPrograms => "NC 程序",
+        Central => "中心管理",
         _ => feature
     };
 }

@@ -132,13 +132,21 @@ dotnet run --project src/Host --no-launch-profile -- --config configs/examples/g
 docker compose -f docker/docker-compose.yml up --build
 ```
 
+一台中心加三台模拟边缘：
+
+```bash
+docker compose -f docker/compose.central.yml up --build
+```
+
+中心页面在 `http://127.0.0.1:5080`，三台边缘在 `5081`、`5082`、`5083`。示例编排打开社区版全部功能，方便没有许可证文件时看机队。生产环境的中心仍要商业功能 `central`，每台边缘用自己的许可证。说明见 [docs/central.md](docs/central.md)。
+
 镜像按普通运行时容器启动，不要求特权或专用工控机基础镜像。Compose 把 `configs/examples/gateway.docker.yaml` **挂到** `/app/gateway.yaml`，并把 Studio 发布到宿主机的 `http://127.0.0.1:5080`（容器内监听 `0.0.0.0:5080`，否则端口映射进不去）。命名卷 `gateway-data` 保住 `gateway.db`。容器里的数据库还是空的时候，`GATEWAY_CONFIG` 会把这份文件导入一次（Broker 主机名是 `mosquitto`）。数据库已经有已发布配置之后，改这个文件不会改变正在跑的采集；要改配置请用 Studio，或换掉数据卷里的数据库后再启动。该 Linux 镜像是 **Fake 演示**，不是生产 FOCAS 路径。systemd 安装见 [docs/linux-install.md](docs/linux-install.md)。
 
 ## 现场安装（Windows x64，无需 SDK）
 
 生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时、`Host.exe`、`wwwroot`、`data/seed` 和安装脚本）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。页面上发布后，同一进程从数据库重载已发布配置。
 
-1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.10.0**，附件名是 `iot-daq-gateway-0.10.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.10.0` 之后 Release 才会换成新 zip。Linux 包是 `iot-daq-gateway-0.10.0-linux-x64.tar.gz`。授权、升级和手册见 [docs/licensing.md](docs/licensing.md)、[docs/upgrade.md](docs/upgrade.md)、[docs/manual/用户手册.md](docs/manual/用户手册.md)。现场调试清单见 [docs/manual/现场调试清单.md](docs/manual/现场调试清单.md)。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
+1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.11.0**，附件名是 `iot-daq-gateway-0.11.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.11.0` 之后 Release 才会换成新 zip。Linux 包是 `iot-daq-gateway-0.11.0-linux-x64.tar.gz`。授权、升级和手册见 [docs/licensing.md](docs/licensing.md)、[docs/upgrade.md](docs/upgrade.md)、[docs/manual/用户手册.md](docs/manual/用户手册.md)。现场调试清单见 [docs/manual/现场调试清单.md](docs/manual/现场调试清单.md)。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
 2. 解压到例如 `C:\iot-daq-gateway\`
 3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进 zip / 不进镜像）。复制 `service.env.example` 为 `service.env` 并填写 `MQTT_USER` / `MQTT_PASSWORD`
 4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。第一次启动把 `data/seed` 导入 `data/gateway.db`，之后采集只读数据库里的已发布配置
@@ -147,7 +155,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。升级与备份见 [docs/ops-field.md](docs/ops-field.md)，故障对照见 [docs/field-fault-guide.md](docs/field-fault-guide.md)，无自有机床时的试点验收见 [docs/product/pilot-acceptance.md](docs/product/pilot-acceptance.md)。Fake 演示见 [docs/product/fake-demo-script.md](docs/product/fake-demo-script.md)，商业边界见 [docs/product/pricing-one-pager.md](docs/product/pricing-one-pager.md)。试点合同附件、销售一页和安全口径见 [docs/product/pilot-contract-appendix.md](docs/product/pilot-contract-appendix.md)、[docs/product/sales-one-pager.md](docs/product/sales-one-pager.md)、[docs/product/security-narrative.md](docs/product/security-narrative.md)。
 
-维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.10.0`：
+维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.11.0`：
 
 ```bash
 git tag vX.Y.Z

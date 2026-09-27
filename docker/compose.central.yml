@@ -1,0 +1,72 @@
+# One central Host and three simulated edges.
+# This file unlocks community features so the example runs without a license file.
+# A production central still needs the commercial `central` feature; each edge keeps its own license.
+# Edges dial out to central, so they can sit behind NAT. If central is down they keep collecting.
+services:
+  central:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["--central", "--demo"]
+    ports:
+      - "127.0.0.1:5080:5080"
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5080
+      Central__BootstrapToken: demo-enroll-token
+      Central__OfflineAfterSeconds: "120"
+      Licensing__Community__Features__0: "*"
+    volumes:
+      - central-data:/app/data
+
+  edge-1: &edge
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["--demo"]
+    depends_on:
+      - central
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5080
+      Central__Url: http://central:5080
+      Central__EnrollmentToken: demo-enroll-token
+      Central__GatewayId: edge-1
+      Central__Name: 边缘 1 · 一车间
+      Licensing__Community__Features__0: "*"
+    ports:
+      - "127.0.0.1:5081:5080"
+    volumes:
+      - edge-1-data:/app/data
+
+  edge-2:
+    <<: *edge
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5080
+      Central__Url: http://central:5080
+      Central__EnrollmentToken: demo-enroll-token
+      Central__GatewayId: edge-2
+      Central__Name: 边缘 2 · 一车间
+      Licensing__Community__Features__0: "*"
+    ports:
+      - "127.0.0.1:5082:5080"
+    volumes:
+      - edge-2-data:/app/data
+
+  edge-3:
+    <<: *edge
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:5080
+      Central__Url: http://central:5080
+      Central__EnrollmentToken: demo-enroll-token
+      Central__GatewayId: edge-3
+      Central__Name: 边缘 3 · 二车间
+      Licensing__Community__Features__0: "*"
+    ports:
+      - "127.0.0.1:5083:5080"
+    volumes:
+      - edge-3-data:/app/data
+
+volumes:
+  central-data:
+  edge-1-data:
+  edge-2-data:
+  edge-3-data:

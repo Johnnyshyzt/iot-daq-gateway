@@ -4,19 +4,23 @@ public static class HostPaths
 {
     public static string ResolveDataDirectory(IHostEnvironment environment, IConfiguration configuration)
     {
-        var fromEnv = Environment.GetEnvironmentVariable("HOST_DATA")
-            ?? Environment.GetEnvironmentVariable("STUDIO_DATA");
-        if (!string.IsNullOrWhiteSpace(fromEnv))
-        {
-            return Path.GetFullPath(fromEnv);
-        }
-
+        // An explicit directory belongs to this host. HOST_DATA / STUDIO_DATA are process-wide,
+        // so they must not override it: parallel test hosts (and a second --central process)
+        // would otherwise open one SQLite file. Shared-cache mode then throws inside sqlite3_prepare_v2.
         var configured = configuration["Host:DataDirectory"] ?? configuration["Studio:DataDirectory"];
         if (!string.IsNullOrWhiteSpace(configured))
         {
             return Path.IsPathRooted(configured)
                 ? configured
                 : Path.GetFullPath(Path.Combine(environment.ContentRootPath, configured));
+        }
+
+        var ignoreEnvironment = string.Equals(configuration["Host:IgnoreDataEnvironment"], "true", StringComparison.OrdinalIgnoreCase);
+        var fromEnv = Environment.GetEnvironmentVariable("HOST_DATA")
+            ?? Environment.GetEnvironmentVariable("STUDIO_DATA");
+        if (!ignoreEnvironment && !string.IsNullOrWhiteSpace(fromEnv))
+        {
+            return Path.GetFullPath(fromEnv);
         }
 
         var besideContent = Path.Combine(environment.ContentRootPath, "data");

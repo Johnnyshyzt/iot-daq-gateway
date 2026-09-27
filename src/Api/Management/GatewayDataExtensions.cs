@@ -5,6 +5,7 @@ using Studio.Host.Northbound;
 using Studio.Host.Notifications;
 using Studio.Host.Oee;
 using Studio.Host.Rules;
+using Studio.Host.Shop;
 using Studio.Host.Visualization;
 
 namespace Studio.Host;
@@ -18,6 +19,7 @@ public static class GatewayDataExtensions
         services.AddSingleton<ILinkStatusWriter>(store.Database);
         services.AddSingleton<VisualizationService>();
         services.AddSingleton<OeeService>();
+        services.AddSingleton<ToolLifeService>();
         services.AddSingleton<EdgePipeline>();
         services.AddSingleton<IObservationExpander>(sp => sp.GetRequiredService<EdgePipeline>());
         services.AddSingleton<NotificationDispatcher>();
@@ -26,6 +28,7 @@ public static class GatewayDataExtensions
         services.AddHostedService<HttpPushWorker>();
         services.AddHostedService<ContractMqttWorker>();
         services.AddHostedService<SampleRetentionService>();
+        services.AddHostedService<ToolLifeWorker>();
         return services;
     }
 }

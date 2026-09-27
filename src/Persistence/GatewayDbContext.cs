@@ -95,6 +95,46 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<ScrapEntryRow> ScrapEntries => Set<ScrapEntryRow>();
 
+    public DbSet<ToolRow> Tools => Set<ToolRow>();
+
+    public DbSet<ToolPocketRow> ToolPockets => Set<ToolPocketRow>();
+
+    public DbSet<ToolLifeRow> ToolLives => Set<ToolLifeRow>();
+
+    public DbSet<ToolCursorRow> ToolCursors => Set<ToolCursorRow>();
+
+    public DbSet<ToolChangeRow> ToolChanges => Set<ToolChangeRow>();
+
+    public DbSet<NcProgramRow> NcPrograms => Set<NcProgramRow>();
+
+    public DbSet<NcProgramVersionRow> NcProgramVersions => Set<NcProgramVersionRow>();
+
+    public DbSet<NcProgramDeviceRow> NcProgramDevices => Set<NcProgramDeviceRow>();
+
+    public DbSet<NcTransferRow> NcTransfers => Set<NcTransferRow>();
+
+    public DbSet<EnrollmentTokenRow> EnrollmentTokens => Set<EnrollmentTokenRow>();
+
+    public DbSet<FleetGatewayRow> FleetGateways => Set<FleetGatewayRow>();
+
+    public DbSet<FleetGroupRow> FleetGroups => Set<FleetGroupRow>();
+
+    public DbSet<CentralTemplateRow> CentralTemplates => Set<CentralTemplateRow>();
+
+    public DbSet<ConfigPushRow> ConfigPushes => Set<ConfigPushRow>();
+
+    public DbSet<ConfigPushTargetRow> ConfigPushTargets => Set<ConfigPushTargetRow>();
+
+    public DbSet<RolloutRow> Rollouts => Set<RolloutRow>();
+
+    public DbSet<RolloutTargetRow> RolloutTargets => Set<RolloutTargetRow>();
+
+    public DbSet<CentralAlertRow> CentralAlerts => Set<CentralAlertRow>();
+
+    public DbSet<CentralAuditRow> CentralAudits => Set<CentralAuditRow>();
+
+    public DbSet<CentralDocumentRow> CentralDocuments => Set<CentralDocumentRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -186,5 +226,38 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<CycleTimeRow>().ToTable("cycle_times").HasKey(row => row.Id);
         modelBuilder.Entity<ScrapEntryRow>().ToTable("scrap_entries").HasKey(row => row.Id);
         modelBuilder.Entity<ScrapEntryRow>().HasIndex(row => new { row.DeviceId, row.UnixMs }).HasDatabaseName("ix_scrap_device_time");
+
+        modelBuilder.Entity<ToolRow>().ToTable("tools").HasKey(row => row.Id);
+        modelBuilder.Entity<ToolRow>().HasIndex(row => row.ToolNumber).IsUnique().HasDatabaseName("ix_tools_number");
+        modelBuilder.Entity<ToolPocketRow>().ToTable("tool_pockets").HasKey(row => row.Id);
+        modelBuilder.Entity<ToolPocketRow>().HasIndex(row => new { row.DeviceId, row.Pocket }).IsUnique().HasDatabaseName("ix_tool_pocket");
+        modelBuilder.Entity<ToolLifeRow>().ToTable("tool_life").HasKey(row => row.Id);
+        modelBuilder.Entity<ToolLifeRow>().HasIndex(row => new { row.DeviceId, row.ToolNumber }).IsUnique().HasDatabaseName("ix_tool_life_device");
+        modelBuilder.Entity<ToolCursorRow>().ToTable("tool_cursors").HasKey(row => row.DeviceId);
+        modelBuilder.Entity<ToolChangeRow>().ToTable("tool_changes").HasKey(row => row.Id);
+        modelBuilder.Entity<ToolChangeRow>().HasIndex(row => new { row.DeviceId, row.UnixMs }).HasDatabaseName("ix_tool_change_time");
+        modelBuilder.Entity<NcProgramRow>().ToTable("nc_programs").HasKey(row => row.Id);
+        modelBuilder.Entity<NcProgramVersionRow>().ToTable("nc_program_versions").HasKey(row => row.Id);
+        modelBuilder.Entity<NcProgramVersionRow>().HasIndex(row => new { row.ProgramId, row.Version }).IsUnique().HasDatabaseName("ix_nc_version");
+        modelBuilder.Entity<NcProgramDeviceRow>().ToTable("nc_program_devices").HasKey(row => new { row.ProgramId, row.DeviceId });
+        modelBuilder.Entity<NcTransferRow>().ToTable("nc_transfers").HasKey(row => row.Id);
+        modelBuilder.Entity<NcTransferRow>().HasIndex(row => row.UnixMs).HasDatabaseName("ix_nc_transfer_time");
+        modelBuilder.Entity<EnrollmentTokenRow>().ToTable("enrollment_tokens").HasKey(row => row.Id);
+        modelBuilder.Entity<EnrollmentTokenRow>().HasIndex(row => row.TokenHash).IsUnique().HasDatabaseName("ix_enroll_hash");
+        modelBuilder.Entity<FleetGatewayRow>().ToTable("fleet_gateways").HasKey(row => row.Id);
+        modelBuilder.Entity<FleetGroupRow>().ToTable("fleet_groups").HasKey(row => row.Id);
+        modelBuilder.Entity<CentralTemplateRow>().ToTable("central_templates").HasKey(row => row.Id);
+        modelBuilder.Entity<CentralTemplateRow>().HasIndex(row => new { row.Key, row.Version }).IsUnique().HasDatabaseName("ix_central_template_ver");
+        modelBuilder.Entity<ConfigPushRow>().ToTable("config_pushes").HasKey(row => row.Id);
+        modelBuilder.Entity<ConfigPushTargetRow>().ToTable("config_push_targets").HasKey(row => row.Id);
+        modelBuilder.Entity<ConfigPushTargetRow>().HasIndex(row => new { row.PushId, row.GatewayId }).IsUnique().HasDatabaseName("ix_push_target");
+        modelBuilder.Entity<RolloutRow>().ToTable("rollouts").HasKey(row => row.Id);
+        modelBuilder.Entity<RolloutTargetRow>().ToTable("rollout_targets").HasKey(row => row.Id);
+        modelBuilder.Entity<RolloutTargetRow>().HasIndex(row => new { row.RolloutId, row.GatewayId }).IsUnique().HasDatabaseName("ix_rollout_target");
+        modelBuilder.Entity<CentralAlertRow>().ToTable("central_alerts").HasKey(row => row.Id);
+        modelBuilder.Entity<CentralAuditRow>().ToTable("central_audits").HasKey(row => row.Id);
+        modelBuilder.Entity<CentralAuditRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<CentralAuditRow>().HasIndex(row => row.UnixMs).HasDatabaseName("ix_central_audit_time");
+        modelBuilder.Entity<CentralDocumentRow>().ToTable("central_documents").HasKey(row => row.Kind);
     }
 }

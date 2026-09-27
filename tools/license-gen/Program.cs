@@ -16,7 +16,7 @@ if (argsList.Count == 0 || Has(argsList, "--help") || Has(argsList, "-h"))
           --devices <n>           设备上限。省略表示不限制
           --points <n>            点位上限。省略表示不限制
           --expires <utc>         到期时间，如 2027-12-31T00:00:00Z。省略表示不过期
-          --feature <id>          可重复。例如 opcua、http-push、alarm-notifications、scheduled-reports、query-api、rules、oee，或 *
+          --feature <id>          可重复。例如 opcua、http-push、alarm-notifications、scheduled-reports、query-api、rules、oee、tool-life、nc-programs、central，或 *
           --fingerprint <hex>     可选机器指纹。省略表示不绑定
           --issued <utc>          签发时间，默认现在
           --out <file>            输出路径，默认标准输出

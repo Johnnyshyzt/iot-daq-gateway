@@ -268,7 +268,7 @@ public sealed class Phase6ApiTests : IClassFixture<Phase6Factory>
             store.Database.EnsureReady();
             using var check = store.Database.CreateContext();
             Assert.Equal(GatewayPersistence.SchemaVersion, check.SchemaInfo.AsNoTracking().Single().Version);
-            Assert.Equal(8, GatewayPersistence.SchemaVersion);
+            Assert.Equal(9, GatewayPersistence.SchemaVersion);
             Assert.Empty(check.InstalledLicense.ToList());
             Assert.Empty(check.HttpPushTargets.ToList());
             Assert.Empty(check.ApiKeys.ToList());

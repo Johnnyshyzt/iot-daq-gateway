@@ -48,7 +48,11 @@ public sealed class AccountStore
 
     public string BootstrapPasswordPath { get; }
 
-    public static Action<string>? AccountsChanged { get; set; }
+    /// <summary>
+    /// Per host. A static callback is shared by every gateway in the process, so one
+    /// host's login would run schema work on another host's database.
+    /// </summary>
+    public Action<string>? AccountsChanged { get; set; }
 
     public string Mode
     {

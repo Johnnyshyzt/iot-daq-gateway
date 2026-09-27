@@ -19,10 +19,17 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWriter
 {
-    public const int SchemaVersion = 8;
+    public const int SchemaVersion = 9;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// EF Core's SQLite EnsureCreated and SQLitePCL's sqlite3_prepare_v2 are not safe when
+    /// several hosts in one process create schemas at the same time. This lock covers only
+    /// that startup section. Each host still uses its own database file afterwards.
+    /// </summary>
+    private static readonly object SchemaGate = new();
 
     private readonly object _gate = new();
     private readonly DbContextOptions<GatewayDbContext> _options;
@@ -106,7 +113,10 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
 
         Directory.CreateDirectory(dataDirectory);
         var path = Path.Combine(dataDirectory, "gateway.db");
-        var sqliteConnection = $"Data Source={path};Cache=Shared;Default Timeout=5";
+        // Cache=Shared is SQLite shared-cache mode. Two connections (two hosts, or EnsureCreated
+        // racing a startup worker) make sqlite3_prepare_v2 throw ArgumentOutOfRangeException.
+        // WAL, set after the file exists, is the concurrent mode.
+        var sqliteConnection = $"Data Source={path};Default Timeout=5";
         builder.UseSqlite(sqliteConnection);
         return new GatewayPersistence(builder.Options, sqlite: true, "Sqlite", retention, path, sqliteConnection);
     }
@@ -115,6 +125,7 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
 
     public void EnsureReady()
     {
+        lock (SchemaGate)
         lock (_gate)
         {
             using var db = CreateContext();

@@ -9,8 +9,10 @@ using Studio.Host.Licensing;
 using Studio.Host.Northbound;
 using Studio.Host.Notifications;
 using Studio.Host.Security;
+using Studio.Host.Central;
 using Studio.Host.Oee;
 using Studio.Host.Rules;
+using Studio.Host.Shop;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Endpoints;
@@ -332,6 +334,10 @@ public static class StudioEndpoints
         HttpsEndpoints.Map(api);
         RuleEndpoints.Map(api);
         OeeEndpoints.Map(api);
+        ToolEndpoints.Map(api);
+        ProgramEndpoints.Map(api);
+        CentralEndpoints.Map(api);
+        CentralEndpoints.MapMachine(app);
     }
 
     private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts, LicenseService licensing)

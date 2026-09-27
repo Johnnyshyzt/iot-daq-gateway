@@ -244,7 +244,8 @@ public sealed class StudioAuthMiddleware(RequestDelegate next)
 
     private static bool IsAnonymous(HttpRequest request) =>
         (HttpMethods.IsPost(request.Method) && request.Path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
-        || (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/posture", StringComparison.OrdinalIgnoreCase));
+        || (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/posture", StringComparison.OrdinalIgnoreCase))
+        || request.Path.StartsWithSegments("/api/central/v1");
 
     private static bool IsAllowedDuringPasswordChange(HttpRequest request) =>
         (HttpMethods.IsGet(request.Method) && request.Path.Equals("/api/v1/auth/me", StringComparison.OrdinalIgnoreCase))

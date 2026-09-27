@@ -198,7 +198,7 @@ public sealed class Phase9SchemaTests
 
             store.Database.EnsureReady();
             using var check = store.Database.CreateContext();
-            Assert.Equal(8, check.SchemaInfo.AsNoTracking().Single().Version);
+            Assert.Equal(GatewayPersistence.SchemaVersion, check.SchemaInfo.AsNoTracking().Single().Version);
             Assert.True(check.DowntimeReasons.Any(row => row.Code == "TOOL"));
             Assert.Equal(0, check.ComputedPoints.Count());
         }
