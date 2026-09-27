@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAlarmsRouteImport } from './routes/_authenticated/alarms'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
@@ -23,6 +24,7 @@ import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
 import { Route as AuthenticatedMonitorDeviceIdRouteImport } from './routes/_authenticated/monitor.$deviceId'
@@ -45,6 +47,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedAlarmsRoute = AuthenticatedAlarmsRouteImport.update({
   id: '/alarms',
   path: '/alarms',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBoardRoute = AuthenticatedBoardRouteImport.update({
@@ -97,6 +104,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUtilizationRoute =
   AuthenticatedUtilizationRouteImport.update({
     id: '/utilization',
@@ -125,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/sign-in': typeof authSignInRoute
   '/alarms': typeof AuthenticatedAlarmsRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
@@ -135,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/publish': typeof AuthenticatedPublishRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/setup': typeof AuthenticatedSetupRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
   '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
@@ -143,6 +157,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/alarms': typeof AuthenticatedAlarmsRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
@@ -153,6 +168,7 @@ export interface FileRoutesByTo {
   '/publish': typeof AuthenticatedPublishRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/setup': typeof AuthenticatedSetupRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -164,6 +180,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/_authenticated/alarms': typeof AuthenticatedAlarmsRoute
+  '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/board': typeof AuthenticatedBoardRoute
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
@@ -174,6 +191,7 @@ export interface FileRoutesById {
   '/_authenticated/publish': typeof AuthenticatedPublishRoute
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -186,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/alarms'
+    | '/audit'
     | '/board'
     | '/catalog'
     | '/devices'
@@ -196,6 +215,7 @@ export interface FileRouteTypes {
     | '/publish'
     | '/runtime'
     | '/settings'
+    | '/setup'
     | '/utilization'
     | '/account/password'
     | '/monitor/$deviceId'
@@ -204,6 +224,7 @@ export interface FileRouteTypes {
   to:
     | '/sign-in'
     | '/alarms'
+    | '/audit'
     | '/board'
     | '/catalog'
     | '/devices'
@@ -214,6 +235,7 @@ export interface FileRouteTypes {
     | '/publish'
     | '/runtime'
     | '/settings'
+    | '/setup'
     | '/utilization'
     | '/'
     | '/account/password'
@@ -224,6 +246,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/(auth)/sign-in'
     | '/_authenticated/alarms'
+    | '/_authenticated/audit'
     | '/_authenticated/board'
     | '/_authenticated/catalog'
     | '/_authenticated/devices'
@@ -234,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authenticated/publish'
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
+    | '/_authenticated/setup'
     | '/_authenticated/utilization'
     | '/_authenticated/'
     | '/_authenticated/account/password'
@@ -274,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/alarms'
       fullPath: '/alarms'
       preLoaderRoute: typeof AuthenticatedAlarmsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/board': {
@@ -346,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/setup': {
+      id: '/_authenticated/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/utilization': {
       id: '/_authenticated/utilization'
       path: '/utilization'
@@ -379,6 +417,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlarmsRoute: typeof AuthenticatedAlarmsRoute
+  AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
@@ -389,6 +428,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPublishRoute: typeof AuthenticatedPublishRoute
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
@@ -398,6 +438,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlarmsRoute: AuthenticatedAlarmsRoute,
+  AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedBoardRoute: AuthenticatedBoardRoute,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
@@ -408,6 +449,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPublishRoute: AuthenticatedPublishRoute,
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { formatNumber, formatPercent, toggleFullscreen } from './format'
 import { stateOrder, stateStyle } from './state-style'
 import type { DashboardDevice, MachineState } from './types'
+import { OnboardingBanner } from '@/features/daq/onboarding'
 import { useOverview } from './use-overview'
 
 export function DashboardPage({ kiosk = false }: { kiosk?: boolean }) {
@@ -61,7 +62,9 @@ export function DashboardPage({ kiosk = false }: { kiosk?: boolean }) {
       </div>
       {error ? <p className='px-4 pb-2 text-sm text-destructive'>{error}</p> : null}
       <div className={cn('flex flex-1 flex-col gap-5 px-4 pb-6', kiosk && 'px-6')}>
-        {(data?.groups.length ?? 0) === 0 ? (
+        {!data && !error ? (
+          <p className={cn('text-sm', kiosk ? 'text-slate-400' : 'text-muted-foreground')}>正在加载设备状态…</p>
+        ) : (data?.groups.length ?? 0) === 0 ? (
           <p className={cn('text-sm', kiosk ? 'text-slate-400' : 'text-muted-foreground')}>
             还没有设备。发布模拟器后，这里会按车间和产线铺开。
           </p>
@@ -96,6 +99,7 @@ export function DashboardPage({ kiosk = false }: { kiosk?: boolean }) {
         <ConfigDrawer />
         <ProfileDropdown />
       </Header>
+      <OnboardingBanner />
       {body}
     </>
   )

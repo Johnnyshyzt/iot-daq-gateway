@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using Cnc.Catalog;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
@@ -17,25 +19,40 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed class GatewayPersistence : ISampleWriter
 {
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
+    public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private readonly object _gate = new();
     private readonly DbContextOptions<GatewayDbContext> _options;
     private readonly bool _sqlite;
+    private readonly string? _sqlitePath;
+    private readonly string? _sqliteConnectionString;
     private readonly int _configuredRetention;
     private event Action? SamplesWritten;
 
-    private GatewayPersistence(DbContextOptions<GatewayDbContext> options, bool sqlite, string provider, int historyRetentionDays)
+    private GatewayPersistence(
+        DbContextOptions<GatewayDbContext> options,
+        bool sqlite,
+        string provider,
+        int historyRetentionDays,
+        string? sqlitePath,
+        string? sqliteConnectionString)
     {
         _options = options;
         _sqlite = sqlite;
         Provider = provider;
         _configuredRetention = historyRetentionDays;
+        _sqlitePath = sqlitePath;
+        _sqliteConnectionString = sqliteConnectionString;
     }
 
     public string Provider { get; }
+
+    public int CurrentSchemaVersion => SchemaVersion;
+
+    public bool SupportsFileBackup => _sqlite && _sqlitePath is not null;
 
     public int HistoryRetentionDays
     {
@@ -79,13 +96,14 @@ public sealed class GatewayPersistence : ISampleWriter
             }
 
             builder.UseNpgsql(connection);
-            return new GatewayPersistence(builder.Options, sqlite: false, "Postgres", retention);
+            return new GatewayPersistence(builder.Options, sqlite: false, "Postgres", retention, null, null);
         }
 
         Directory.CreateDirectory(dataDirectory);
         var path = Path.Combine(dataDirectory, "gateway.db");
-        builder.UseSqlite($"Data Source={path};Cache=Shared;Default Timeout=5");
-        return new GatewayPersistence(builder.Options, sqlite: true, "Sqlite", retention);
+        var sqliteConnection = $"Data Source={path};Cache=Shared;Default Timeout=5";
+        builder.UseSqlite(sqliteConnection);
+        return new GatewayPersistence(builder.Options, sqlite: true, "Sqlite", retention, path, sqliteConnection);
     }
 
     public GatewayDbContext CreateContext() => new(_options);
@@ -746,6 +764,155 @@ public sealed class GatewayPersistence : ISampleWriter
         }
     }
 
+    public void AppendAudit(string username, string role, string action, string target, string detail)
+    {
+        EnsureReady();
+        var text = detail.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        if (text.Length > 400)
+        {
+            text = text[..400];
+        }
+
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            db.AuditEvents.Add(new AuditEventRow
+            {
+                UnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Username = TrimAudit(username, 80),
+                Role = TrimAudit(role, 32),
+                Action = TrimAudit(action, 64),
+                Target = TrimAudit(target, 120),
+                Detail = text
+            });
+            db.SaveChanges();
+            var stale = db.AuditEvents.OrderByDescending(row => row.Id).Skip(500).Select(row => row.Id).FirstOrDefault();
+            if (stale > 0)
+            {
+                db.AuditEvents.Where(row => row.Id <= stale).ExecuteDelete();
+            }
+        }
+    }
+
+    public IReadOnlyList<AuditEventRow> ListAudit(int limit)
+    {
+        EnsureReady();
+        limit = Math.Clamp(limit, 1, 200);
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.AuditEvents.AsNoTracking()
+                .OrderByDescending(row => row.Id)
+                .Take(limit)
+                .ToList();
+        }
+    }
+
+    public bool HasSamples()
+    {
+        EnsureReady();
+        lock (_gate)
+        {
+            using var db = CreateContext();
+            return db.SampleLatest.Any() || db.SampleHistory.Any();
+        }
+    }
+
+    public void WriteSqliteBackup(Stream destination)
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "iot-daq-backup-" + Guid.NewGuid().ToString("N") + ".db");
+        try
+        {
+            WriteSqliteBackupFile(temp);
+            using var file = File.OpenRead(temp);
+            file.CopyTo(destination);
+        }
+        finally
+        {
+            DeleteIfExists(temp);
+        }
+    }
+
+    public void WriteSqliteBackupFile(string destinationPath)
+    {
+        if (!_sqlite || string.IsNullOrWhiteSpace(_sqliteConnectionString))
+        {
+            throw new InvalidOperationException("只有 SQLite 支持在页面备份。PostgreSQL 请在数据库服务器上备份。");
+        }
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(destinationPath));
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        DeleteIfExists(destinationPath);
+        lock (_gate)
+        {
+            using var source = new SqliteConnection(_sqliteConnectionString);
+            source.Open();
+            using var dest = new SqliteConnection($"Data Source={destinationPath}");
+            dest.Open();
+            source.BackupDatabase(dest);
+        }
+    }
+
+    public void RestoreSqlite(Stream upload)
+    {
+        if (!_sqlite || string.IsNullOrWhiteSpace(_sqlitePath) || string.IsNullOrWhiteSpace(_sqliteConnectionString))
+        {
+            throw new InvalidOperationException("当前数据库不是 SQLite，不能在页面恢复。");
+        }
+
+        var temp = Path.Combine(Path.GetTempPath(), "iot-daq-restore-" + Guid.NewGuid().ToString("N") + ".db");
+        try
+        {
+            using (var file = File.Create(temp))
+            {
+                var buffer = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = upload.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    total += read;
+                    if (total > MaxBackupBytes)
+                    {
+                        throw new InvalidOperationException("备份文件超过 512 MB，已拒绝。");
+                    }
+
+                    file.Write(buffer, 0, read);
+                }
+            }
+
+            ValidateSqliteBackup(temp);
+            lock (_gate)
+            {
+                SqliteConnection.ClearAllPools();
+                var backup = _sqlitePath + ".bak";
+                File.Copy(_sqlitePath, backup, overwrite: true);
+                try
+                {
+                    DeleteIfExists(_sqlitePath + "-wal");
+                    DeleteIfExists(_sqlitePath + "-shm");
+                    File.Copy(temp, _sqlitePath, overwrite: true);
+                    EnsureReady();
+                }
+                catch
+                {
+                    File.Copy(backup, _sqlitePath, overwrite: true);
+                    DeleteIfExists(_sqlitePath + "-wal");
+                    DeleteIfExists(_sqlitePath + "-shm");
+                    EnsureReady();
+                    throw;
+                }
+            }
+        }
+        finally
+        {
+            DeleteIfExists(temp);
+        }
+    }
+
     public bool HasHistory()
     {
         EnsureReady();
@@ -787,6 +954,67 @@ public sealed class GatewayPersistence : ISampleWriter
             AcknowledgedBy = row.AcknowledgedBy,
             AcknowledgedUnixMs = row.AcknowledgedUnixMs
         }).ToList();
+
+    private static void ValidateSqliteBackup(string path)
+    {
+        var header = new byte[16];
+        using (var stream = File.OpenRead(path))
+        {
+            if (stream.Read(header, 0, header.Length) < 16
+                || !Encoding.ASCII.GetString(header).StartsWith("SQLite format 3", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("文件不是 SQLite 数据库。");
+            }
+        }
+
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={path};Mode=ReadOnly");
+            connection.Open();
+            using var versionCommand = connection.CreateCommand();
+            versionCommand.CommandText = "SELECT Version FROM schema_info WHERE Id = 1";
+            var version = versionCommand.ExecuteScalar();
+            if (version is null or DBNull)
+            {
+                throw new InvalidOperationException("备份里没有 schema_info，不是本网关的数据库。");
+            }
+
+            var number = Convert.ToInt32(version, CultureInfo.InvariantCulture);
+            if (number < 1 || number > SchemaVersion)
+            {
+                throw new InvalidOperationException($"备份的数据库版本是 {number.ToString(CultureInfo.InvariantCulture)}，当前 Host 只接受 1 到 {SchemaVersion.ToString(CultureInfo.InvariantCulture)}。");
+            }
+
+            using var slot = connection.CreateCommand();
+            slot.CommandText = "SELECT 1 FROM config_bundles WHERE Slot = 'published'";
+            if (slot.ExecuteScalar() is null)
+            {
+                throw new InvalidOperationException("备份里没有已发布配置。");
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (SqliteException ex)
+        {
+            throw new InvalidOperationException("无法读取这份 SQLite 备份。", ex);
+        }
+    }
+
+    private static string TrimAudit(string value, int max)
+    {
+        var text = (value ?? "").Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return text.Length <= max ? text : text[..max];
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
 
     private string? TryReadSetting(string key)
     {

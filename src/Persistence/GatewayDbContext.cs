@@ -53,6 +53,8 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<AppSettingRow> AppSettings => Set<AppSettingRow>();
 
+    public DbSet<AuditEventRow> AuditEvents => Set<AuditEventRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -102,5 +104,8 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<StateTransitionRow>().HasIndex(row => row.EndedUnixMs)
             .HasDatabaseName("ix_state_ended");
         modelBuilder.Entity<AppSettingRow>().ToTable("app_settings").HasKey(row => row.Key);
+        modelBuilder.Entity<AuditEventRow>().ToTable("audit_events").HasKey(row => row.Id);
+        modelBuilder.Entity<AuditEventRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<AuditEventRow>().HasIndex(row => row.UnixMs).HasDatabaseName("ix_audit_unix");
     }
 }

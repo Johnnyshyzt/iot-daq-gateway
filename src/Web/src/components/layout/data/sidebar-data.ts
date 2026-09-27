@@ -2,13 +2,14 @@ import {
   Activity,
   Bell,
   BookOpen,
-  Command,
   Gauge,
   LayoutDashboard,
   LineChart,
+  ListChecks,
   PieChart,
   Radio,
   KeyRound,
+  ScrollText,
   Settings,
   Share2,
   Upload,
@@ -22,17 +23,11 @@ export const sidebarData: SidebarData = {
     email: '',
     avatar: '',
   },
-  teams: [
-    {
-      name: 'Config Studio',
-      logo: Command,
-      plan: '采集网关',
-    },
-  ],
   navGroups: [
     {
       title: '采集',
       items: [
+        { title: '上手引导', url: '/setup', icon: ListChecks },
         { title: '总览', url: '/', icon: LayoutDashboard },
         { title: '历史曲线', url: '/history', icon: LineChart },
         { title: '报警', url: '/alarms', icon: Bell },
@@ -50,6 +45,7 @@ export const sidebarData: SidebarData = {
       title: '系统',
       items: [
         { title: '系统', url: '/settings', icon: Settings },
+        { title: '审计', url: '/audit', icon: ScrollText },
         { title: '修改密码', url: '/account/password', icon: KeyRound },
       ],
     },

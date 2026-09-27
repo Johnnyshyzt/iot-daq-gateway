@@ -105,7 +105,16 @@ if (webRoot is not null)
 }
 
 app.UseMiddleware<StudioAuthMiddleware>();
-app.MapGet("/healthz", () => Results.Json(new { status = "ok", acquisition = acquisitionOn }, StudioJson.Options));
+var startedAt = DateTimeOffset.UtcNow;
+app.MapGet("/healthz", () => Results.Json(new
+{
+    status = "ok",
+    version = HostInfo.Version,
+    acquisition = acquisitionOn,
+    database = store.Database.Provider,
+    schemaVersion = store.Database.CurrentSchemaVersion,
+    uptimeSeconds = Math.Max(0, (long)(DateTimeOffset.UtcNow - startedAt).TotalSeconds)
+}, StudioJson.Options));
 app.MapStudioApi();
 
 if (webRoot is not null)

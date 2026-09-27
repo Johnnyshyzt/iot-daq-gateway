@@ -124,7 +124,7 @@ public static class VisualizationEndpoints
 
         api.MapGet("/viz/settings", (VisualizationService viz) => ApiResults.Ok(viz.Settings()));
 
-        api.MapPut("/viz/settings", (VizSettings? body, VisualizationService viz) =>
+        api.MapPut("/viz/settings", (VizSettings? body, VisualizationService viz, HttpContext http, GatewayPersistence database) =>
         {
             if (body is null)
             {
@@ -137,6 +137,7 @@ public static class VisualizationEndpoints
                 return ApiResults.Error(StatusCodes.Status400BadRequest, "invalid_settings", string.Join("；", issues));
             }
 
+            ConfigAudit.Write(http, database, "viz.settings", "shifts", "更新班次或历史保留");
             return ApiResults.Ok(viz.Settings());
         }).RequireWriter();
     }

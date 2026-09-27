@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -68,6 +69,7 @@ export function PointsPage() {
   const [newName, setNewName] = useState('')
   const [newBrand, setNewBrand] = useState('fanuc')
   const [message, setMessage] = useState('')
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   const template = templates.find((item) => item.metadata.id === templateId)
   const users = devices.filter((device) => device.spec.pointTemplateId === templateId)
@@ -576,8 +578,8 @@ export function PointsPage() {
                     </Button>
                     <Button
                       variant='destructive'
-                      disabled={!writable}
-                      onClick={() => void removeTemplate().catch(fail)}
+                      disabled={!writable || !templateId}
+                      onClick={() => setConfirmRemove(true)}
                     >
                       删除模板
                     </Button>
@@ -682,6 +684,18 @@ export function PointsPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title='删除点位模板'
+        desc={`从草稿删除模板「${displayName || template?.metadata.displayName || templateId}」。仍引用它的设备在发布时会校验失败。`}
+        destructive
+        confirmText='删除'
+        handleConfirm={() => {
+          setConfirmRemove(false)
+          void removeTemplate().catch(fail)
+        }}
+      />
     </PageShell>
   )
 }
