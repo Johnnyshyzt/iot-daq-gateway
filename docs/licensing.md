@@ -14,7 +14,9 @@ dotnet run --project tools/license-gen -- \
   --out customer.license.json
 ```
 
-省略 `--devices`、`--points` 或 `--expires` 表示这一项不限制。`--fingerprint` 可选，值来自 Studio「授权许可」页。
+省略 `--devices`、`--points` 或 `--expires` 表示这一项不限制。`--fingerprint` 可选，值来自 Studio「授权许可」页。当前指纹是 `fp2`：系统标识、主机名、主板信息和网卡的哈希。系统标识必须一致；主机名和主板信息最多差一项；已记录网卡时允许更换一块。旧的 32 位十六进制指纹仍按系统标识加主机名比对。
+
+时钟回拨和状态被改时，采集继续，配置修改被拒绝，页面顶部出提示。上次见到的时间写在数据库和 `data/security/clock.json`，用 `data/security/state.key` 做 HMAC。`Licensing:ClockDriftToleranceSeconds` 默认 300。这不是 TPM。同时删掉密钥和两处记录会重新起算。
 
 没有许可证时是社区版。默认上限和功能清单在 `appsettings.json` 的 `Licensing` 节，现场包的 `appsettings.Field.json` 同样有一份。这是可改的默认值，不是价格。
 

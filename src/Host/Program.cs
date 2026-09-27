@@ -10,10 +10,12 @@ using Microsoft.Extensions.FileProviders;
 using Studio.Contracts;
 using Studio.Host;
 using Studio.Host.Auth;
+using Studio.Host.Commissioning;
 using Studio.Host.Config;
 using Studio.Host.Endpoints;
 using Studio.Host.Licensing;
 using Studio.Host.Runtime;
+using Studio.Host.Security;
 using Studio.Host.Visualization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +37,17 @@ builder.Logging.AddCollectorFileLog();
 
 var dataDirectory = HostPaths.ResolveDataDirectory(builder.Environment, builder.Configuration);
 builder.Configuration["Host:DataDirectory"] = dataDirectory;
+var httpsBinding = HttpsBindingFile.Load(dataDirectory);
+var httpsCertificate = HttpsBindingFile.TryLoadCertificate(httpsBinding);
+if (httpsCertificate is not null)
+{
+    var host = httpsBinding.ListenAny ? "0.0.0.0" : "127.0.0.1";
+    builder.WebHost.UseUrls($"http://{host}:{httpsBinding.HttpPort}", $"https://{host}:{httpsBinding.HttpsPort}");
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ConfigureHttpsDefaults(adapter => adapter.ServerCertificate = httpsCertificate);
+    });
+}
 var acquisitionOn = !string.Equals(builder.Configuration["Host:Acquisition"], "off", StringComparison.OrdinalIgnoreCase);
 var importPath = CollectorHost.UsesPublishedDirectory(args)
     ? null
@@ -43,8 +56,9 @@ var demoRequested = args.Any(arg => string.Equals(arg, "--demo", StringCompariso
     || string.Equals(builder.Configuration["Host:Demo"], "true", StringComparison.OrdinalIgnoreCase)
     || string.Equals(Environment.GetEnvironmentVariable("HOST_DEMO"), "1", StringComparison.Ordinal);
 var store = new ConfigStore(dataDirectory);
-var licensing = new LicenseService(store.Database, builder.Configuration);
+var licensing = new LicenseService(store.Database, builder.Configuration, dataDirectory);
 store.LimitIncrease = licensing.RejectIncrease;
+store.SecurityBlock = licensing.ConfigBlockMessage;
 builder.Services.AddSingleton(licensing);
 builder.Services.AddSingleton(store);
 builder.Services.AddSingleton<IRuntimeConfigSource>(_ => new DatabaseRuntimeConfigSource(store));
@@ -70,6 +84,10 @@ builder.Services.AddSingleton<IOpcUaControl>(sp => sp.GetRequiredService<OpcUaWo
 builder.Services.AddHostedService(sp => sp.GetRequiredService<OpcUaWorker>());
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<RuntimeQueries>();
+var traces = new ProtocolTraceBuffer(dataDirectory);
+Adapters.Cnc.Drivers.ProtocolTraceHub.Sink = traces;
+builder.Services.AddSingleton(traces);
+builder.Services.AddSingleton<SelfTestRunner>();
 builder.Services.AddSingleton<GatewayReloadClient>();
 builder.Services.AddCors(options =>
 {
@@ -131,6 +149,20 @@ app.UseExceptionHandler(handler =>
 });
 
 app.UseCors("studio-dev");
+if (httpsCertificate is not null && httpsBinding.RedirectHttp)
+{
+    app.Use(async (context, next) =>
+    {
+        if (!context.Request.IsHttps)
+        {
+            var targetHost = context.Request.Host.Host;
+            context.Response.Redirect($"https://{targetHost}:{httpsBinding.HttpsPort}{context.Request.Path}{context.Request.QueryString}");
+            return;
+        }
+
+        await next(context);
+    });
+}
 
 var webRoot = HostPaths.ResolveWebRoot(app.Environment);
 if (webRoot is not null)
@@ -142,6 +174,17 @@ if (webRoot is not null)
 
 app.UseMiddleware<Studio.Host.Northbound.ApiKeyMiddleware>();
 app.UseMiddleware<StudioAuthMiddleware>();
+app.Use(async (context, next) =>
+{
+    await next(context);
+    if (context.Response.StatusCode == StatusCodes.Status403Forbidden
+        && context.Items["studio.user"] is string user
+        && context.Request.Path.StartsWithSegments("/api"))
+    {
+        store.Database.AppendAudit(user, context.Items["studio.role"] as string ?? "", "auth.denied", context.Request.Path, "拒绝访问");
+    }
+});
+app.UseMiddleware<RoleEnforcementMiddleware>();
 var startedAt = DateTimeOffset.UtcNow;
 app.MapGet("/healthz", (IEnumerable<IMqttBufferStatus> buffers) =>
 {
@@ -234,6 +277,27 @@ else
 if (webRoot is not null)
 {
     logger.LogInformation("Serving Web from {WebRoot}", webRoot);
+}
+
+if (httpsCertificate is not null)
+{
+    logger.LogInformation(
+        "HTTPS is configured on port {HttpsPort}. HTTP port {HttpPort}, redirect {Redirect}. Restart is required after the certificate changes.",
+        httpsBinding.HttpsPort,
+        httpsBinding.HttpPort,
+        httpsBinding.RedirectHttp);
+}
+
+var diagnose = Array.FindIndex(args, arg => string.Equals(arg, "--diagnose", StringComparison.OrdinalIgnoreCase));
+if (diagnose >= 0)
+{
+    var output = diagnose + 1 < args.Length && !args[diagnose + 1].StartsWith('-')
+        ? args[diagnose + 1]
+        : DiagnosticBundle.DefaultPath(dataDirectory);
+    DiagnosticBundle.WriteZip(output, store, licensing, traces);
+    logger.LogInformation("诊断包已写入 {Path}", output);
+    Console.WriteLine(output);
+    return;
 }
 
 logger.LogInformation("Account mode {Mode}", accounts.Mode);

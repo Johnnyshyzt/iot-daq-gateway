@@ -70,6 +70,7 @@ public sealed class CncConnectionTester(ILoggerFactory loggerFactory) : IDeviceC
                 };
             }
 
+            using var trace = ProtocolTraceHub.Begin(binding.Id);
             var report = await probe.ProbeAsync(cancellationToken).ConfigureAwait(false);
             watch.Stop();
             return new DeviceConnectionReport

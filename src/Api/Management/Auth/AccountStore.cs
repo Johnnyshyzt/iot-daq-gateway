@@ -20,6 +20,7 @@ public sealed class AccountStore
     [
         ("admin", "admin", "admin"),
         ("engineer", "engineer", "engineer"),
+        ("operator", "operator", "operator"),
         ("viewer", "viewer", "viewer")
     ];
 
@@ -119,26 +120,55 @@ public sealed class AccountStore
         }
     }
 
-    public bool TryAuthenticate(string? username, string? password, out string role)
+    public AuthAttempt Authenticate(string? username, string? password)
     {
-        role = "";
         if (string.IsNullOrWhiteSpace(username) || password is null || username.Contains('\n', StringComparison.Ordinal))
         {
-            return false;
+            return AuthAttempt.Fail("invalid_credentials", "用户名或密码错误");
         }
 
         lock (_gate)
         {
             EnsureInitialized();
             var user = Find(username);
-            if (user is null || !PasswordHasher.Verify(password, user.PasswordHash))
+            if (user is null)
             {
-                return false;
+                return AuthAttempt.Fail("invalid_credentials", "用户名或密码错误");
             }
 
-            role = user.Role;
-            return true;
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            if (user.LockedUntilUnixMs > now)
+            {
+                return AuthAttempt.Fail("locked", "登录失败次数过多，账号已暂时锁定。请稍后再试。");
+            }
+
+            if (!PasswordHasher.Verify(password, user.PasswordHash))
+            {
+                user.FailedAttempts++;
+                if (user.FailedAttempts >= LockoutThreshold)
+                {
+                    user.LockedUntilUnixMs = DateTimeOffset.UtcNow.AddMinutes(LockoutMinutes).ToUnixTimeMilliseconds();
+                    user.FailedAttempts = 0;
+                    Save();
+                    return AuthAttempt.Fail("locked", "登录失败次数过多，账号已暂时锁定。请稍后再试。");
+                }
+
+                Save();
+                return AuthAttempt.Fail("invalid_credentials", "用户名或密码错误");
+            }
+
+            user.FailedAttempts = 0;
+            user.LockedUntilUnixMs = 0;
+            Save();
+            return AuthAttempt.Success(user.Role);
         }
+    }
+
+    public bool TryAuthenticate(string? username, string? password, out string role)
+    {
+        var attempt = Authenticate(username, password);
+        role = attempt.Role;
+        return attempt.Ok;
     }
 
     public bool UsesDemoPassword(string? username)
@@ -159,6 +189,7 @@ public sealed class AccountStore
 
             return PasswordHasher.Verify("admin", user.PasswordHash)
                 || PasswordHasher.Verify("engineer", user.PasswordHash)
+                || PasswordHasher.Verify("operator", user.PasswordHash)
                 || PasswordHasher.Verify("viewer", user.PasswordHash);
         }
     }
@@ -186,22 +217,9 @@ public sealed class AccountStore
             return false;
         }
 
-        if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 8)
+        if (PasswordPolicy.Check(newPassword, username) is { } policy)
         {
-            error = "新密码至少 8 位。";
-            return false;
-        }
-
-        if (newPassword.Contains('\n', StringComparison.Ordinal) || newPassword.Contains('\r', StringComparison.Ordinal))
-        {
-            error = "新密码不能包含换行。";
-            return false;
-        }
-
-        if (string.Equals(newPassword, username, StringComparison.OrdinalIgnoreCase)
-            || IsDemoPassword(newPassword))
-        {
-            error = "不能把密码改成演示口令（admin、engineer、viewer）或与用户名相同。";
+            error = policy;
             return false;
         }
 
@@ -215,14 +233,14 @@ public sealed class AccountStore
                 return false;
             }
 
-            if (PasswordHasher.Verify(newPassword, user.PasswordHash))
+            if (PasswordHasher.Verify(newPassword!, user.PasswordHash))
             {
                 error = "新密码不能与当前密码相同。";
                 return false;
             }
 
             user.MustChangePassword = false;
-            user.PasswordHash = PasswordHasher.Hash(newPassword);
+            user.PasswordHash = PasswordHasher.Hash(newPassword!);
             Save();
             DropBootstrapLine(user.Username);
             _logger.LogInformation("Password changed for {Username}", user.Username);
@@ -247,6 +265,7 @@ public sealed class AccountStore
     private void Load()
     {
         AccountFile? file;
+        var migrated = false;
         try
         {
             file = JsonSerializer.Deserialize<AccountFile>(File.ReadAllText(_accountsPath), Json);
@@ -263,9 +282,16 @@ public sealed class AccountStore
 
         foreach (var user in file.Users)
         {
+            if (string.Equals(user.Username?.Trim(), "admin", StringComparison.OrdinalIgnoreCase)
+                && !StudioRoles.IsKnown(user.Role))
+            {
+                user.Role = StudioRoles.Admin;
+                migrated = true;
+            }
+
             if (string.IsNullOrWhiteSpace(user.Username)
                 || user.Username.Contains('\n', StringComparison.Ordinal)
-                || user.Role is not ("admin" or "engineer" or "viewer")
+                || !StudioRoles.IsKnown(user.Role)
                 || string.IsNullOrWhiteSpace(user.PasswordHash))
             {
                 throw new InvalidOperationException($"账号文件无效：{_accountsPath}");
@@ -275,6 +301,10 @@ public sealed class AccountStore
         _fileMode = file.Mode == FieldMode ? FieldMode : DemoMode;
         _users = file.Users;
         ModeMismatch = !string.Equals(_fileMode, _configuredMode, StringComparison.Ordinal);
+        if (migrated)
+        {
+            Save();
+        }
     }
 
     private void CreateDemoAccounts()
@@ -288,7 +318,7 @@ public sealed class AccountStore
         else
         {
             seeds = configured
-                .Where(user => user.Role is "admin" or "engineer" or "viewer" && !string.IsNullOrWhiteSpace(user.Username))
+                .Where(user => StudioRoles.IsKnown(user.Role) && !string.IsNullOrWhiteSpace(user.Username))
                 .Select(user => (user.Username.Trim(), user.Role, user.Password ?? ""))
                 .ToList();
         }
@@ -317,7 +347,7 @@ public sealed class AccountStore
         {
             "# 现场一次性登录口令。打开 http://127.0.0.1:5080 登录后必须修改。",
             "# 全部账号改密后，本文件会删除。不要使用 admin/admin 作为长期密码。",
-            "# 角色仍是本机的 admin / engineer / viewer。"
+            "# 角色仍是本机的 admin / engineer / operator / viewer。operator 与 viewer 只读。"
         };
         _users = [];
         foreach (var seed in Seeds)
@@ -382,13 +412,13 @@ public sealed class AccountStore
             if (_users.Any(user => user.MustChangePassword))
             {
                 return "现场模式。默认 admin/admin 不能登录。请打开 " + BootstrapPasswordPath
-                    + " 查看一次性密码，登录后立即修改。角色仍是本机的 admin、engineer、viewer。";
+                    + " 查看一次性密码，登录后立即修改。角色是本机的 admin、engineer、operator、viewer。operator 与 viewer 只能查看。";
             }
 
             return "现场模式。一次性引导密码已失效。请使用修改后的本地账号登录。忘记密码时，停止服务并删除 data\\auth 后重启，会重新生成引导密码。";
         }
 
-        return "本机演示模式。账号 admin / admin、engineer / engineer、viewer / viewer 只适合 localhost 开发。现场安装包不会使用这些默认口令；交到客户机器前必须修改密码。";
+        return "本机演示模式。账号 admin / admin、engineer / engineer、operator / operator、viewer / viewer 只适合 localhost 开发。现场安装包不会使用这些默认口令；交到客户机器前必须修改密码。";
     }
 
     private void DropBootstrapLine(string username)
@@ -411,6 +441,140 @@ public sealed class AccountStore
             .ToArray();
         WriteText(BootstrapPasswordPath, string.Join(Environment.NewLine, kept) + Environment.NewLine);
     }
+
+    public bool TryCreate(string? username, string? role, string? password, out string error)
+    {
+        error = "";
+        username = username?.Trim() ?? "";
+        role = role?.Trim() ?? "";
+        if (!IsUserName(username))
+        {
+            error = "用户名只能包含字母、数字、下划线和连字符，长度 1 到 32。";
+            return false;
+        }
+
+        if (!StudioRoles.IsKnown(role))
+        {
+            error = "角色只能是 admin、engineer、operator 或 viewer。";
+            return false;
+        }
+
+        if (PasswordPolicy.Check(password, username) is { } policy)
+        {
+            error = policy;
+            return false;
+        }
+
+        lock (_gate)
+        {
+            EnsureInitialized();
+            if (Find(username) is not null)
+            {
+                error = "用户名已存在。";
+                return false;
+            }
+
+            _users.Add(new AccountRecord
+            {
+                Username = username,
+                Role = role,
+                PasswordHash = PasswordHasher.Hash(password!),
+                MustChangePassword = false
+            });
+            Save();
+            return true;
+        }
+    }
+
+    public bool TryUpdate(string? username, string? role, string? password, out string error)
+    {
+        error = "";
+        username = username?.Trim() ?? "";
+        lock (_gate)
+        {
+            EnsureInitialized();
+            var user = Find(username);
+            if (user is null)
+            {
+                error = "用户不存在。";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                if (!StudioRoles.IsKnown(role))
+                {
+                    error = "角色只能是 admin、engineer、operator 或 viewer。";
+                    return false;
+                }
+
+                if (user.Role == StudioRoles.Admin && role != StudioRoles.Admin && !HasAnotherAdmin(user.Username))
+                {
+                    error = "不能取消最后一个管理员。";
+                    return false;
+                }
+
+                user.Role = role;
+            }
+
+            if (!string.IsNullOrEmpty(password))
+            {
+                if (PasswordPolicy.Check(password, user.Username) is { } policy)
+                {
+                    error = policy;
+                    return false;
+                }
+
+                user.PasswordHash = PasswordHasher.Hash(password);
+                user.MustChangePassword = false;
+            }
+
+            Save();
+            return true;
+        }
+    }
+
+    public bool TryDelete(string? username, out string error)
+    {
+        error = "";
+        username = username?.Trim() ?? "";
+        lock (_gate)
+        {
+            EnsureInitialized();
+            var user = Find(username);
+            if (user is null)
+            {
+                error = "用户不存在。";
+                return false;
+            }
+
+            if (user.Role == StudioRoles.Admin && !HasAnotherAdmin(user.Username))
+            {
+                error = "不能删除最后一个管理员。";
+                return false;
+            }
+
+            _users.Remove(user);
+            Save();
+            return true;
+        }
+    }
+
+    private bool HasAnotherAdmin(string username) =>
+        _users.Any(user => user.Role == StudioRoles.Admin && !string.Equals(user.Username, username, StringComparison.Ordinal));
+
+    private int LockoutThreshold =>
+        int.TryParse(_configuration["Studio:LockoutThreshold"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? Math.Clamp(value, 1, 50)
+            : 5;
+
+    private int LockoutMinutes =>
+        int.TryParse(_configuration["Studio:LockoutMinutes"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? Math.Clamp(value, 1, 1440)
+            : 15;
+
+    private static bool IsUserName(string username) =>
+        username.Length is >= 1 and <= 32 && username.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '-');
 
     private AccountRecord? Find(string username) =>
         _users.FirstOrDefault(user => string.Equals(user.Username, username, StringComparison.Ordinal));
@@ -450,10 +614,7 @@ public sealed class AccountStore
         return string.Equals(raw?.Trim(), FieldMode, StringComparison.OrdinalIgnoreCase) ? FieldMode : DemoMode;
     }
 
-    private static bool IsDemoPassword(string password) =>
-        password.Equals("admin", StringComparison.Ordinal)
-        || password.Equals("engineer", StringComparison.Ordinal)
-        || password.Equals("viewer", StringComparison.Ordinal);
+    private static bool IsDemoPassword(string password) => PasswordPolicy.IsDemo(password);
 
     private static string CreatePassword()
     {
@@ -484,7 +645,26 @@ public sealed class AccountStore
         public string PasswordHash { get; set; } = "";
 
         public bool MustChangePassword { get; set; }
+
+        public int FailedAttempts { get; set; }
+
+        public long LockedUntilUnixMs { get; set; }
     }
+}
+
+public sealed class AuthAttempt
+{
+    public bool Ok { get; init; }
+
+    public string Role { get; init; } = "";
+
+    public string Code { get; init; } = "";
+
+    public string Message { get; init; } = "";
+
+    public static AuthAttempt Success(string role) => new() { Ok = true, Role = role };
+
+    public static AuthAttempt Fail(string code, string message) => new() { Code = code, Message = message };
 }
 
 internal static class PasswordHasher

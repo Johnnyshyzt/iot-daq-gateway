@@ -61,20 +61,20 @@ Studio 页面与路径的对应关系见 [studio-ia.md](../product/studio-ia.md)
 
 登录是本地账号，不是目录服务。`POST /api/v1/auth/login` 返回 Bearer 令牌。除登录和 `GET /api/v1/auth/posture` 外，`/api` 都要带 `Authorization: Bearer <token>`。
 
-- 开发与 `dotnet run`：`Studio:AccountMode` 缺省为 `demo`。初始口令是 `admin` / `admin`、`engineer` / `engineer`、`viewer` / `viewer`，只适合 localhost。登录页会写明这一点。
+- 开发与 `dotnet run`：`Studio:AccountMode` 缺省为 `demo`。初始口令是 `admin` / `admin`、`engineer` / `engineer`、`operator` / `operator`、`viewer` / `viewer`，只适合 localhost。登录页会写明这一点。
 - 现场 zip：`AccountMode` 为 `field`。首次启动把一次性密码写到 `data/auth/bootstrap-password.txt`。`admin` / `admin` 不能登录。登录响应 `mustChangePassword: true` 时，除 `GET /auth/me`、`GET /auth/posture`、`POST /auth/password` 外，接口返回 `403 password_change_required`。
-- `POST /api/v1/auth/password` 正文 `{ "currentPassword", "newPassword" }`。新密码至少 8 位，不能与当前密码、用户名或演示口令相同。密码以 PBKDF2 存在 `data/auth/accounts.json`，文件里没有明文。
-- 不信任客户端自报的角色头。
+- `POST /api/v1/auth/password` 正文 `{ "currentPassword", "newPassword" }`。新密码至少 8 位，同时包含字母和数字，不能与当前密码、用户名或演示口令相同。密码以 PBKDF2 存在 `data/auth/accounts.json`，文件里没有明文。连续失败会锁定。
+- 不信任客户端自报的角色头。已有用户名 `admin` 且角色为空时，读入账号文件会改成管理员。
 
 角色矩阵：
 
-| 操作 | viewer | engineer | admin |
+| 操作 | viewer / operator | engineer | admin |
 | --- | --- | --- | --- |
-| 读取配置、运行态、日志 | 是 | 是 | 是 |
-| 写草稿、校验、发布、回滚、设备测试 | 否 | 是 | 是 |
-| 许可证与用户 | 否 | 否 | 是 |
+| 读取配置、运行态、日志、自检结果 | 是 | 是 | 是 |
+| 写草稿、校验、发布、回滚、设备测试、自检、报文、诊断包 | 否 | 是 | 是 |
+| 用户、HTTPS、备份恢复、许可证导入移除、升级 | 否 | 否 | 是 |
 
-viewer 调用写接口返回 `403 forbidden`。
+只读角色调用写接口返回 `403 forbidden`。时钟回拨或授权状态被改时，配置修改返回 `403 security_block`，采集不停止。
 
 ## 许可证桩
 

@@ -440,12 +440,32 @@ export function actionLabel(action: string) {
 export function roleLabel(role: string) {
   if (role === 'admin') return '管理员'
   if (role === 'engineer') return '工程师'
+  if (role === 'operator') return '操作员'
   if (role === 'viewer') return '只读'
   return role
 }
 
 export function canWrite(role: string | undefined) {
   return role === 'admin' || role === 'engineer'
+}
+
+export function isAdmin(role: string | undefined) {
+  return role === 'admin'
+}
+
+export async function studioDownload(path: string, filename: string, init: RequestInit = {}) {
+  const token = useAuthStore.getState().auth.accessToken
+  const headers = new Headers(init.headers)
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const response = await fetch(path, { ...init, headers })
+  if (!response.ok) throw await readError(response)
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 const categoryLabels: Record<string, string> = {

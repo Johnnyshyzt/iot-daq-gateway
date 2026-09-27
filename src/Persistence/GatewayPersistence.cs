@@ -19,7 +19,7 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWriter
 {
-    public const int SchemaVersion = 6;
+    public const int SchemaVersion = 7;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

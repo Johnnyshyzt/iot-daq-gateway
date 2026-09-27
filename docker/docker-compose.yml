@@ -21,7 +21,8 @@ services:
     # Overlay example YAML. An empty database imports it once (MQTT host mosquitto).
     # Later edits belong in the database. The named volume keeps gateway.db.
     # Linux Compose remains a Fake demo — not a production FOCAS path.
-    # The host port stays on 127.0.0.1. Do not publish 0.0.0.0.
+      # The host port stays on 127.0.0.1. Do not publish 0.0.0.0.
+      # HTTPS stays off unless data/https/binding.json exists. This Compose sets ASPNETCORE_URLS to HTTP.
     volumes:
       - gateway-data:/app/data
       - ../configs/examples/gateway.docker.yaml:/app/gateway.yaml:ro

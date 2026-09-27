@@ -54,6 +54,21 @@ const actionLabels: Record<string, string> = {
   'apikey.revoke': '吊销查询密钥',
   'opcua.update': 'OPC UA 设置',
   'onboarding.dismiss': '关闭引导',
+  'auth.login': '登录',
+  'auth.login.fail': '登录失败',
+  'auth.lockout': '登录锁定',
+  'auth.denied': '拒绝访问',
+  'user.create': '创建用户',
+  'user.update': '更新用户',
+  'user.delete': '删除用户',
+  'https.self-signed': '生成 HTTPS 证书',
+  'https.import': '导入 HTTPS 证书',
+  'https.disable': '关闭 HTTPS',
+  'device.self-test': '连通性自检',
+  'ops.diagnose': '导出诊断包',
+  'security.clock_rollback': '时钟回拨',
+  'security.state_tamper': '授权状态被改',
+  'security.ack': '确认授权状态',
 }
 
 export function AuditPage() {

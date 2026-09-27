@@ -2,11 +2,13 @@ using Adapters.Cnc.Drivers;
 using IotDaq.Persistence;
 using Studio.Contracts;
 using Studio.Host.Auth;
+using Studio.Host.Commissioning;
 using Studio.Host.Config;
 using Studio.Host.Runtime;
 using Studio.Host.Licensing;
 using Studio.Host.Northbound;
 using Studio.Host.Notifications;
+using Studio.Host.Security;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Endpoints;
@@ -15,22 +17,25 @@ public static class StudioEndpoints
 {
     public static void MapStudioApi(this WebApplication app)
     {
-        var api = app.MapGroup("/api/v1");
+        var api = app.MapGroup("/api/v1").EnforceRoles();
 
-        api.MapPost("/auth/login", (LoginRequest? body, TokenService tokens) =>
+        api.MapPost("/auth/login", (LoginRequest? body, TokenService tokens, IotDaq.Persistence.GatewayPersistence database) =>
         {
             var username = body?.Username?.Trim();
-            if (body is null || !tokens.TryLogin(username, body.Password, out var token, out var role, out var expires))
+            var outcome = tokens.Login(username, body?.Password);
+            if (!outcome.Ok)
             {
-                return ApiResults.Error(StatusCodes.Status401Unauthorized, "invalid_credentials", "用户名或密码错误");
+                database.AppendAudit(username ?? "", "", outcome.Code == "locked" ? "auth.lockout" : "auth.login.fail", username ?? "", outcome.Message);
+                return ApiResults.Error(StatusCodes.Status401Unauthorized, outcome.Code.Length == 0 ? "invalid_credentials" : outcome.Code, outcome.Message);
             }
 
+            database.AppendAudit(username ?? "", outcome.Role, "auth.login", username ?? "", "登录成功");
             return ApiResults.Ok(new LoginResponse
             {
-                Token = token,
+                Token = outcome.Token,
                 Username = username ?? "",
-                Role = role,
-                ExpiresAt = expires,
+                Role = outcome.Role,
+                ExpiresAt = outcome.ExpiresAt,
                 MustChangePassword = tokens.MustChangePassword(username)
             });
         });
@@ -320,6 +325,9 @@ public static class StudioEndpoints
         ApiKeyEndpoints.Map(api);
         OpcUaEndpoints.Map(api);
         QueryApi.Map(app);
+        CommissioningEndpoints.Map(api);
+        UserEndpoints.Map(api);
+        HttpsEndpoints.Map(api);
     }
 
     private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts, LicenseService licensing)

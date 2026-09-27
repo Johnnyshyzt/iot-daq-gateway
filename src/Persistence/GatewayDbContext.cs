@@ -71,6 +71,10 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<InstalledLicenseRow> InstalledLicense => Set<InstalledLicenseRow>();
 
+    public DbSet<SecurityStateRow> SecurityState => Set<SecurityStateRow>();
+
+    public DbSet<SelfTestRunRow> SelfTestRuns => Set<SelfTestRunRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -138,5 +142,10 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.KeyHash).IsUnique().HasDatabaseName("ix_api_keys_hash");
         modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.Prefix).HasDatabaseName("ix_api_keys_prefix");
         modelBuilder.Entity<InstalledLicenseRow>().ToTable("installed_license").HasKey(row => row.Id);
+        modelBuilder.Entity<SecurityStateRow>().ToTable("security_state").HasKey(row => row.Id);
+        modelBuilder.Entity<SelfTestRunRow>().ToTable("self_test_runs").HasKey(row => row.Id);
+        modelBuilder.Entity<SelfTestRunRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<SelfTestRunRow>().HasIndex(row => new { row.DeviceId, row.FinishedUnixMs })
+            .HasDatabaseName("ix_self_test_device_time");
     }
 }

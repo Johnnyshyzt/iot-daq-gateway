@@ -101,13 +101,17 @@ public sealed class SchemaUpgradeV6Tests
             using (var db = store.Database.CreateContext())
             {
                 db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS installed_license");
+                db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS security_state");
+                db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS self_test_runs");
                 db.Database.ExecuteSqlRaw("UPDATE schema_info SET Version = {0} WHERE Id = 1", version);
             }
 
             store.Database.EnsureReady();
             using var check = store.Database.CreateContext();
-            Assert.Equal(6, check.SchemaInfo.AsNoTracking().Single().Version);
+            Assert.Equal(7, check.SchemaInfo.AsNoTracking().Single().Version);
             Assert.Empty(check.InstalledLicense.ToList());
+            Assert.Empty(check.SecurityState.ToList());
+            Assert.Empty(check.SelfTestRuns.ToList());
         }
         finally
         {

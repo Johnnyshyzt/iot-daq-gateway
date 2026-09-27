@@ -17,6 +17,8 @@ public sealed class LicensingOptions
 
     public List<string> GatedFeatures { get; set; } = [.. LicenseFeatures.DefaultGated];
 
+    public int ClockDriftToleranceSeconds { get; set; } = 300;
+
     public string? PublicKeySpki { get; set; }
 }
 
@@ -25,12 +27,14 @@ public sealed class LicenseService
     private readonly GatewayPersistence _database;
     private readonly LicensingOptions _options;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly LicenseGuard _guard;
 
-    public LicenseService(GatewayPersistence database, IConfiguration configuration, Func<DateTimeOffset>? clock = null)
+    public LicenseService(GatewayPersistence database, IConfiguration configuration, string dataDirectory, Func<DateTimeOffset>? clock = null)
     {
         _database = database;
         _options = Read(configuration);
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _guard = new LicenseGuard(database, dataDirectory, _options.ClockDriftToleranceSeconds, _clock);
     }
 
     public LicensingOptions Options => _options;
@@ -103,33 +107,57 @@ public sealed class LicenseService
             payload.Edition.Trim().ToLowerInvariant(),
             importedBy,
             _clock().ToUnixTimeMilliseconds());
+        _guard.Observe(document, allowDocumentChange: true);
         var evaluation = Evaluate();
         return (true, "license_imported", evaluation.Message);
     }
 
-    public void Remove() => _database.ClearInstalledLicense();
+    public void Remove()
+    {
+        _database.ClearInstalledLicense();
+        _guard.Observe(null, allowDocumentChange: true);
+    }
+
+    public LicenseGuardResult AcknowledgeTamper()
+    {
+        var installed = _database.ReadInstalledLicense();
+        var result = _guard.Observe(installed?.DocumentText, allowDocumentChange: true, clearTamper: true);
+        if (result.Code.Length == 0)
+        {
+            _database.AppendAudit("system", "admin", "security.ack", "license", "管理员确认并清除了授权状态异常标记。时钟回拨不会因此清除。");
+        }
+
+        return result;
+    }
+
+    public string? ConfigBlockMessage()
+    {
+        var evaluation = Evaluate();
+        return evaluation.BlocksConfig ? evaluation.TamperMessage : null;
+    }
 
     public LicenseEvaluation Evaluate()
     {
         var now = _clock();
         var installed = _database.ReadInstalledLicense();
+        var guard = _guard.Observe(installed?.DocumentText, allowDocumentChange: false);
         if (installed is null || string.IsNullOrWhiteSpace(installed.DocumentText))
         {
-            return Community("community", "未导入许可证，按社区版运行。采集不受影响。", null);
+            return Community("community", "未导入许可证，按社区版运行。采集不受影响。", null, guard);
         }
 
         using var key = LicenseCrypto.CreatePublic(_options.PublicKeySpki);
         var check = LicenseCodec.Verify(installed.DocumentText, key);
         if (!check.Ok || check.Payload is null)
         {
-            return Community("invalid", "已保存的许可证无法通过校验，已按社区版运行。采集不受影响。", check.Message);
+            return Community("invalid", "已保存的许可证无法通过校验，已按社区版运行。采集不受影响。", check.Message, guard);
         }
 
         var payload = check.Payload;
         if (!string.IsNullOrWhiteSpace(payload.MachineFingerprint)
-            && !string.Equals(payload.MachineFingerprint.Trim(), MachineFingerprint.Current(), StringComparison.OrdinalIgnoreCase))
+            && !MachineFingerprint.Matches(payload.MachineFingerprint))
         {
-            return Community("invalid", "许可证绑定的机器指纹与本机不一致，已按社区版运行。采集不受影响。", "指纹不匹配");
+            return Community("invalid", "许可证绑定的机器指纹与本机不一致，已按社区版运行。采集不受影响。", "指纹不匹配", guard);
         }
 
         DateTimeOffset? expires = null;
@@ -187,11 +215,14 @@ public sealed class LicenseService
             LicenseFeatures = payload.Features ?? [],
             CommunityFeatures = _options.CommunityFeatures,
             EntitlementsActive = entitlements,
-            BoundFingerprint = string.IsNullOrWhiteSpace(payload.MachineFingerprint) ? null : payload.MachineFingerprint.Trim().ToLowerInvariant()
+            BoundFingerprint = string.IsNullOrWhiteSpace(payload.MachineFingerprint) ? null : payload.MachineFingerprint.Trim().ToLowerInvariant(),
+            TamperCode = guard.Code,
+            TamperMessage = guard.Message,
+            BlocksConfig = guard.BlocksConfig
         };
     }
 
-    private LicenseEvaluation Community(string state, string message, string? detail) => new()
+    private LicenseEvaluation Community(string state, string message, string? detail, LicenseGuardResult guard) => new()
     {
         State = state,
         Edition = "community",
@@ -202,7 +233,10 @@ public sealed class LicenseService
         PointLimit = _options.CommunityPointLimit,
         LicenseFeatures = [],
         CommunityFeatures = _options.CommunityFeatures,
-        EntitlementsActive = false
+        EntitlementsActive = false,
+        TamperCode = guard.Code,
+        TamperMessage = guard.Message,
+        BlocksConfig = guard.BlocksConfig
     };
 
     private LicenseView ToView(
@@ -217,7 +251,7 @@ public sealed class LicenseService
             feature => feature,
             feature => Allows(feature),
             StringComparer.Ordinal);
-        string? banner = evaluation.State switch
+        string? banner = guardBanner(evaluation) ?? evaluation.State switch
         {
             "grace" => evaluation.Message,
             "expired" => evaluation.Message,
@@ -248,9 +282,16 @@ public sealed class LicenseService
             BoundFingerprint = evaluation.BoundFingerprint,
             Banner = banner,
             CollectionContinues = true,
-            DemoMode = demo
+            DemoMode = demo,
+            TamperCode = evaluation.TamperCode,
+            TamperMessage = evaluation.TamperMessage,
+            BlocksConfig = evaluation.BlocksConfig,
+            FingerprintNote = "指纹由系统标识、主机名、主板信息和网卡组成。更换一块网卡仍然有效；换主板或重装系统后需要重新签发。"
         };
     }
+
+    private static string? guardBanner(LicenseEvaluation evaluation) =>
+        evaluation.BlocksConfig ? evaluation.TamperMessage : null;
 
     private static bool HasFeature(IEnumerable<string> features, string token) =>
         features.Any(feature =>
@@ -285,6 +326,11 @@ public sealed class LicenseService
 
         var spki = section["PublicKeySpki"];
         options.PublicKeySpki = string.IsNullOrWhiteSpace(spki) ? null : spki.Trim();
+        if (int.TryParse(section["ClockDriftToleranceSeconds"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var drift))
+        {
+            options.ClockDriftToleranceSeconds = Math.Clamp(drift, 0, 86_400);
+        }
+
         return options;
     }
 
@@ -335,6 +381,12 @@ public sealed class LicenseEvaluation
     public bool EntitlementsActive { get; init; }
 
     public string? BoundFingerprint { get; init; }
+
+    public string TamperCode { get; init; } = "";
+
+    public string TamperMessage { get; init; } = "";
+
+    public bool BlocksConfig { get; init; }
 }
 
 public sealed class LicenseView
@@ -384,4 +436,12 @@ public sealed class LicenseView
     public bool CollectionContinues { get; set; } = true;
 
     public bool DemoMode { get; set; }
+
+    public string TamperCode { get; set; } = "";
+
+    public string TamperMessage { get; set; } = "";
+
+    public bool BlocksConfig { get; set; }
+
+    public string FingerprintNote { get; set; } = "";
 }
