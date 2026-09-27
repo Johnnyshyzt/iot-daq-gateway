@@ -264,8 +264,10 @@ public sealed class Phase8ApiTests : IClassFixture<Phase8Factory>
     {
         using var viewer = _factory.CreateClient();
         using var engineer = _factory.CreateClient();
+        using var floor = _factory.CreateClient();
         await Authorize(viewer, "viewer", "viewer");
         await Authorize(engineer, "engineer", "engineer");
+        await Authorize(floor, "operator", "operator");
         var data = _factory.Services.GetRequiredService<EndpointDataSource>();
         var seen = 0;
         foreach (var endpoint in data.Endpoints.OfType<RouteEndpoint>())
@@ -305,7 +307,7 @@ public sealed class Phase8ApiTests : IClassFixture<Phase8Factory>
                     : policy == ApiPolicy.Write
                         ? viewer
                         : viewer;
-                if (policy is ApiPolicy.Write or ApiPolicy.Admin or ApiPolicy.Read)
+                if (policy is ApiPolicy.Write or ApiPolicy.Admin or ApiPolicy.Read or ApiPolicy.Operate)
                 {
                     request.Headers.Authorization = viewer.DefaultRequestHeaders.Authorization;
                     client = viewer;
@@ -333,12 +335,23 @@ public sealed class Phase8ApiTests : IClassFixture<Phase8Factory>
                 {
                     Assert.DoesNotContain("\"code\":\"forbidden\"", text, StringComparison.Ordinal);
                 }
-                else if (policy is ApiPolicy.Write or ApiPolicy.Admin)
+                else if (policy is ApiPolicy.Write or ApiPolicy.Admin or ApiPolicy.Operate)
                 {
                     Assert.True(
                         response.StatusCode == HttpStatusCode.Forbidden,
                         method + " " + path + " viewer -> " + (int)response.StatusCode + " " + Trim(text));
                     Assert.Contains("\"code\":\"forbidden\"", text, StringComparison.Ordinal);
+                    if (policy == ApiPolicy.Operate)
+                    {
+                        using var operatorRequest = new HttpRequestMessage(new HttpMethod(method), path);
+                        operatorRequest.Headers.Authorization = floor.DefaultRequestHeaders.Authorization;
+                        var operatorResponse = await floor.SendAsync(operatorRequest);
+                        var operatorBody = await operatorResponse.Content.ReadAsStringAsync();
+                        Assert.DoesNotContain(
+                            "\"code\":\"forbidden\"",
+                            operatorBody,
+                            StringComparison.Ordinal);
+                    }
                 }
                 else
                 {

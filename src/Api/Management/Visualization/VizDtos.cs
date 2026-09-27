@@ -203,4 +203,8 @@ public sealed class VizSettings
     public string TimeZone { get; set; } = "Asia/Shanghai";
 
     public List<ShiftDefinition> Shifts { get; set; } = [];
+
+    public List<PlannedBreak>? Breaks { get; set; }
+
+    public List<string>? Holidays { get; set; }
 }

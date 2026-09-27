@@ -1,0 +1,13 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "pointValue",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "deviceId": "cnc-01",
+  "point": "calc_loadHigh",
+  "value": 1,
+  "quality": "good",
+  "unit": "",
+  "ts": "2026-09-27T08:00:01+00:00",
+  "computed": true
+}

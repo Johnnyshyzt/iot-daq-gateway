@@ -225,7 +225,8 @@ public sealed class OpcUaWorker : BackgroundService, IOpcUaControl
                     Numeric = point.NumericValue,
                     Quality = point.Quality,
                     TimestampUnixMs = point.TimestampUnixMs,
-                    DataType = types.TryGetValue(point.PointId, out var type) ? type : ""
+                    DataType = types.TryGetValue(point.PointId, out var type) ? type : "",
+                    Computed = point.Computed
                 }).ToList()
             });
         }

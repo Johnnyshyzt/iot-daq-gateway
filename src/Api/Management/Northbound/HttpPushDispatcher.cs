@@ -318,7 +318,8 @@ public sealed class HttpPushDispatcher
             string.IsNullOrWhiteSpace(sample.Quality) ? "good" : sample.Quality,
             sample.Unit,
             DateTimeOffset.FromUnixTimeMilliseconds(sample.TimestampUnixMs),
-            versioned: true);
+            versioned: true,
+            computed: sample.Computed);
         return NorthboundPayload.Parse(json);
     }
 

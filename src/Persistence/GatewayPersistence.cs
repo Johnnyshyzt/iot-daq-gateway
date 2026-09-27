@@ -19,7 +19,7 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWriter
 {
-    public const int SchemaVersion = 7;
+    public const int SchemaVersion = 8;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -152,6 +152,23 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
 
             db.SaveChanges();
             SeedCatalog(db);
+            if (!db.DowntimeReasons.Any())
+            {
+                foreach (var reason in Rules.ReasonCatalog.Defaults)
+                {
+                    db.DowntimeReasons.Add(new DowntimeReasonRow
+                    {
+                        Id = reason.Id,
+                        ParentId = reason.ParentId,
+                        Code = reason.Code,
+                        Name = reason.Name,
+                        Sort = reason.Sort,
+                        Enabled = true
+                    });
+                }
+
+                db.SaveChanges();
+            }
         }
     }
 
@@ -497,7 +514,8 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
                 NumericValue = row.NumericValue,
                 Quality = row.Quality,
                 Unit = row.Unit,
-                TimestampUnixMs = row.TimestampUnixMs
+                TimestampUnixMs = row.TimestampUnixMs,
+                Computed = row.Computed
             }).ToList();
         }
     }
@@ -519,7 +537,8 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
                     NumericValue = row.NumericValue,
                     Quality = row.Quality,
                     Unit = row.Unit,
-                    TimestampUnixMs = row.TimestampUnixMs
+                    TimestampUnixMs = row.TimestampUnixMs,
+                    Computed = row.Computed
                 })
                 .ToList();
         }
@@ -549,7 +568,8 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
                     NumericValue = row.NumericValue,
                     Quality = row.Quality,
                     Unit = row.Unit,
-                    TimestampUnixMs = row.TimestampUnixMs
+                    TimestampUnixMs = row.TimestampUnixMs,
+                    Computed = row.Computed
                 })
                 .ToList();
             if (bucketMs <= 0)
@@ -1545,6 +1565,8 @@ public sealed class SampleView
     public string? Unit { get; set; }
 
     public long TimestampUnixMs { get; set; }
+
+    public bool Computed { get; set; }
 }
 
 public sealed class AlarmView

@@ -9,6 +9,10 @@ public sealed class ShiftCalendar
 
     public List<ShiftDefinition> Shifts { get; set; } = [];
 
+    public List<PlannedBreak> Breaks { get; set; } = [];
+
+    public List<string> Holidays { get; set; } = [];
+
     public static ShiftCalendar Default() => new()
     {
         TimeZone = "Asia/Shanghai",
@@ -35,6 +39,8 @@ public sealed class ShiftCalendar
             }
 
             parsed.TimeZone = string.IsNullOrWhiteSpace(parsed.TimeZone) ? "Asia/Shanghai" : parsed.TimeZone.Trim();
+            parsed.Breaks ??= [];
+            parsed.Holidays ??= [];
             return parsed;
         }
         catch (JsonException)
@@ -104,6 +110,28 @@ public sealed class ShiftCalendar
             windows.Add((shift.Name.Trim(), start, end > start ? end : end + 1440));
         }
 
+        foreach (var item in Breaks)
+        {
+            if (string.IsNullOrWhiteSpace(item.Name))
+            {
+                issues.Add("休息名称不能为空");
+                continue;
+            }
+
+            if (!TryClock(item.Start, out var start) || !TryClock(item.End, out var end) || start == end)
+            {
+                issues.Add($"休息「{item.Name}」的起止时间需为 HH:mm，且不能相同");
+            }
+        }
+
+        foreach (var holiday in Holidays)
+        {
+            if (!DateOnly.TryParseExact(holiday?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            {
+                issues.Add($"节假日「{holiday}」需为 yyyy-MM-dd");
+            }
+        }
+
         for (var i = 0; i < windows.Count; i++)
         {
             for (var j = i + 1; j < windows.Count; j++)
@@ -157,12 +185,66 @@ public sealed class ShiftCalendar
                 }
 
                 var lengthMs = (long)(end - start).TotalMilliseconds;
-                var planned = Math.Clamp(shift.PlannedMinutes, 0, (int)Math.Max(0, lengthMs / 60000)) * 60_000L;
+                var planned = PlannedMilliseconds(cursor, start, end, lengthMs, shift);
                 windows.Add(new ShiftWindow(shift.Name.Trim(), cursor, start, end, lengthMs, planned));
             }
         }
 
         return windows.OrderBy(window => window.Start).ToList();
+    }
+
+    private long PlannedMilliseconds(DateOnly day, DateTimeOffset start, DateTimeOffset end, long lengthMs, ShiftDefinition shift)
+    {
+        if (IsHoliday(day))
+        {
+            return 0;
+        }
+
+        if (Breaks.Count == 0)
+        {
+            return Math.Clamp(shift.PlannedMinutes, 0, (int)Math.Max(0, lengthMs / 60000)) * 60_000L;
+        }
+
+        long breakMs = 0;
+        foreach (var item in Breaks)
+        {
+            if (!TryClock(item.Start, out var breakStart) || !TryClock(item.End, out var breakEnd))
+            {
+                continue;
+            }
+
+            breakMs += BreakOverlap(day, start, end, breakStart, breakEnd);
+        }
+
+        return Math.Max(0, lengthMs - breakMs);
+    }
+
+    public bool IsHoliday(DateOnly day) =>
+        Holidays.Any(holiday => DateOnly.TryParseExact(holiday?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) && parsed == day);
+
+    private long BreakOverlap(DateOnly day, DateTimeOffset shiftStart, DateTimeOffset shiftEnd, int breakStartMin, int breakEndMin)
+    {
+        var zone = ResolveZone();
+        long total = 0;
+        foreach (var offsetDay in new[] { -1, 0, 1 })
+        {
+            var date = day.AddDays(offsetDay);
+            var breakStart = ToOffset(date.ToDateTime(TimeOnly.MinValue).AddMinutes(breakStartMin), zone);
+            var breakEnd = ToOffset(date.ToDateTime(TimeOnly.MinValue).AddMinutes(breakEndMin), zone);
+            if (breakEndMin <= breakStartMin)
+            {
+                breakEnd = breakEnd.AddDays(1);
+            }
+
+            var from = breakStart > shiftStart ? breakStart : shiftStart;
+            var to = breakEnd < shiftEnd ? breakEnd : shiftEnd;
+            if (to > from)
+            {
+                total += (long)(to - from).TotalMilliseconds;
+            }
+        }
+
+        return total;
     }
 
     private static bool Overlaps(int startA, int endA, int startB, int endB) => startA < endB && startB < endA;
@@ -220,6 +302,15 @@ public sealed class ShiftDefinition
     public string End { get; set; } = "20:00";
 
     public int PlannedMinutes { get; set; } = 660;
+}
+
+public sealed class PlannedBreak
+{
+    public string Name { get; set; } = "";
+
+    public string Start { get; set; } = "12:00";
+
+    public string End { get; set; } = "13:00";
 }
 
 public readonly record struct ShiftWindow(

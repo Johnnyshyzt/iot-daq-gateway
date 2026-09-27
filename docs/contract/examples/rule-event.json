@@ -1,0 +1,11 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "ruleEvent",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "deviceId": "cnc-01",
+  "ruleId": "rule-spindle",
+  "name": "part.step",
+  "message": "产量计数增加",
+  "ts": "2026-09-27T08:00:01+00:00"
+}

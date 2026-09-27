@@ -39,6 +39,8 @@ public sealed class OpcUaPointSnapshot
     public long TimestampUnixMs { get; set; }
 
     public string DataType { get; set; } = "";
+
+    public bool Computed { get; set; }
 }
 
 public sealed class OpcUaDeviceSnapshot
@@ -383,7 +385,7 @@ internal sealed class DaqNodeManager : CustomNodeManager2
             {
                 var id = Sanitize(point.Id);
                 var (type, _) = Typed(point);
-                EnsureVariable(points, prefix + "/points/" + id, point.Id, type);
+                EnsureVariable(points, prefix + "/points/" + id, point.Computed ? point.Id + "（计算）" : point.Id, type);
             }
         }
     }

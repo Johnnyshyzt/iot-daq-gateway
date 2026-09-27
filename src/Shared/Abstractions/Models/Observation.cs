@@ -16,4 +16,6 @@ public sealed record Observation
     public string Quality { get; init; } = "good";
 
     public string? Unit { get; init; }
+
+    public bool Computed { get; init; }
 }

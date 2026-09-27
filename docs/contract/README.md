@@ -6,4 +6,4 @@ JSON Schema files in this directory are the stable payload contract for MQTT (wh
 - `GET /api/contract/v1/{name}.schema.json` returns one schema
 - `GET /api/query/v1/openapi.json` returns the query API document
 
-Examples live in `examples/`. Point and device-status files named `*.legacy.json` match the default MQTT shape, which omits `schema` and `kind`. The integration guide is [../integration.md](../integration.md).
+Examples live in `examples/`. Point and device-status files named `*.legacy.json` match the default MQTT shape, which omits `schema` and `kind`. A computed point adds `computed: true` and otherwise uses the same point document. Utilization may add OEE factors; consumers that ignore unknown fields keep working. Rule events use `rule-event.schema.json` and kind `ruleEvent`. The integration guide is [../integration.md](../integration.md).

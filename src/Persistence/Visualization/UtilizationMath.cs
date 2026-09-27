@@ -47,6 +47,12 @@ public sealed class UtilizationRow
 
     public long StoppedMs { get; set; }
 
+    public long SetupMs { get; set; }
+
+    public long WaitingMs { get; set; }
+
+    public long PlannedStopMs { get; set; }
+
     public long PlannedMs { get; set; }
 
     public double Utilization { get; set; }
@@ -244,6 +250,9 @@ public static class UtilizationMath
                     AlarmMs = durations[MachineState.Alarm],
                     OfflineMs = durations[MachineState.Offline],
                     StoppedMs = durations[MachineState.Stopped],
+                    SetupMs = durations[MachineState.Setup],
+                    WaitingMs = durations[MachineState.Waiting],
+                    PlannedStopMs = durations[MachineState.Planned],
                     PlannedMs = planned,
                     Utilization = Ratio(durations[MachineState.Running], planned),
                     PartCount = PartDelta(partSamples)
@@ -301,6 +310,9 @@ public static class UtilizationMath
             AlarmMs = list.Sum(row => row.AlarmMs),
             OfflineMs = list.Sum(row => row.OfflineMs),
             StoppedMs = list.Sum(row => row.StoppedMs),
+            SetupMs = list.Sum(row => row.SetupMs),
+            WaitingMs = list.Sum(row => row.WaitingMs),
+            PlannedStopMs = list.Sum(row => row.PlannedStopMs),
             PlannedMs = planned,
             Utilization = Ratio(run, planned),
             PartCount = list.Sum(row => row.PartCount)

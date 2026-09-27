@@ -57,6 +57,7 @@ public sealed class ContractMqttWorker(
         await PublishAlarmsAsync(lease, cancellationToken).ConfigureAwait(false);
         await PublishPartsAsync(lease, cancellationToken).ConfigureAwait(false);
         await PublishUtilizationAsync(lease, cancellationToken).ConfigureAwait(false);
+        await PublishRuleEventsAsync(lease, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task PublishAlarmsAsync(ContractLease lease, CancellationToken cancellationToken)
@@ -183,6 +184,32 @@ public sealed class ContractMqttWorker(
             devices,
             DateTimeOffset.FromUnixTimeMilliseconds(now));
         await lease.PublishAsync(NorthboundTopics.Utilization(lease.TopicTemplate, lease.Site), json, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task PublishRuleEventsAsync(ContractLease lease, CancellationToken cancellationToken)
+    {
+        var pending = database.PendingRuleEvents(50);
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var published = new List<long>();
+        foreach (var row in pending)
+        {
+            var json = NorthboundPayload.RuleEvent(
+                lease.GatewayId,
+                lease.Site,
+                row.DeviceId,
+                row.RuleId,
+                row.Name,
+                row.Message,
+                DateTimeOffset.FromUnixTimeMilliseconds(row.UnixMs));
+            await lease.PublishAsync(NorthboundTopics.Event(lease.TopicTemplate, lease.Site, row.DeviceId), json, cancellationToken).ConfigureAwait(false);
+            published.Add(row.Id);
+        }
+
+        database.MarkRuleEventsPublished(published);
     }
 
     private void EnsureCursors()

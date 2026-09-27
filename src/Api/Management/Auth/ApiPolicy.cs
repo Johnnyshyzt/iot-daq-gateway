@@ -12,7 +12,9 @@ public static class StudioRoles
 
     public static bool CanWrite(string? role) => role is Admin or Engineer;
 
-    public static bool IsReadOnly(string? role) => role is Operator or Viewer;
+    public static bool CanOperate(string? role) => role is Admin or Engineer or Operator;
+
+    public static bool IsReadOnly(string? role) => role is Viewer;
 }
 
 public static class ApiPolicy
@@ -21,6 +23,7 @@ public static class ApiPolicy
     public const string ApiKey = "api-key";
     public const string Read = "read";
     public const string Write = "write";
+    public const string Operate = "operate";
     public const string Admin = "admin";
 
     public static string Required(string method, string? path)
@@ -76,6 +79,13 @@ public static class ApiPolicy
             || route.StartsWith("/api/v1/onboarding/", StringComparison.OrdinalIgnoreCase)))
         {
             return Read;
+        }
+
+        if (verb == "POST" && (route.Equals("/api/v1/downtime/assign", StringComparison.OrdinalIgnoreCase)
+            || route.Equals("/api/v1/downtime/bulk", StringComparison.OrdinalIgnoreCase)
+            || route.Equals("/api/v1/oee/scrap", StringComparison.OrdinalIgnoreCase)))
+        {
+            return Operate;
         }
 
         return Write;

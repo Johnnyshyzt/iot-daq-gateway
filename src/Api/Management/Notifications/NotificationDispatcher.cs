@@ -25,6 +25,7 @@ public sealed class NotificationDispatcher
     private readonly VisualizationService _visualization;
     private readonly ILogger<NotificationDispatcher> _logger;
     private readonly LicenseService? _license;
+    private readonly Oee.OeeService? _oee;
     private readonly HttpClient _http;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -33,13 +34,15 @@ public sealed class NotificationDispatcher
         ConfigStore store,
         VisualizationService visualization,
         ILogger<NotificationDispatcher> logger,
-        LicenseService? license = null)
+        LicenseService? license = null,
+        Oee.OeeService? oee = null)
     {
         _database = database;
         _store = store;
         _visualization = visualization;
         _logger = logger;
         _license = license;
+        _oee = oee;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
     }
 
@@ -560,6 +563,17 @@ public sealed class NotificationDispatcher
             }
 
             builder.AppendLine();
+        }
+
+        if (_oee is not null && (_license?.Allows(LicenseFeatures.Oee) ?? false))
+        {
+            var oee = _oee.Build(from.ToUnixTimeMilliseconds(), to.ToUnixTimeMilliseconds(), null, null);
+            var scored = oee.Rows.Where(row => row.Oee is not null).ToList();
+            if (scored.Count > 0)
+            {
+                var average = scored.Average(row => row.Oee!.Value);
+                builder.Append("OEE 平均 ").Append((average * 100).ToString("0.#", CultureInfo.InvariantCulture)).AppendLine("%");
+            }
         }
 
         var text = builder.ToString().Trim();

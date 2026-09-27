@@ -449,6 +449,10 @@ export function canWrite(role: string | undefined) {
   return role === 'admin' || role === 'engineer'
 }
 
+export function canOperate(role: string | undefined) {
+  return role === 'admin' || role === 'engineer' || role === 'operator'
+}
+
 export function isAdmin(role: string | undefined) {
   return role === 'admin'
 }

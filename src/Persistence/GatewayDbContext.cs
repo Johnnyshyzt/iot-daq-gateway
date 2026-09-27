@@ -75,6 +75,26 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<SelfTestRunRow> SelfTestRuns => Set<SelfTestRunRow>();
 
+    public DbSet<ComputedPointRow> ComputedPoints => Set<ComputedPointRow>();
+
+    public DbSet<EdgeRuleRow> EdgeRules => Set<EdgeRuleRow>();
+
+    public DbSet<RuleLogRow> RuleLogs => Set<RuleLogRow>();
+
+    public DbSet<RuleEventRow> RuleEvents => Set<RuleEventRow>();
+
+    public DbSet<DowntimeReasonRow> DowntimeReasons => Set<DowntimeReasonRow>();
+
+    public DbSet<DowntimeEventRow> DowntimeEvents => Set<DowntimeEventRow>();
+
+    public DbSet<StateMapRow> StateMaps => Set<StateMapRow>();
+
+    public DbSet<PlannedStopRow> PlannedStops => Set<PlannedStopRow>();
+
+    public DbSet<CycleTimeRow> CycleTimes => Set<CycleTimeRow>();
+
+    public DbSet<ScrapEntryRow> ScrapEntries => Set<ScrapEntryRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -147,5 +167,24 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<SelfTestRunRow>().Property(row => row.Id).ValueGeneratedOnAdd();
         modelBuilder.Entity<SelfTestRunRow>().HasIndex(row => new { row.DeviceId, row.FinishedUnixMs })
             .HasDatabaseName("ix_self_test_device_time");
+
+        modelBuilder.Entity<ComputedPointRow>().ToTable("computed_points").HasKey(row => row.Id);
+        modelBuilder.Entity<ComputedPointRow>().HasIndex(row => new { row.Scope, row.OwnerId, row.PointId }).IsUnique()
+            .HasDatabaseName("ix_computed_owner_point");
+        modelBuilder.Entity<EdgeRuleRow>().ToTable("edge_rules").HasKey(row => row.Id);
+        modelBuilder.Entity<RuleLogRow>().ToTable("rule_logs").HasKey(row => row.Id);
+        modelBuilder.Entity<RuleLogRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<RuleLogRow>().HasIndex(row => row.UnixMs).HasDatabaseName("ix_rule_log_time");
+        modelBuilder.Entity<RuleEventRow>().ToTable("rule_events").HasKey(row => row.Id);
+        modelBuilder.Entity<RuleEventRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<RuleEventRow>().HasIndex(row => new { row.Published, row.UnixMs }).HasDatabaseName("ix_rule_event_pending");
+        modelBuilder.Entity<DowntimeReasonRow>().ToTable("downtime_reasons").HasKey(row => row.Id);
+        modelBuilder.Entity<DowntimeEventRow>().ToTable("downtime_events").HasKey(row => row.Id);
+        modelBuilder.Entity<DowntimeEventRow>().HasIndex(row => new { row.DeviceId, row.StartedUnixMs }).HasDatabaseName("ix_downtime_device_time");
+        modelBuilder.Entity<StateMapRow>().ToTable("state_maps").HasKey(row => row.Id);
+        modelBuilder.Entity<PlannedStopRow>().ToTable("planned_stops").HasKey(row => row.Id);
+        modelBuilder.Entity<CycleTimeRow>().ToTable("cycle_times").HasKey(row => row.Id);
+        modelBuilder.Entity<ScrapEntryRow>().ToTable("scrap_entries").HasKey(row => row.Id);
+        modelBuilder.Entity<ScrapEntryRow>().HasIndex(row => new { row.DeviceId, row.UnixMs }).HasDatabaseName("ix_scrap_device_time");
     }
 }

@@ -1,3 +1,4 @@
+using Cnc.Catalog;
 using Studio.Contracts;
 using Studio.Host.Config;
 
@@ -32,6 +33,8 @@ public static class DemoMode
                 continue;
             }
 
+            var brandId = CncCatalog.Current.BrandOfAdapter(device.Adapter) ?? device.Adapter.Split('.')[0];
+            var templateId = EnsureDemoTemplate(store, brandId);
             store.UpsertDevice(device.Id, new DeviceDocument
             {
                 Metadata = new DeviceMetadata
@@ -46,6 +49,7 @@ public static class DemoMode
                     IntervalMs = 1000,
                     Workshop = "演示车间",
                     Line = device.Line,
+                    PointTemplateId = templateId,
                     Connection = new DeviceConnection
                     {
                         Host = "127.0.0.1",
@@ -83,6 +87,55 @@ public static class DemoMode
                 ? "演示设备已经在草稿里，名称都带「演示数据」。"
                 : "已加入 " + added.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " 台模拟设备，名称带「演示数据」。这不是真实机床。"
         };
+    }
+
+    private static string EnsureDemoTemplate(ConfigStore store, string brandId)
+    {
+        var id = brandId + "-demo";
+        if (store.ListPointTemplates().Any(item => string.Equals(item.Metadata.Id, id, StringComparison.OrdinalIgnoreCase)))
+        {
+            return id;
+        }
+
+        var catalog = CncCatalog.Current;
+        var brand = catalog.FindBrand(brandId);
+        var points = new List<PointDefinition>();
+        foreach (var pointId in new[] { "state", "alarm", "program", "spindleLoad", "partCount", "scrapCount" })
+        {
+            if (brand is not null && !brand.ItemIds.Contains(pointId, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var item = catalog.FindItem(pointId);
+            var numeric = !string.Equals(item?.DataType, "string", StringComparison.OrdinalIgnoreCase)
+                && pointId is not ("state" or "alarm" or "program");
+            points.Add(new PointDefinition
+            {
+                Id = pointId,
+                Address = "catalog/" + pointId,
+                DataType = numeric ? "number" : "string",
+                Unit = item?.Unit ?? "",
+                Scale = 1,
+                Deadband = 0,
+                Enabled = true
+            });
+        }
+
+        store.UpsertPointTemplate(id, new PointTemplateDocument
+        {
+            Metadata = new PointTemplateMetadata
+            {
+                Id = id,
+                DisplayName = "演示 · " + brandId
+            },
+            Spec = new PointTemplateSpec
+            {
+                Adapter = brandId,
+                Points = points
+            }
+        });
+        return id;
     }
 }
 

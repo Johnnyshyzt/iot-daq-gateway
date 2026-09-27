@@ -27,6 +27,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl, IContract
     private readonly ILogger<LiveGateway> _logger;
     private readonly IReadOnlyList<ISampleWriter> _samples;
     private readonly IReadOnlyList<ILinkStatusWriter> _linkStatus;
+    private readonly IReadOnlyList<IObservationExpander> _expanders;
     private readonly ReliabilityOptions _reliability;
     private readonly MqttSpool _spool;
     private readonly MqttBufferStatus _buffer;
@@ -49,6 +50,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl, IContract
         ILogger<LiveGateway> logger,
         IEnumerable<ISampleWriter> samples,
         IEnumerable<ILinkStatusWriter> linkStatus,
+        IEnumerable<IObservationExpander> expanders,
         ReliabilityOptions reliability,
         MqttSpool spool,
         MqttBufferStatus buffer)
@@ -60,6 +62,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl, IContract
         _logger = logger;
         _samples = samples.ToList();
         _linkStatus = linkStatus.ToList();
+        _expanders = expanders.ToList();
         _reliability = reliability;
         _spool = spool;
         _buffer = buffer;
@@ -400,11 +403,24 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl, IContract
             }
 
             var observations = await adapter.CollectAsync(stall.Token).ConfigureAwait(false);
+            var batch = observations.ToList();
+            foreach (var expander in _expanders)
+            {
+                try
+                {
+                    batch = expander.Expand(batch).ToList();
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(ex, "Edge evaluation failed for {DeviceId}", adapter.DeviceId);
+                }
+            }
+
             foreach (var writer in _samples)
             {
                 try
                 {
-                    writer.Write(observations);
+                    writer.Write(batch);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -412,7 +428,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl, IContract
                 }
             }
 
-            foreach (var observation in observations)
+            foreach (var observation in batch)
             {
                 Remember(observation);
                 if (!session.Filter.ShouldPublish(observation))

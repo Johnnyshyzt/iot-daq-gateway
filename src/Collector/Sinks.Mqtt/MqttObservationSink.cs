@@ -83,7 +83,8 @@ public sealed class MqttObservationSink : INorthboundSink
             observation.Quality,
             observation.Unit,
             observation.Timestamp,
-            NorthboundPayload.IsV1(_config.Mqtt.ContractVersion));
+            NorthboundPayload.IsV1(_config.Mqtt.ContractVersion),
+            observation.Computed);
         await PublishRawAsync(topic, json, cancellationToken).ConfigureAwait(false);
     }
 
