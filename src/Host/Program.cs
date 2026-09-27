@@ -82,11 +82,15 @@ else
     builder.Services.AddSingleton<MqttBufferStatus>();
     builder.Services.AddSingleton<IMqttBufferStatus>(sp => sp.GetRequiredService<MqttBufferStatus>());
 }
-AccountStore.AccountsChanged = path => store.Database.SyncUsers(path);
-builder.Services.AddSingleton(sp => new AccountStore(
-    dataDirectory,
-    sp.GetRequiredService<IConfiguration>(),
-    sp.GetRequiredService<ILogger<AccountStore>>()));
+builder.Services.AddSingleton(sp =>
+{
+    var accounts = new AccountStore(
+        dataDirectory,
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<ILogger<AccountStore>>());
+    accounts.AccountsChanged = path => store.Database.SyncUsers(path);
+    return accounts;
+});
 builder.Services.AddFocasConnectProbe();
 builder.Services.AddDriverServices();
 builder.Services.AddSingleton<OpcUaWorker>();
