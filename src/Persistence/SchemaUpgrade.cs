@@ -32,6 +32,7 @@ internal static class SchemaUpgrade
             EnsureFromScript(db, connection, "link_status");
             EnsureFromScript(db, connection, "http_push_targets");
             EnsureFromScript(db, connection, "api_keys");
+            EnsureFromScript(db, connection, "installed_license");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_audit_unix ON audit_events ("UnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_created ON notification_deliveries ("CreatedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_status ON notification_deliveries ("Status", "CreatedUnixMs")""");

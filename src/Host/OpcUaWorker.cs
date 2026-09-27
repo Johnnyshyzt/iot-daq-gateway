@@ -1,8 +1,10 @@
 using Gateway.Abstractions.Contracts;
+using IotDaq.Licensing;
 using IotDaq.Persistence;
 using Microsoft.Extensions.Hosting;
 using Sinks.OpcUa;
 using Studio.Host.Config;
+using Studio.Host.Licensing;
 using Studio.Host.Northbound;
 
 namespace IotDaq.Host;
@@ -11,15 +13,17 @@ public sealed class OpcUaWorker : BackgroundService, IOpcUaControl
 {
     private readonly GatewayPersistence _database;
     private readonly ConfigStore _store;
+    private readonly LicenseService _license;
     private readonly ILogger<OpcUaWorker> _logger;
     private readonly object _gate = new();
     private OpcUaRuntimeInfo _info = new();
     private int _reload;
 
-    public OpcUaWorker(GatewayPersistence database, ConfigStore store, ILogger<OpcUaWorker> logger)
+    public OpcUaWorker(GatewayPersistence database, ConfigStore store, LicenseService license, ILogger<OpcUaWorker> logger)
     {
         _database = database;
         _store = store;
+        _license = license;
         _logger = logger;
     }
 
@@ -113,6 +117,23 @@ public sealed class OpcUaWorker : BackgroundService, IOpcUaControl
 
         if (!settings.Enabled)
         {
+            return;
+        }
+
+        if (!_license.Allows(LicenseFeatures.OpcUa))
+        {
+            lock (_gate)
+            {
+                _info = new OpcUaRuntimeInfo
+                {
+                    Enabled = true,
+                    Listening = false,
+                    Port = settings.Port,
+                    LastError = _license.Denial(LicenseFeatures.OpcUa)
+                };
+            }
+
+            _logger.LogInformation("OPC UA stays stopped because the license does not include it. Collection continues.");
             return;
         }
 

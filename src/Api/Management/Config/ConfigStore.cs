@@ -29,6 +29,21 @@ public sealed partial class ConfigStore
 
     public GatewayPersistence Database => _database;
 
+    /// <summary>
+    /// Returns a Chinese message when a change would increase device or point counts past the license limit.
+    /// Null means the change is allowed. Decreases and equal counts stay allowed so collection can keep running.
+    /// </summary>
+    public Func<int, int, int, int, string?>? LimitIncrease { get; set; }
+
+    public (int Devices, int Points) CountUsage(string slot)
+    {
+        lock (_gate)
+        {
+            var bundle = ReadSlot(slot);
+            return (CountDevices(bundle), CountPoints(bundle));
+        }
+    }
+
     public void EnsureInitialized(string? importPath = null)
     {
         lock (_gate)
@@ -168,6 +183,8 @@ public sealed partial class ConfigStore
                 throw new ConfigStoreException("id_conflict", "已存在仅大小写不同的设备 Id", StatusCodes.Status409Conflict);
             }
 
+            var beforeDevices = CountDevices(bundle);
+            var beforePoints = CountPoints(bundle);
             if (index >= 0)
             {
                 bundle.Devices[index] = document;
@@ -177,6 +194,7 @@ public sealed partial class ConfigStore
                 bundle.Devices.Add(document);
             }
 
+            Guard(beforeDevices, CountDevices(bundle), beforePoints, CountPoints(bundle));
             SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新设备 {id}");
             return document;
@@ -253,6 +271,8 @@ public sealed partial class ConfigStore
             }
 
             var bundle = ReadSlot("draft");
+            var beforeDevices = CountDevices(bundle);
+            var beforePoints = CountPoints(bundle);
             var index = bundle.PointTemplates.FindIndex(template =>
                 string.Equals(template.Metadata.Id, id, StringComparison.OrdinalIgnoreCase));
             if (index >= 0 && !string.Equals(bundle.PointTemplates[index].Metadata.Id, id, StringComparison.Ordinal))
@@ -269,6 +289,7 @@ public sealed partial class ConfigStore
                 bundle.PointTemplates.Add(document);
             }
 
+            Guard(beforeDevices, CountDevices(bundle), beforePoints, CountPoints(bundle));
             SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新点位模板 {id}");
             return document;
@@ -323,6 +344,8 @@ public sealed partial class ConfigStore
         {
             EnsureSafeId(deviceId);
             var bundle = ReadSlot("draft");
+            var beforeDevices = CountDevices(bundle);
+            var beforePoints = CountPoints(bundle);
             var device = FindDevice(bundle, deviceId);
             document.ApiVersion = StudioApi.Version;
             document.Kind = "PointSet";
@@ -351,6 +374,7 @@ public sealed partial class ConfigStore
                 bundle.PointSets.Add(document);
             }
 
+            Guard(beforeDevices, CountDevices(bundle), beforePoints, CountPoints(bundle));
             SaveSlot("draft", bundle);
             AppendLogUnlocked($"草稿已更新点位 {deviceId}");
             return document;
@@ -489,6 +513,8 @@ public sealed partial class ConfigStore
                 };
             }
 
+            var publishedBefore = ReadSlot("published");
+            Guard(CountDevices(publishedBefore), CountDevices(draft), CountPoints(publishedBefore), CountPoints(draft));
             SaveSlot("published", draft);
             _database.AppendRevision(
                 hash,
@@ -541,6 +567,8 @@ public sealed partial class ConfigStore
                 hash = CanonicalRevision.Compute(bundle);
             }
 
+            var currentPublished = ReadSlot("published");
+            Guard(CountDevices(currentPublished), CountDevices(bundle), CountPoints(currentPublished), CountPoints(bundle));
             SaveSlot("published", bundle);
             SaveSlot("draft", bundle);
             var now = DateTimeOffset.UtcNow;
@@ -674,6 +702,8 @@ public sealed partial class ConfigStore
         lock (_gate)
         {
             YamlFiles.Normalize(bundle);
+            var current = ReadSlot("draft");
+            Guard(CountDevices(current), CountDevices(bundle), CountPoints(current), CountPoints(bundle));
             SaveSlot("draft", bundle);
             AppendLogUnlocked("已导入草稿");
         }
@@ -865,6 +895,32 @@ public sealed partial class ConfigStore
         }
 
         return bundle;
+    }
+
+    private void Guard(int beforeDevices, int afterDevices, int beforePoints, int afterPoints)
+    {
+        var message = LimitIncrease?.Invoke(beforeDevices, afterDevices, beforePoints, afterPoints);
+        if (!string.IsNullOrEmpty(message))
+        {
+            throw new ConfigStoreException("license_limit", message, StatusCodes.Status403Forbidden);
+        }
+    }
+
+    private static int CountDevices(ConfigBundle bundle) => bundle.Devices?.Count ?? 0;
+
+    private static int CountPoints(ConfigBundle bundle)
+    {
+        var total = 0;
+        foreach (var device in bundle.Devices ?? [])
+        {
+            var template = bundle.PointTemplates?.FirstOrDefault(item =>
+                string.Equals(item.Metadata.Id, device.Spec.PointTemplateId, StringComparison.OrdinalIgnoreCase));
+            var overrides = bundle.PointSets?.FirstOrDefault(set =>
+                string.Equals(set.Metadata.DeviceId, device.Metadata.Id, StringComparison.OrdinalIgnoreCase));
+            total += PointExpansion.EffectivePoints(template, overrides).Count(point => point.Enabled);
+        }
+
+        return total;
     }
 
     private void SaveSlot(string slot, ConfigBundle bundle)

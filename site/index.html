@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>采集网关 · 车间边缘的工业采集</title>
+  <style>
+    :root { color-scheme: light; --ink: #14202b; --muted: #526272; --line: #d7e0e8; --brand: #0f6e6e; --paper: #f6f8f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", sans-serif; color: var(--ink); background: var(--paper); }
+    header, main, footer { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 48px 0 16px; }
+    .kicker { letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand); font-size: 12px; }
+    h1 { font-size: 42px; line-height: 1.15; margin: 8px 0; }
+    h2 { margin-top: 40px; }
+    p { line-height: 1.7; }
+    .lead { font-size: 18px; color: var(--muted); max-width: 720px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card, table { background: white; border: 1px solid var(--line); border-radius: 12px; }
+    .card { padding: 16px; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    img.shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); background: white; }
+    .en { color: var(--muted); }
+    footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="kicker">IoT DAQ Gateway 0.8.0</div>
+    <h1>采集网关</h1>
+    <p class="lead">放在车间边上的工业采集程序。读数控设备，把数据留在本机，再按需要送到 MQTT、HTTP、查询接口或 OPC UA。Studio 和采集是同一个进程。</p>
+  </header>
+  <main>
+    <div class="row">
+      <section class="card"><h2>采集不中断</h2><p>许可证过期或功能未授权时，已经在跑的设备继续采集。页面说明原因，不把进程打崩。</p></section>
+      <section class="card"><h2>库是唯一事实</h2><p>SQLite 开箱即用，PostgreSQL 可选。配置、报警和采样都在库里。从旧库启动会自己补到结构版本 6。</p></section>
+      <section class="card"><h2>价格未定</h2><p>社区版上限和功能清单可以改。下面的对照表不写金额，标成待定。</p></section>
+    </div>
+
+    <h2>版本对照</h2>
+    <table>
+      <thead><tr><th>项目</th><th>社区版</th><th>商用许可证</th></tr></thead>
+      <tbody>
+        <tr><td>采集、Studio、MQTT</td><td>包含</td><td>包含</td></tr>
+        <tr><td>设备数 / 点位数</td><td>配置默认，可改</td><td>许可证里写，也可不限制</td></tr>
+        <tr><td>OPC UA、HTTP 推送、报警通知、定时报表、查询接口</td><td>默认关闭，清单可改</td><td>按功能标记开通</td></tr>
+        <tr><td>到期</td><td>无许可证</td><td>可写到期日，另有宽限期</td></tr>
+        <tr><td>价格</td><td>待定</td><td>待定</td></tr>
+      </tbody>
+    </table>
+
+    <h2>界面</h2>
+    <div class="row">
+      <figure class="card"><img class="shot" src="images/license-community.png" alt="授权许可，社区版" /><figcaption>授权许可 · 社区版</figcaption></figure>
+      <figure class="card"><img class="shot" src="images/license-commercial.png" alt="授权许可，商用" /><figcaption>授权许可 · 商用</figcaption></figure>
+      <figure class="card"><img class="shot" src="images/upgrade.png" alt="升级页" /><figcaption>升级</figcaption></figure>
+      <figure class="card"><img class="shot" src="images/demo-dashboard.png" alt="演示数据总览" /><figcaption>演示数据总览</figcaption></figure>
+    </div>
+
+    <h2 class="en">English</h2>
+    <p class="en">Edge software for CNC collection. SQLite by default, PostgreSQL optional. An offline ES256 license file sets edition, optional device and point caps, expiry, feature flags, and an optional machine fingerprint. Without a file the gateway runs as community edition using limits from configuration, not a price list. Collection keeps running when a feature is blocked. In-app upgrade verifies a signed zip, backs up the database, and applies on restart. Docker image swaps stay outside the UI.</p>
+  </main>
+  <footer>Apache-2.0。厂商 SDK 不在本仓库里。手册见仓库 docs/manual。</footer>
+</body>
+</html>

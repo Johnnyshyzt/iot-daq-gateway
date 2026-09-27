@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { canWrite, describeError, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { FeatureLock } from './license-banner'
 import { PageShell } from './page-shell'
 
 type ApiKey = {
@@ -45,6 +46,7 @@ export function QueryApiPage() {
         </Button>
       }
     >
+      <FeatureLock feature='query-api' />
       <Card className='mb-4'>
         <CardHeader>
           <CardTitle>新建只读密钥</CardTitle>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { canWrite, describeError, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { FeatureLock } from './license-banner'
 import { PageShell } from './page-shell'
 
 type Settings = {
@@ -58,6 +59,7 @@ export function OpcUaPage() {
       title='OPC UA'
       description='把车间、产线和设备展开成 OPC UA 地址空间。默认关闭。演示可用 None，对接用 Basic256Sha256 签名加密。'
     >
+      <FeatureLock feature='opcua' />
       <Card className='mb-4'>
         <CardHeader>
           <CardTitle>运行</CardTitle>

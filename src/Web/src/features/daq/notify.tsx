@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { canWrite, describeError, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { FeatureLock } from './license-banner'
 import { PageShell } from './page-shell'
 
 type Channel = {
@@ -203,6 +204,7 @@ export function NotifyPage() {
 
   return (
     <PageShell title='通知' description='报警发到企业微信、钉钉、飞书、邮件或 Webhook。密钥只写入，接口不回传明文。'>
+      <FeatureLock feature='alarm-notifications' />
       {message ? <p className='mb-3 text-sm text-destructive'>{message}</p> : null}
       <div className='grid gap-4 xl:grid-cols-2'>
         <Card>

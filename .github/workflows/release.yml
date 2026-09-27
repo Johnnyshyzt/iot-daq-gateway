@@ -57,6 +57,16 @@ jobs:
             $archive.Dispose()
           }
           Write-Host "Release asset: $($zips[0].Name)"
+      - name: Install Inno Setup
+        continue-on-error: true
+        run: choco install innosetup --no-progress -y
+      - name: Compile installer
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          & $iscc packaging\windows\iot-daq-gateway.iss
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -87,3 +97,37 @@ jobs:
             This zip does not include `Fwlib64.dll` or any other FOCAS vendor binary. Place a licensed 64-bit `Fwlib64.dll` next to `Host.exe`.
 
             The seed config is `fanuc.fake`. Use Fake first for the page, publish, and MQTT. Real FOCAS means `fanuc.focas` plus your own `Fwlib64.dll`. This repository has no Fanuc machine and does not treat an open TCP port as a successful handshake.
+
+            Linux x64 tarball is attached by the linux job when that job succeeds. The Inno Setup installer is attached only when ISCC.exe is available on the Windows runner. In-UI upgrade requires SHA256SUMS.sig from the private key in RELEASE_SIGNING_KEY, which is not stored in this repository.
+      - name: Attach installer when it compiled
+        if: success()
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          fail_on_unmatched_files: false
+          files: artifacts/win-x64/iot-daq-gateway-*-setup.exe
+
+  pack-linux-x64:
+    needs: pack-win-x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.203
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pack linux-x64 tarball
+        run: bash scripts/pack-linux-x64.sh
+      - name: Attach Linux package
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
+          files: artifacts/linux-x64/iot-daq-gateway-*-linux-x64.tar.gz

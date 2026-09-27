@@ -56,6 +56,7 @@ Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Stage "appsettings.
 Set-Content -Path (Join-Path $Stage "VERSION.txt") -Value $Informational -Encoding ascii
 
 Copy-Item -Force (Join-Path $Root "packaging/windows/install-service.bat") $Stage
+Copy-Item -Force (Join-Path $Root "packaging/windows/apply-upgrade.ps1") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/uninstall-service.bat") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/run-console.bat") $Stage
 Copy-Item -Force (Join-Path $Root "packaging/windows/service-env.ps1") $Stage

@@ -39,18 +39,31 @@ public static class OpsEndpoints
         {
             Database = store.Database.Provider,
             FileBackup = store.Database.SupportsFileBackup,
-            SchemaVersion = store.Database.CurrentSchemaVersion
+            SchemaVersion = store.Database.CurrentSchemaVersion,
+            PostgresTools = Studio.Host.Licensing.PostgresTools.Find("pg_dump") is not null
+                && Studio.Host.Licensing.PostgresTools.Find("pg_restore") is not null
         }));
         api.MapGet("/ops/backup", (HttpContext http, ConfigStore store) =>
         {
             try
             {
-                var memory = new MemoryStream();
-                store.Database.WriteSqliteBackup(memory);
-                ConfigAudit.Write(http, store.Database, "ops.backup", "gateway.db", "下载 SQLite 备份");
-                memory.Position = 0;
-                var name = "iot-daq-gateway-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".db";
-                return Results.File(memory, "application/octet-stream", name);
+                if (store.Database.SupportsFileBackup)
+                {
+                    var memory = new MemoryStream();
+                    store.Database.WriteSqliteBackup(memory);
+                    ConfigAudit.Write(http, store.Database, "ops.backup", "gateway.db", "下载 SQLite 备份");
+                    memory.Position = 0;
+                    var name = "iot-daq-gateway-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".db";
+                    return Results.File(memory, "application/octet-stream", name);
+                }
+
+                var directory = Path.Combine(store.DataDirectory, "upgrade", "manual-backup");
+                var file = Studio.Host.Licensing.PostgresTools.Dump(
+                    store.Database.PostgresConnectionString,
+                    directory,
+                    "iot-daq-gateway-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".dump");
+                ConfigAudit.Write(http, store.Database, "ops.backup", "postgres", "下载 PostgreSQL 备份");
+                return Results.File(file, "application/octet-stream", Path.GetFileName(file));
             }
             catch (InvalidOperationException ex)
             {
@@ -59,14 +72,30 @@ public static class OpsEndpoints
         }).RequireAdmin();
         api.MapPost("/ops/restore", async (HttpContext http, ConfigStore store, GatewayReloadClient reload, CancellationToken cancellationToken) =>
         {
+            var buffer = new MemoryStream();
+            await http.Request.Body.CopyToAsync(buffer, cancellationToken);
+            buffer.Position = 0;
             try
             {
-                var buffer = new MemoryStream();
-                await http.Request.Body.CopyToAsync(buffer, cancellationToken);
-                buffer.Position = 0;
-                store.Database.RestoreSqlite(buffer);
-                store.Database.SyncUsers(Path.Combine(store.DataDirectory, "auth", "accounts.json"));
-                ConfigAudit.Write(http, store.Database, "ops.restore", "gateway.db", "已从上传的 SQLite 备份恢复");
+                if (store.Database.SupportsFileBackup)
+                {
+                    store.Database.RestoreSqlite(buffer);
+                    store.Database.SyncUsers(Path.Combine(store.DataDirectory, "auth", "accounts.json"));
+                    ConfigAudit.Write(http, store.Database, "ops.restore", "gateway.db", "已从上传的 SQLite 备份恢复");
+                }
+                else
+                {
+                    var path = Path.Combine(store.DataDirectory, "upgrade", "manual-backup", "upload.dump");
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    await using (var file = File.Create(path))
+                    {
+                        await buffer.CopyToAsync(file, cancellationToken);
+                    }
+
+                    Studio.Host.Licensing.PostgresTools.Restore(store.Database.PostgresConnectionString, path);
+                    ConfigAudit.Write(http, store.Database, "ops.restore", "postgres", "已用 pg_restore 恢复");
+                }
+
                 await reload.NotifyAsync(cancellationToken);
                 return ApiResults.Ok(new { restored = true });
             }
@@ -205,4 +234,6 @@ public sealed class OpsStatus
     public bool FileBackup { get; set; }
 
     public int SchemaVersion { get; set; }
+
+    public bool PostgresTools { get; set; }
 }

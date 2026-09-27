@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\Shared\Catalog\Cnc.Catalog.csproj" />
     <ProjectReference Include="..\..\Collector\Adapters.Cnc\Adapters.Cnc.csproj" />
     <ProjectReference Include="..\..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\..\Shared\Licensing\Licensing.csproj" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 </Project>

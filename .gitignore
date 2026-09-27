@@ -31,6 +31,8 @@ project.fragment.lock.json
 appsettings.*.local.json
 *.pfx
 *.key
+license-private.pem
+**/*-private.pem
 
 ## User-supplied FOCAS native libraries (never commit)
 Fwlib*.dll

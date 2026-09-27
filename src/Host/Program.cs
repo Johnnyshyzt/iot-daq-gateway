@@ -12,6 +12,7 @@ using Studio.Host;
 using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Endpoints;
+using Studio.Host.Licensing;
 using Studio.Host.Runtime;
 using Studio.Host.Visualization;
 
@@ -38,7 +39,13 @@ var acquisitionOn = !string.Equals(builder.Configuration["Host:Acquisition"], "o
 var importPath = CollectorHost.UsesPublishedDirectory(args)
     ? null
     : CollectorHost.ResolveConfigPath(args, Path.Combine(dataDirectory, "published"));
+var demoRequested = args.Any(arg => string.Equals(arg, "--demo", StringComparison.OrdinalIgnoreCase))
+    || string.Equals(builder.Configuration["Host:Demo"], "true", StringComparison.OrdinalIgnoreCase)
+    || string.Equals(Environment.GetEnvironmentVariable("HOST_DEMO"), "1", StringComparison.Ordinal);
 var store = new ConfigStore(dataDirectory);
+var licensing = new LicenseService(store.Database, builder.Configuration);
+store.LimitIncrease = licensing.RejectIncrease;
+builder.Services.AddSingleton(licensing);
 builder.Services.AddSingleton(store);
 builder.Services.AddSingleton<IRuntimeConfigSource>(_ => new DatabaseRuntimeConfigSource(store));
 builder.Services.AddGatewayData(store);
@@ -76,6 +83,20 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized(importPath);
+if (demoRequested)
+{
+    try
+    {
+        var seeded = DemoMode.Seed(store, publish: true);
+        app.Logger.LogInformation("Demo mode: {Message}", seeded.Message);
+    }
+    catch (ConfigStoreException ex)
+    {
+        app.Logger.LogWarning("Demo mode did not add devices: {Message}", ex.Message);
+    }
+}
+
+UpgradeCoordinator.NoteBoot(dataDirectory, HostInfo.Version, app.Logger);
 if (app.Services.GetService<ReliabilityOptions>() is { } reliability)
 {
     reliability.OverlayJson(store.Database.GetSetting("reliability"));

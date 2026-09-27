@@ -62,6 +62,7 @@ rm -f "$STAGE/appsettings.Development.json"
 printf '%s\n' "$INFORMATIONAL" > "$STAGE/VERSION.txt"
 
 cp -f "$ROOT/packaging/windows/install-service.bat" "$STAGE/"
+cp -f "$ROOT/packaging/windows/apply-upgrade.ps1" "$STAGE/"
 cp -f "$ROOT/packaging/windows/uninstall-service.bat" "$STAGE/"
 cp -f "$ROOT/packaging/windows/run-console.bat" "$STAGE/"
 cp -f "$ROOT/packaging/windows/service-env.ps1" "$STAGE/"

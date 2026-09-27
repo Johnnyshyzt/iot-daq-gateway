@@ -12,10 +12,12 @@ import { formatNumber, formatPercent, toggleFullscreen } from './format'
 import { stateOrder, stateStyle } from './state-style'
 import type { DashboardDevice, MachineState } from './types'
 import { OnboardingBanner } from '@/features/daq/onboarding'
+import { useLicense } from '@/features/daq/license-banner'
 import { useOverview } from './use-overview'
 
 export function DashboardPage({ kiosk = false }: { kiosk?: boolean }) {
   const { data, error, push } = useOverview()
+  const license = useLicense()
   const counts = data?.counts
 
   const body = (
@@ -26,6 +28,9 @@ export function DashboardPage({ kiosk = false }: { kiosk?: boolean }) {
             总览大屏
           </p>
           <h1 className='text-2xl font-bold tracking-tight'>设备状态</h1>
+          {license?.demoMode ? (
+            <p className={cn('mt-1 text-xs font-medium', kiosk ? 'text-amber-200' : 'text-amber-700')}>演示数据 · 模拟器，不是真实机床</p>
+          ) : null}
         </div>
         <div className='flex flex-wrap items-center gap-2'>
           <Badge variant='outline' className={cn(push ? 'border-emerald-500/50' : '', kiosk && 'border-slate-600 text-slate-200')}>
@@ -141,7 +146,12 @@ function DeviceTile({ device, kiosk }: { device: DashboardDevice; kiosk: boolean
     >
       <div className='flex items-start justify-between gap-2'>
         <div className='min-w-0'>
-          <div className='truncate font-medium'>{device.displayName}</div>
+          <div className='truncate font-medium'>
+            {device.displayName}
+            {device.displayName.includes('演示数据') ? (
+              <span className='ms-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700'>演示数据</span>
+            ) : null}
+          </div>
           <div className={cn('truncate font-mono text-xs', kiosk ? 'text-slate-400' : 'text-muted-foreground')}>
             {device.id}
           </div>

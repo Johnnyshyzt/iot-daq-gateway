@@ -18,6 +18,7 @@ import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedLicenseRouteImport } from './routes/_authenticated/license'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/live'
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
 import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated/points'
@@ -25,6 +26,7 @@ import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
+import { Route as AuthenticatedUpgradeRouteImport } from './routes/_authenticated/upgrade'
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
 import { Route as AuthenticatedIntegrateOpcuaRouteImport } from './routes/_authenticated/integrate/opcua'
@@ -79,6 +81,11 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLicenseRoute = AuthenticatedLicenseRouteImport.update({
+  id: '/license',
+  path: '/license',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
   id: '/live',
   path: '/live',
@@ -112,6 +119,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUpgradeRoute = AuthenticatedUpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUtilizationRoute =
@@ -176,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
@@ -183,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
+  '/upgrade': typeof AuthenticatedUpgradeRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
   '/integrate/opcua': typeof AuthenticatedIntegrateOpcuaRoute
@@ -201,6 +215,7 @@ export interface FileRoutesByTo {
   '/catalog': typeof AuthenticatedCatalogRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
   '/points': typeof AuthenticatedPointsRoute
@@ -208,6 +223,7 @@ export interface FileRoutesByTo {
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
+  '/upgrade': typeof AuthenticatedUpgradeRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -229,6 +245,7 @@ export interface FileRoutesById {
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/license': typeof AuthenticatedLicenseRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
   '/_authenticated/points': typeof AuthenticatedPointsRoute
@@ -236,6 +253,7 @@ export interface FileRoutesById {
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
+  '/_authenticated/upgrade': typeof AuthenticatedUpgradeRoute
   '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
@@ -258,6 +276,7 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/devices'
     | '/history'
+    | '/license'
     | '/live'
     | '/mqtt'
     | '/points'
@@ -265,6 +284,7 @@ export interface FileRouteTypes {
     | '/runtime'
     | '/settings'
     | '/setup'
+    | '/upgrade'
     | '/utilization'
     | '/account/password'
     | '/integrate/opcua'
@@ -283,6 +303,7 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/devices'
     | '/history'
+    | '/license'
     | '/live'
     | '/mqtt'
     | '/points'
@@ -290,6 +311,7 @@ export interface FileRouteTypes {
     | '/runtime'
     | '/settings'
     | '/setup'
+    | '/upgrade'
     | '/utilization'
     | '/'
     | '/account/password'
@@ -310,6 +332,7 @@ export interface FileRouteTypes {
     | '/_authenticated/catalog'
     | '/_authenticated/devices'
     | '/_authenticated/history'
+    | '/_authenticated/license'
     | '/_authenticated/live'
     | '/_authenticated/mqtt'
     | '/_authenticated/points'
@@ -317,6 +340,7 @@ export interface FileRouteTypes {
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
     | '/_authenticated/setup'
+    | '/_authenticated/upgrade'
     | '/_authenticated/utilization'
     | '/_authenticated/'
     | '/_authenticated/account/password'
@@ -399,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/license': {
+      id: '/_authenticated/license'
+      path: '/license'
+      fullPath: '/license'
+      preLoaderRoute: typeof AuthenticatedLicenseRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/live': {
       id: '/_authenticated/live'
       path: '/live'
@@ -446,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/upgrade': {
+      id: '/_authenticated/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof AuthenticatedUpgradeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/utilization': {
@@ -521,6 +559,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedLicenseRoute: typeof AuthenticatedLicenseRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
   AuthenticatedPointsRoute: typeof AuthenticatedPointsRoute
@@ -528,6 +567,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
+  AuthenticatedUpgradeRoute: typeof AuthenticatedUpgradeRoute
   AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
@@ -547,6 +587,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedLicenseRoute: AuthenticatedLicenseRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
   AuthenticatedPointsRoute: AuthenticatedPointsRoute,
@@ -554,6 +595,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
+  AuthenticatedUpgradeRoute: AuthenticatedUpgradeRoute,
   AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>IotDaq.Licensing</RootNamespace>
+    <Description>Offline license documents and upgrade-package verification. No private key.</Description>
+  </PropertyGroup>
+</Project>

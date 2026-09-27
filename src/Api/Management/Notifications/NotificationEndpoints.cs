@@ -4,8 +4,10 @@ using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Reliability;
 using IotDaq.Persistence;
 using IotDaq.Persistence.Visualization;
+using IotDaq.Licensing;
 using Studio.Host.Auth;
 using Studio.Host.Endpoints;
+using Studio.Host.Licensing;
 
 namespace Studio.Host.Notifications;
 
@@ -20,8 +22,13 @@ public static class NotificationEndpoints
     {
         api.MapGet("/notifications/channels", (GatewayPersistence database) =>
             ApiResults.Ok(new { channels = database.ListNotificationChannels().Select(ToView).ToList() }));
-        api.MapPut("/notifications/channels", (ChannelWrite? body, HttpContext http, GatewayPersistence database) =>
+        api.MapPut("/notifications/channels", (ChannelWrite? body, HttpContext http, GatewayPersistence database, LicenseService licensing) =>
         {
+            if (!licensing.Allows(LicenseFeatures.AlarmNotifications))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.AlarmNotifications));
+            }
+
             var error = Validate(body);
             if (error is not null)
             {
@@ -68,8 +75,13 @@ public static class NotificationEndpoints
             ConfigAudit.Write(http, database, "notify.channel.delete", id, "删除通知通道");
             return ApiResults.Ok(new { deleted = true });
         }).RequireWriter();
-        api.MapPost("/notifications/channels/{id}/test", async (string id, HttpContext http, NotificationDispatcher dispatcher, GatewayPersistence database, CancellationToken cancellationToken) =>
+        api.MapPost("/notifications/channels/{id}/test", async (string id, HttpContext http, NotificationDispatcher dispatcher, GatewayPersistence database, LicenseService licensing, CancellationToken cancellationToken) =>
         {
+            if (!licensing.Allows(LicenseFeatures.AlarmNotifications))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.AlarmNotifications));
+            }
+
             try
             {
                 var delivery = await dispatcher.SendTestAsync(id, cancellationToken);
@@ -84,8 +96,13 @@ public static class NotificationEndpoints
 
         api.MapGet("/notifications/rules", (GatewayPersistence database) =>
             ApiResults.Ok(new { rules = database.ListNotificationRules().Select(ToRule).ToList() }));
-        api.MapPut("/notifications/rules", (RuleWrite? body, HttpContext http, GatewayPersistence database) =>
+        api.MapPut("/notifications/rules", (RuleWrite? body, HttpContext http, GatewayPersistence database, LicenseService licensing) =>
         {
+            if (!licensing.Allows(LicenseFeatures.AlarmNotifications))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.AlarmNotifications));
+            }
+
             var error = Validate(body, database);
             if (error is not null)
             {
@@ -143,8 +160,13 @@ public static class NotificationEndpoints
         }).RequireWriter();
 
         api.MapGet("/notifications/reports", (GatewayPersistence database) => ApiResults.Ok(ToSchedule(database.GetReportSchedule())));
-        api.MapPut("/notifications/reports", (ScheduleWrite? body, HttpContext http, GatewayPersistence database) =>
+        api.MapPut("/notifications/reports", (ScheduleWrite? body, HttpContext http, GatewayPersistence database, LicenseService licensing) =>
         {
+            if (body?.Enabled == true && !licensing.Allows(LicenseFeatures.ScheduledReports))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.ScheduledReports));
+            }
+
             if (body is null)
             {
                 return ApiResults.Error(StatusCodes.Status400BadRequest, "invalid_report", "缺少报表设置");

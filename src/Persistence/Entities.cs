@@ -592,3 +592,18 @@ public sealed class ReportScheduleRow
 
     public long UpdatedUnixMs { get; set; }
 }
+
+public sealed class InstalledLicenseRow
+{
+    public int Id { get; set; } = 1;
+
+    public string DocumentText { get; set; } = "";
+
+    public string Customer { get; set; } = "";
+
+    public string Edition { get; set; } = "";
+
+    public string ImportedBy { get; set; } = "";
+
+    public long ImportedUnixMs { get; set; }
+}

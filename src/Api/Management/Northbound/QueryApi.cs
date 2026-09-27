@@ -4,8 +4,10 @@ using Gateway.Abstractions.Security;
 using IotDaq.Persistence;
 using IotDaq.Persistence.Visualization;
 using Studio.Contracts;
+using IotDaq.Licensing;
 using Studio.Host.Config;
 using Studio.Host.Endpoints;
+using Studio.Host.Licensing;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Northbound;
@@ -175,8 +177,13 @@ public static class ApiKeyEndpoints
         api.MapGet("/api-keys", (GatewayPersistence database) =>
             ApiResults.Ok(new { keys = database.ListApiKeys().Select(ToView).ToList() }));
 
-        api.MapPost("/api-keys", (ApiKeyWrite? body, HttpContext http, GatewayPersistence database) =>
+        api.MapPost("/api-keys", (ApiKeyWrite? body, HttpContext http, GatewayPersistence database, LicenseService licensing) =>
         {
+            if (!licensing.Allows(LicenseFeatures.QueryApi))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.QueryApi));
+            }
+
             var name = body?.Name?.Trim() ?? "";
             if (name.Length == 0 || name.Length > 80)
             {
@@ -253,7 +260,7 @@ public sealed class ApiKeyWrite
 
 public sealed class ApiKeyMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, GatewayPersistence database)
+    public async Task InvokeAsync(HttpContext context, GatewayPersistence database, LicenseService licensing)
     {
         if (!context.Request.Path.StartsWithSegments("/api/query"))
         {
@@ -265,6 +272,15 @@ public sealed class ApiKeyMiddleware(RequestDelegate next)
             && context.Request.Path.Equals("/api/query/v1/openapi.json", StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
+            return;
+        }
+
+        if (!licensing.Allows(LicenseFeatures.QueryApi))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(
+                new ApiError { Code = "license_feature", Message = licensing.Denial(LicenseFeatures.QueryApi) },
+                StudioJson.Options);
             return;
         }
 

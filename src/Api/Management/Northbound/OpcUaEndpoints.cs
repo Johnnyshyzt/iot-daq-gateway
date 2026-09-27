@@ -2,8 +2,10 @@ using System.Text.Json;
 using Gateway.Abstractions.Contract;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Security;
+using IotDaq.Licensing;
 using IotDaq.Persistence;
 using Studio.Host.Endpoints;
+using Studio.Host.Licensing;
 
 namespace Studio.Host.Northbound;
 
@@ -20,8 +22,13 @@ public static class OpcUaEndpoints
                 runtime = controls.FirstOrDefault()?.Current ?? new OpcUaRuntimeInfo()
             }));
 
-        api.MapPut("/opcua", (OpcUaWrite? body, HttpContext http, GatewayPersistence database, IEnumerable<IOpcUaControl> controls) =>
+        api.MapPut("/opcua", (OpcUaWrite? body, HttpContext http, GatewayPersistence database, IEnumerable<IOpcUaControl> controls, LicenseService licensing) =>
         {
+            if (body?.Enabled == true && !licensing.Allows(LicenseFeatures.OpcUa))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.OpcUa));
+            }
+
             if (body is null)
             {
                 return ApiResults.Error(StatusCodes.Status400BadRequest, "invalid_opcua", "缺少 OPC UA 设置");

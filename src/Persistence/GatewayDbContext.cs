@@ -69,6 +69,8 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<ApiKeyRow> ApiKeys => Set<ApiKeyRow>();
 
+    public DbSet<InstalledLicenseRow> InstalledLicense => Set<InstalledLicenseRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -135,5 +137,6 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<ApiKeyRow>().ToTable("api_keys").HasKey(row => row.Id);
         modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.KeyHash).IsUnique().HasDatabaseName("ix_api_keys_hash");
         modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.Prefix).HasDatabaseName("ix_api_keys_prefix");
+        modelBuilder.Entity<InstalledLicenseRow>().ToTable("installed_license").HasKey(row => row.Id);
     }
 }

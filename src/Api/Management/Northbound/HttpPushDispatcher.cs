@@ -7,7 +7,9 @@ using Gateway.Abstractions.Reliability;
 using IotDaq.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using IotDaq.Licensing;
 using Studio.Host.Config;
+using Studio.Host.Licensing;
 
 namespace Studio.Host.Northbound;
 
@@ -16,6 +18,7 @@ public sealed class HttpPushDispatcher
     private readonly GatewayPersistence _database;
     private readonly ConfigStore _store;
     private readonly ILogger<HttpPushDispatcher> _logger;
+    private readonly LicenseService? _license;
     private readonly HttpClient _http;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, DiskForwardSpool> _spools = new(StringComparer.Ordinal);
@@ -24,16 +27,22 @@ public sealed class HttpPushDispatcher
     private readonly Dictionary<string, long> _lastPeriodic = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _lastValue = new(StringComparer.Ordinal);
 
-    public HttpPushDispatcher(GatewayPersistence database, ConfigStore store, ILogger<HttpPushDispatcher> logger)
+    public HttpPushDispatcher(GatewayPersistence database, ConfigStore store, ILogger<HttpPushDispatcher> logger, LicenseService? license = null)
     {
         _database = database;
         _store = store;
+        _license = license;
         _logger = logger;
         _http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     public async Task TickAsync(CancellationToken cancellationToken)
     {
+        if (_license is not null && !_license.Allows(LicenseFeatures.HttpPush))
+        {
+            return;
+        }
+
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
