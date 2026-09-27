@@ -24,6 +24,8 @@ internal static class SchemaUpgrade
         {
             EnsureFromScript(db, connection, "state_transitions");
             EnsureFromScript(db, connection, "app_settings");
+            EnsureFromScript(db, connection, "audit_events");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_audit_unix ON audit_events ("UnixMs")""");
             if (sqlite)
             {
                 AddColumn(connection, "alarms", "Code", "TEXT NOT NULL DEFAULT ''");

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import useDialogState from '@/hooks/use-dialog-state'
 import { roleLabel } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -27,8 +27,7 @@ export function ProfileDropdown() {
         <DropdownMenuTrigger asChild>
           <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
             <Avatar className='h-8 w-8'>
-              <AvatarImage src='/avatars/01.png' alt='@shadcn' />
-              <AvatarFallback>SN</AvatarFallback>
+              <AvatarFallback>{initials(name)}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
@@ -55,4 +54,10 @@ export function ProfileDropdown() {
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
     </>
   )
+}
+
+function initials(name: string) {
+  const text = name.trim()
+  if (!text || text === '未登录') return '访'
+  return text.slice(0, 2).toUpperCase()
 }

@@ -1,0 +1,20 @@
+[Unit]
+Description=IoT DAQ Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iot-daq
+Group=iot-daq
+WorkingDirectory=/opt/iot-daq-gateway
+ExecStart=/usr/bin/dotnet /opt/iot-daq-gateway/Host.dll
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5080
+Environment=HOST_DATA=/var/lib/iot-daq-gateway
+Environment=STUDIO_ACCOUNT_MODE=field
+Environment=DOTNET_ENVIRONMENT=Production
+
+[Install]
+WantedBy=multi-user.target

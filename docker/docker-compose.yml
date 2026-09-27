@@ -12,9 +12,19 @@ services:
       dockerfile: docker/Dockerfile
     depends_on:
       - mosquitto
+    ports:
+      - "127.0.0.1:5080:5080"
     environment:
       GATEWAY_CONFIG: /app/gateway.yaml
+      # appsettings binds 127.0.0.1, which is unreachable through a published port.
+      ASPNETCORE_URLS: http://0.0.0.0:5080
     # Overlay example YAML. An empty database imports it once (MQTT host mosquitto).
-    # Later edits belong in the database. Linux Compose remains a Fake demo — not a production FOCAS path.
+    # Later edits belong in the database. The named volume keeps gateway.db.
+    # Linux Compose remains a Fake demo — not a production FOCAS path.
+    # The host port stays on 127.0.0.1. Do not publish 0.0.0.0.
     volumes:
+      - gateway-data:/app/data
       - ../configs/examples/gateway.docker.yaml:/app/gateway.yaml:ro
+
+volumes:
+  gateway-data:

@@ -9,6 +9,7 @@ import { ChangePasswordForm } from '@/features/auth/change-password-form'
 import { canWrite, describeError, roleLabel, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
 import { VizSettingsCard } from '@/features/viz/viz-settings'
+import { BackupCard } from './backup-card'
 import { PageShell } from './page-shell'
 
 type SettingsView = {
@@ -39,6 +40,18 @@ export function SettingsPage() {
 
   async function save() {
     if (!settings) return
+    if (!/^[A-Za-z0-9_-]+$/.test(settings.siteId.trim())) {
+      setMessage('站点标识只能包含字母、数字、下划线和连字符')
+      return
+    }
+    if (!settings.name.trim() || settings.name.trim().length > 80) {
+      setMessage('站点名称不能为空，且不超过 80 个字符')
+      return
+    }
+    if (!Number.isFinite(settings.defaultIntervalMs) || settings.defaultIntervalMs < 100 || settings.defaultIntervalMs > 86_400_000) {
+      setMessage('默认采集周期需在 100 到 86400000 毫秒之间')
+      return
+    }
     await studioApi('/api/v1/settings', {
       method: 'PUT',
       body: JSON.stringify({
@@ -65,7 +78,7 @@ export function SettingsPage() {
   return (
     <PageShell
       title='系统'
-      description='站点名写入 Gateway 草稿。许可证桩当前不拦截管理 API。账号只存在本机。'
+      description='站点名写入 Gateway 草稿，发布后才影响运行中的主题。账号只存在本机。数据库备份只有管理员可以下载。'
     >
       <div className='grid gap-4 lg:grid-cols-2'>
         <Card>
@@ -136,6 +149,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
         <VizSettingsCard />
+        <BackupCard />
         <Card className='lg:col-span-2'>
           <CardHeader>
             <CardTitle>修改密码</CardTitle>

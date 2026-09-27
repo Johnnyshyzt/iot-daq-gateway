@@ -362,3 +362,20 @@ public sealed class AppSettingRow
 
     public string Value { get; set; } = "";
 }
+
+public sealed class AuditEventRow
+{
+    public long Id { get; set; }
+
+    public long UnixMs { get; set; }
+
+    public string Username { get; set; } = "";
+
+    public string Role { get; set; } = "";
+
+    public string Action { get; set; } = "";
+
+    public string Target { get; set; } = "";
+
+    public string Detail { get; set; } = "";
+}

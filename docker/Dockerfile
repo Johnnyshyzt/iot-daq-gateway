@@ -16,4 +16,6 @@ COPY --from=build /app/publish .
 # Never COPY Fwlib*.dll / libfwlib32.so — vendor FOCAS binaries stay off image layers.
 COPY configs/examples/gateway.docker.yaml /app/gateway.yaml
 ENV GATEWAY_CONFIG=/app/gateway.yaml
+ENV ASPNETCORE_URLS=http://0.0.0.0:5080
+EXPOSE 5080
 ENTRYPOINT ["dotnet", "Host.dll"]

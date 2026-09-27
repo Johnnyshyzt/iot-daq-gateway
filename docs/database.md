@@ -24,14 +24,15 @@ YAML / JSON 仍然是导入、导出和现场包种子的格式：
 | `sample_history` | 历史采样。列 `TimestampUnixMs` 为 bigint。索引 `ix_sample_history_device_point_time`、`ix_sample_history_time`、`ix_sample_history_device_time` |
 | `alarms` | 报警事件。含代码、恢复时间、持续时长、确认人和确认时间。索引 `ix_alarms_device_raised`、`ix_alarms_active_raised`、`ix_alarms_device_code` |
 | `state_transitions` | 设备状态段：状态、原始值、开始、结束。索引 `ix_state_device_started`、`ix_state_ended` |
-| `app_settings` | 键值。`historyRetentionDays`、`shiftCalendar`、`demoHistorySeeded` |
+| `app_settings` | 键值。`historyRetentionDays`、`shiftCalendar`、`demoHistorySeeded`，以及上手引导 `onboarding.dismissed` / `onboarding.passwordAck` / `onboarding.connectionTested` |
+| `audit_events` | 配置变更。用户、角色、动作、对象、短说明。不记录密码。最多保留最近 500 条。索引 `ix_audit_unix` |
 | `schema_info` | 当前 schema 版本 |
 
 时间列用 Unix 毫秒整数，避免 `InvariantGlobalization` 下 Npgsql 对 `DateTime` 的时区问题。以后迁到 TimescaleDB 时，可以用 `to_timestamp(timestamp_unix_ms / 1000.0)` 生成 `timestamptz`，再 `create_hypertable`。
 
 ## 为什么不用两套 EF Migration
 
-SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 2）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions` 与 `app_settings`，并 `CREATE INDEX IF NOT EXISTS`。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。
+SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 3）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions`、`app_settings` 与 `audit_events`，并 `CREATE INDEX IF NOT EXISTS`。从版本 1 或 2 的库启动会补到 3，不要求手工迁移。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。
 
 ## 保留
 

@@ -141,6 +141,28 @@ public sealed class AccountStore
         }
     }
 
+    public bool UsesDemoPassword(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return false;
+        }
+
+        lock (_gate)
+        {
+            EnsureInitialized();
+            var user = Find(username);
+            if (user is null)
+            {
+                return false;
+            }
+
+            return PasswordHasher.Verify("admin", user.PasswordHash)
+                || PasswordHasher.Verify("engineer", user.PasswordHash)
+                || PasswordHasher.Verify("viewer", user.PasswordHash);
+        }
+    }
+
     public bool MustChangePassword(string? username)
     {
         if (string.IsNullOrWhiteSpace(username))

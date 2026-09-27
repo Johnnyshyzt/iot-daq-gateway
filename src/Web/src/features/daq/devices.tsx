@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -80,6 +81,7 @@ export function DevicesPage() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<DeviceTestResult | null>(null)
   const [runtime, setRuntime] = useState<RuntimeStatus | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   async function reload() {
     const [deviceItems, templateItems, overview, status] = await Promise.all([
@@ -181,6 +183,14 @@ export function DevicesPage() {
     }
     if (!draft.metadata.displayName.trim()) {
       setMessage('请填写显示名')
+      return
+    }
+    if (!draft.spec.connection.host?.trim()) {
+      setMessage('请填写设备地址')
+      return
+    }
+    if (!Number.isFinite(draft.spec.intervalMs) || draft.spec.intervalMs < 100 || draft.spec.intervalMs > 86_400_000) {
+      setMessage('采集周期需在 100 到 86400000 毫秒之间')
       return
     }
     if (!draft.spec.pointTemplateId) {
@@ -561,8 +571,8 @@ export function DevicesPage() {
               </Button>
               <Button
                 variant='destructive'
-                disabled={!writable || !draft.metadata.id}
-                onClick={() => void remove(draft.metadata.id).catch(fail)}
+                disabled={!writable || mode !== 'edit' || !draft.metadata.id}
+                onClick={() => setConfirmDelete(true)}
               >
                 删除
               </Button>
@@ -572,6 +582,19 @@ export function DevicesPage() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title='删除设备'
+        desc={`从草稿删除「${draft.metadata.displayName || draft.metadata.id}」。已发布的采集要到发布页之后才会去掉这台设备。`}
+        destructive
+        confirmText='删除'
+        handleConfirm={() => {
+          const id = draft.metadata.id
+          setConfirmDelete(false)
+          void remove(id).catch(fail)
+        }}
+      />
     </PageShell>
   )
 }

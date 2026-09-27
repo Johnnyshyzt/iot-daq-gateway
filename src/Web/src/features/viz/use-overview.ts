@@ -11,7 +11,6 @@ export function useOverview() {
   useEffect(() => {
     let stop = false
     const controller = new AbortController()
-    let poll = 0
 
     async function load() {
       try {
@@ -25,50 +24,61 @@ export function useOverview() {
       }
     }
 
-    async function stream() {
+    async function readStream() {
       const token = useAuthStore.getState().auth.accessToken
       const headers = new Headers({ Accept: 'text/event-stream' })
       if (token) headers.set('Authorization', `Bearer ${token}`)
-      try {
-        const response = await fetch('/api/v1/live/stream', { headers, signal: controller.signal })
-        if (!response.ok || !response.body) throw new Error('stream')
-        if (!stop) setPush(true)
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        while (!stop) {
-          const chunk = await reader.read()
-          if (chunk.done) break
-          buffer += decoder.decode(chunk.value, { stream: true })
-          const parts = buffer.split('\n\n')
-          buffer = parts.pop() ?? ''
-          for (const part of parts) {
-            const line = part.split('\n').find((item) => item.startsWith('data:'))
-            if (!line) continue
-            try {
-              const next = JSON.parse(line.slice(5).trim()) as DashboardSnapshot
-              if (!stop) {
-                setData(next)
-                setError('')
-              }
-            } catch {
-              // ignore a partial frame
+      const response = await fetch('/api/v1/live/stream', { headers, signal: controller.signal })
+      if (!response.ok || !response.body) throw new Error('stream')
+      if (!stop) setPush(true)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (!stop) {
+        const chunk = await reader.read()
+        if (chunk.done) return
+        buffer += decoder.decode(chunk.value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
+        for (const part of parts) {
+          const line = part.split('\n').find((item) => item.startsWith('data:'))
+          if (!line) continue
+          try {
+            const next = JSON.parse(line.slice(5).trim()) as DashboardSnapshot
+            if (!stop) {
+              setData(next)
+              setError('')
             }
+          } catch {
+            // ignore a partial frame
           }
         }
-      } catch {
-        if (stop) return
-        if (!stop) setPush(false)
-        poll = window.setInterval(() => void load(), 3000)
       }
     }
 
-    void load()
-    void stream()
+    async function loop() {
+      await load()
+      let delay = 1000
+      while (!stop) {
+        try {
+          await readStream()
+          if (stop) return
+          delay = 1000
+        } catch {
+          if (stop || controller.signal.aborted) return
+          if (!stop) setPush(false)
+        }
+        if (stop) return
+        await load()
+        await new Promise((resolve) => window.setTimeout(resolve, delay))
+        delay = Math.min(delay * 2, 15_000)
+      }
+    }
+
+    void loop()
     return () => {
       stop = true
       controller.abort()
-      window.clearInterval(poll)
     }
   }, [])
 

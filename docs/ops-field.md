@@ -63,6 +63,8 @@ copy /Y C:\iot-daq-gateway\service.env %DEST%\
 
 进程还在时，页面「回滚」从数据库里的修订历史找回，不必先拷文件。历史最多 30 条。
 
+管理员也可以在「系统」页下载一份一致的 SQLite 快照，或从这份文件恢复。恢复前会把当前库留成 `data/gateway.db.bak`。页面备份不含 `data/auth`，恢复不会改掉正在使用的登录口令。PostgreSQL 不走这个按钮，仍在数据库服务器上备份。停服务后按上面的文件拷贝，仍然是现场换机时更完整的做法（连同 `data/auth` 和 `service.env`）。
+
 配置里只有环境变量名（`usernameFromEnv` / `passwordFromEnv`）。Broker 口令在 `service.env` 那份备份里。`data\auth` 是本机登录哈希，不是 MQTT 口令。导出的 YAML 同样只有变量名。
 
 `gateway.db` 已经损坏时，用上面的整库备份换回去再启动。不要把旧的 `data\published` 当成运行副本；只有在数据库文件不存在、需要重新导入时，那份 YAML 才会被读一次。

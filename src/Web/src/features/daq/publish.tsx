@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,6 +35,7 @@ export function PublishPage() {
   const [note, setNote] = useState('')
   const [issues, setIssues] = useState<ValidationIssue[]>([])
   const [message, setMessage] = useState('')
+  const [rollbackTarget, setRollbackTarget] = useState<Revision | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function fail(error: unknown) {
@@ -216,7 +218,7 @@ export function PublishPage() {
                         size='sm'
                         variant='outline'
                         disabled={!writable}
-                        onClick={() => void rollback(item.revision).catch(fail)}
+                        onClick={() => setRollbackTarget(item)}
                       >
                         回滚
                       </Button>
@@ -228,6 +230,21 @@ export function PublishPage() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmDialog
+        open={rollbackTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRollbackTarget(null)
+        }}
+        title='回滚已发布配置'
+        desc={`把已发布配置和草稿都恢复到修订 ${rollbackTarget?.revision.slice(0, 12) ?? ''}。采集会立刻按这一版重载。`}
+        destructive
+        confirmText='回滚'
+        handleConfirm={() => {
+          const revision = rollbackTarget?.revision
+          setRollbackTarget(null)
+          if (revision) void rollback(revision).catch(fail)
+        }}
+      />
     </PageShell>
   )
 }

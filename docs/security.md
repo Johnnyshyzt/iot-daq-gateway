@@ -18,6 +18,13 @@ FOCAS 面板以太网通常是明文工业协议，**不能**直接暴露到工�
 - Studio 只监听 `127.0.0.1:5080`。开发机演示账号是 `admin` / `admin` 等，登录页会标明只适合 localhost。现场包改为一次性引导密码，首次登录必须修改，角色仍是本机 admin / engineer / viewer。
 - 限制出站：仅允许 MQTT broker 与已登记的机床地址。
 
+## 管理接口
+
+- 除 `POST /api/v1/auth/login` 和 `GET /api/v1/auth/posture` 外，`/api/v1` 都要带 `Authorization: Bearer`。角色是本机的 admin、engineer、viewer。viewer 不能改配置。
+- `GET /healthz` 不需要登录，只返回 `status`、版本、数据库种类、schema 版本和运行秒数，不返回路径、账号或采样。
+- 数据库备份和恢复只有 admin。页面备份是 SQLite 快照，不含 `data/auth` 里的登录口令。PostgreSQL 不在页面里备份。
+- 配置变更写入 `audit_events`（发布、回滚、设备、模板、MQTT、密码已修改、备份、恢复）。说明里不放密码。
+
 ## 变更发布
 
 `change_only` 减少噪声，但 `$status` 每轮仍会发布，便于发现离线。不要把状态主题当作鉴权手段。
