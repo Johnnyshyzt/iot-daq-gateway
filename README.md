@@ -138,7 +138,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时、`Host.exe`、`wwwroot`、`data/seed` 和安装脚本）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。页面上发布后，同一进程从数据库重载已发布配置。
 
-1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.7.0**，附件名是 `iot-daq-gateway-0.7.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.7.0` 之后 Release 才会换成新 zip。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
+1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.8.0**，附件名是 `iot-daq-gateway-0.8.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.8.0` 之后 Release 才会换成新 zip。Linux 包是 `iot-daq-gateway-0.8.0-linux-x64.tar.gz`。授权、升级和手册见 [docs/licensing.md](docs/licensing.md)、[docs/upgrade.md](docs/upgrade.md)、[docs/manual/用户手册.md](docs/manual/用户手册.md)。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
 2. 解压到例如 `C:\iot-daq-gateway\`
 3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进 zip / 不进镜像）。复制 `service.env.example` 为 `service.env` 并填写 `MQTT_USER` / `MQTT_PASSWORD`
 4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。第一次启动把 `data/seed` 导入 `data/gateway.db`，之后采集只读数据库里的已发布配置
@@ -147,7 +147,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。升级与备份见 [docs/ops-field.md](docs/ops-field.md)，故障对照见 [docs/field-fault-guide.md](docs/field-fault-guide.md)，无自有机床时的试点验收见 [docs/product/pilot-acceptance.md](docs/product/pilot-acceptance.md)。Fake 演示见 [docs/product/fake-demo-script.md](docs/product/fake-demo-script.md)，商业边界见 [docs/product/pricing-one-pager.md](docs/product/pricing-one-pager.md)。试点合同附件、销售一页和安全口径见 [docs/product/pilot-contract-appendix.md](docs/product/pilot-contract-appendix.md)、[docs/product/sales-one-pager.md](docs/product/sales-one-pager.md)、[docs/product/security-narrative.md](docs/product/security-narrative.md)。
 
-维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.7.0`：
+维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.8.0`：
 
 ```bash
 git tag vX.Y.Z

@@ -14,6 +14,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { canWrite, describeError, studioApi } from '@/lib/studio-api'
 import { useAuthStore } from '@/stores/auth-store'
+import { FeatureLock } from './license-banner'
 import { PageShell } from './page-shell'
 
 type Header = { name: string; value: string }
@@ -116,6 +117,7 @@ export function HttpPushPage() {
       title='北向 HTTP'
       description='把契约 v1 批次推到 MES 或云端。目标不可达时写入磁盘缓冲，恢复后按顺序补发。密钥不会再显示。'
     >
+      <FeatureLock feature='http-push' />
       <div className='mb-4 grid gap-3 md:grid-cols-3'>
         {targets.map((target) => (
           <Card key={target.id}>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>IotDaq.LicenseGen</RootNamespace>
+    <Description>Signs offline license files. The private key is passed by path and is never read from the repository.</Description>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shared\Licensing\Licensing.csproj" />
+  </ItemGroup>
+</Project>

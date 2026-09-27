@@ -23,5 +23,6 @@
     <ProjectReference Include="..\..\src\Collector\Adapters.Cnc\Adapters.Cnc.csproj" />
     <ProjectReference Include="..\..\src\Api\Management\Api.csproj" />
     <ProjectReference Include="..\..\src\Api\Contracts\Studio.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Licensing\Licensing.csproj" />
   </ItemGroup>
 </Project>

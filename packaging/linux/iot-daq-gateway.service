@@ -9,6 +9,10 @@ User=iot-daq
 Group=iot-daq
 WorkingDirectory=/opt/iot-daq-gateway
 ExecStart=/usr/bin/dotnet /opt/iot-daq-gateway/Host.dll
+# 自包含包把上一行改成 /opt/iot-daq-gateway/Host。
+# 若要在启动前应用 Studio 暂存的升级包，可增加：
+# ExecStartPre=/opt/iot-daq-gateway/apply-upgrade.sh --if-staged
+# Docker 不走这条路径，请更换镜像。
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=0

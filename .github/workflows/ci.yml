@@ -48,3 +48,16 @@ jobs:
       - name: Build Web
         working-directory: src/Web
         run: npm ci && npm run build
+
+  manual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pandoc and weasyprint
+        run: sudo apt-get update && sudo apt-get install -y pandoc weasyprint fonts-noto-cjk
+      - name: Build user manual PDF
+        run: bash scripts/build-manual.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: user-manual
+          path: artifacts/manual/*

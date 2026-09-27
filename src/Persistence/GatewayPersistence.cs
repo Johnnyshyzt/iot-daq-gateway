@@ -19,7 +19,7 @@ namespace IotDaq.Persistence;
 /// </summary>
 public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWriter
 {
-    public const int SchemaVersion = 5;
+    public const int SchemaVersion = 6;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -29,6 +29,7 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
     private readonly bool _sqlite;
     private readonly string? _sqlitePath;
     private readonly string? _sqliteConnectionString;
+    private readonly string? _postgresConnectionString;
     private readonly int _configuredRetention;
     private event Action? SamplesWritten;
 
@@ -38,7 +39,8 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
         string provider,
         int historyRetentionDays,
         string? sqlitePath,
-        string? sqliteConnectionString)
+        string? sqliteConnectionString,
+        string? postgresConnectionString = null)
     {
         _options = options;
         _sqlite = sqlite;
@@ -46,7 +48,10 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
         _configuredRetention = historyRetentionDays;
         _sqlitePath = sqlitePath;
         _sqliteConnectionString = sqliteConnectionString;
+        _postgresConnectionString = postgresConnectionString;
     }
+
+    public string? PostgresConnectionString => _postgresConnectionString;
 
     public string Provider { get; }
 
@@ -96,7 +101,7 @@ public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWrite
             }
 
             builder.UseNpgsql(connection);
-            return new GatewayPersistence(builder.Options, sqlite: false, "Postgres", retention, null, null);
+            return new GatewayPersistence(builder.Options, sqlite: false, "Postgres", retention, null, null, connection);
         }
 
         Directory.CreateDirectory(dataDirectory);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -150,6 +151,23 @@ export function SettingsPage() {
         </Card>
         <VizSettingsCard />
         <BackupCard />
+        <DemoCard />
+        <Card>
+          <CardHeader>
+            <CardTitle>授权与升级</CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-2 text-sm'>
+            <p>{settings.license.message}</p>
+            <div className='flex flex-wrap gap-2'>
+              <Button asChild variant='outline'>
+                <Link to='/license'>授权许可</Link>
+              </Button>
+              <Button asChild variant='outline'>
+                <Link to='/upgrade'>升级</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         <ReliabilityCard writable={writable} />
         <Card className='lg:col-span-2'>
           <CardHeader>
@@ -225,6 +243,34 @@ function ReliabilityCard({ writable }: { writable: boolean }) {
           </Button>
           {note ? <p className='mt-2 text-sm text-muted-foreground'>{note}</p> : null}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DemoCard() {
+  const admin = useAuthStore((state) => state.auth.user?.role[0]) === 'admin'
+  const [note, setNote] = useState('')
+
+  async function seed() {
+    const result = await studioApi<{ message: string }>('/api/v1/ops/demo', { method: 'POST' })
+    setNote(result.message)
+    toast.success('已载入演示数据')
+  }
+
+  return (
+    <Card className='lg:col-span-2'>
+      <CardHeader>
+        <CardTitle>演示数据</CardTitle>
+      </CardHeader>
+      <CardContent className='space-y-2 text-sm'>
+        <p className='text-muted-foreground'>
+          加入发那科、西门子、三菱、新代、广数、哈斯的模拟器，名称都带「演示数据」。这不是真实机床，也不会调用厂商 SDK。也可以用命令行 --demo 启动。
+        </p>
+        <Button disabled={!admin} onClick={() => void seed().catch((error: unknown) => setNote(describeError(error)))}>
+          载入演示数据
+        </Button>
+        {note ? <p>{note}</p> : null}
       </CardContent>
     </Card>
   )

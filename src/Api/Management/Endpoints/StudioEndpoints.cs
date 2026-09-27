@@ -4,6 +4,7 @@ using Studio.Contracts;
 using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Runtime;
+using Studio.Host.Licensing;
 using Studio.Host.Northbound;
 using Studio.Host.Notifications;
 using Studio.Host.Visualization;
@@ -294,9 +295,8 @@ public static class StudioEndpoints
         api.MapGet("/runtime/logs/tail", async (int? lines, RuntimeQueries runtime, CancellationToken cancellationToken) =>
             ApiResults.Ok(await runtime.LogsAsync(lines ?? 200, cancellationToken)));
 
-        api.MapGet("/license", () => ApiResults.Ok(License()));
-        api.MapGet("/settings", (HttpContext http, ConfigStore store, AccountStore accounts) =>
-            ApiResults.Ok(BuildSettings(http, store, accounts)));
+        api.MapGet("/settings", (HttpContext http, ConfigStore store, AccountStore accounts, LicenseService licensing) =>
+            ApiResults.Ok(BuildSettings(http, store, accounts, licensing)));
         api.MapPut("/settings", (SettingsUpdate body, ConfigStore store, HttpContext http) =>
         {
             var gateway = store.GetGateway();
@@ -312,6 +312,8 @@ public static class StudioEndpoints
         }).RequireWriter();
 
         OpsEndpoints.Map(api);
+        LicenseEndpoints.Map(api);
+        DeliveryEndpoints.Map(api);
         NotificationEndpoints.Map(api);
         VisualizationEndpoints.Map(api);
         HttpPushEndpoints.Map(api);
@@ -320,12 +322,13 @@ public static class StudioEndpoints
         QueryApi.Map(app);
     }
 
-    private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts)
+    private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts, LicenseService licensing)
     {
         var gateway = store.GetGateway();
         var user = CurrentUser(http, accounts);
         var posture = accounts.Posture();
         var users = user.Role == "admin" ? accounts.ListUsers().ToList() : [];
+        var license = licensing.Describe(store);
         return new SettingsView
         {
             SiteId = gateway.Metadata.SiteId,
@@ -335,21 +338,19 @@ public static class StudioEndpoints
             DefaultIntervalMs = gateway.Spec.Acquisition.DefaultIntervalMs,
             ChangeOnly = gateway.Spec.Acquisition.ChangeOnly,
             DataDirectory = store.DataDirectory,
-            License = License(),
+            License = new LicenseStatus
+            {
+                Enforced = license.Enforced,
+                Status = license.Status,
+                Edition = license.Edition,
+                Message = license.Message
+            },
             CurrentUser = user,
             Users = users,
             AccountMode = posture.Mode,
             AccountMessage = posture.Message
         };
     }
-
-    private static LicenseStatus License() => new()
-    {
-        Enforced = false,
-        Status = "stub",
-        Edition = "m1-dev",
-        Message = "M1 许可证闸门为桩，当前不拦截管理 API。没有许可证时 Runtime 与 Studio 都可以运行。"
-    };
 
     private static UserInfo CurrentUser(HttpContext http, AccountStore accounts)
     {

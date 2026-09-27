@@ -18,6 +18,8 @@ import {
   Share2,
   Upload,
   Cpu,
+  BadgeCheck,
+  Package,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -54,6 +56,8 @@ export const sidebarData: SidebarData = {
       title: '系统',
       items: [
         { title: '系统', url: '/settings', icon: Settings },
+        { title: '授权许可', url: '/license', icon: BadgeCheck },
+        { title: '升级', url: '/upgrade', icon: Package },
         { title: '审计', url: '/audit', icon: ScrollText },
         { title: '修改密码', url: '/account/password', icon: KeyRound },
       ],

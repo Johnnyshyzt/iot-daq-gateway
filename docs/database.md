@@ -33,13 +33,14 @@ YAML / JSON 仍然是导入、导出和现场包种子的格式：
 | `link_status` | 每台设备最近一次链路状态和说明，供查询 API 与 OPC UA |
 | `http_push_targets` | HTTP 推送目标。URL、认证种类、打码后不返回的密钥、批量与退避、送达 / 失败 / 丢弃计数 |
 | `api_keys` | 只读查询密钥。前缀、SHA-256、创建人、吊销时间和最近使用。不明文保存。唯一索引 `ix_api_keys_hash` |
+| `installed_license` | 当前导入的许可证原文、客户、版本、导入人和时间。验签失败或指纹不符时仍可留下记录，运行时按社区版 |
 | `schema_info` | 当前 schema 版本 |
 
 时间列用 Unix 毫秒整数，避免 `InvariantGlobalization` 下 Npgsql 对 `DateTime` 的时区问题。以后迁到 TimescaleDB 时，可以用 `to_timestamp(timestamp_unix_ms / 1000.0)` 生成 `timestamptz`，再 `create_hypertable`。
 
 ## 为什么不用两套 EF Migration
 
-SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 5）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions`、`app_settings`、`audit_events`、四张通知表、`link_status`、`http_push_targets`、`api_keys`，并为 `config_mqtt` 补 `ContractVersion`（默认 `legacy`），再 `CREATE INDEX IF NOT EXISTS`。从版本 1、2、3 或 4 的库启动会补到 5，不要求手工迁移。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。MQTT 待发报文在数据目录的 `mqtt-spool/`，HTTP 推送待发报文在 `http-spool/`，都不在这些表里。OPC UA 证书在 `data/opcua/pki/`，也不在表里。`app_settings` 键 `opcua` 只存口令的 PBKDF2，不存明文。
+SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 6）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions`、`app_settings`、`audit_events`、四张通知表、`link_status`、`http_push_targets`、`api_keys`、`installed_license`，并为 `config_mqtt` 补 `ContractVersion`（默认 `legacy`），再 `CREATE INDEX IF NOT EXISTS`。从版本 1、2、3、4 或 5 的库启动会补到 6，不要求手工迁移。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。MQTT 待发报文在数据目录的 `mqtt-spool/`，HTTP 推送待发报文在 `http-spool/`，都不在这些表里。OPC UA 证书在 `data/opcua/pki/`，也不在表里。`app_settings` 键 `opcua` 只存口令的 PBKDF2，不存明文。
 
 ## 保留
 

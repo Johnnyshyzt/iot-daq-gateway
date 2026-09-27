@@ -6,8 +6,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using IotDaq.Persistence;
 using IotDaq.Persistence.Visualization;
+using IotDaq.Licensing;
 using Studio.Contracts;
 using Studio.Host.Config;
+using Studio.Host.Licensing;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Notifications;
@@ -22,6 +24,7 @@ public sealed class NotificationDispatcher
     private readonly ConfigStore _store;
     private readonly VisualizationService _visualization;
     private readonly ILogger<NotificationDispatcher> _logger;
+    private readonly LicenseService? _license;
     private readonly HttpClient _http;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -29,12 +32,14 @@ public sealed class NotificationDispatcher
         GatewayPersistence database,
         ConfigStore store,
         VisualizationService visualization,
-        ILogger<NotificationDispatcher> logger)
+        ILogger<NotificationDispatcher> logger,
+        LicenseService? license = null)
     {
         _database = database;
         _store = store;
         _visualization = visualization;
         _logger = logger;
+        _license = license;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
     }
 
@@ -43,11 +48,26 @@ public sealed class NotificationDispatcher
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            var alarms = _license?.Allows(LicenseFeatures.AlarmNotifications) ?? true;
+            var reports = _license?.Allows(LicenseFeatures.ScheduledReports) ?? true;
+            if (!alarms && !reports)
+            {
+                return;
+            }
+
             EnsureCursors();
-            ScanRaises();
-            ScanClears();
-            ScanEscalations();
-            ScanReports();
+            if (alarms)
+            {
+                ScanRaises();
+                ScanClears();
+                ScanEscalations();
+            }
+
+            if (reports)
+            {
+                ScanReports();
+            }
+
             await FlushPendingAsync(cancellationToken).ConfigureAwait(false);
         }
         finally

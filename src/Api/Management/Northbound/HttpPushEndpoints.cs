@@ -1,5 +1,7 @@
+using IotDaq.Licensing;
 using IotDaq.Persistence;
 using Studio.Host.Endpoints;
+using Studio.Host.Licensing;
 
 namespace Studio.Host.Northbound;
 
@@ -15,8 +17,13 @@ public static class HttpPushEndpoints
         api.MapGet("/http-push", (HttpPushDispatcher dispatcher, GatewayPersistence database) =>
             ApiResults.Ok(new { targets = database.ListHttpPushTargets().Select(row => ToView(row, dispatcher)).ToList() }));
 
-        api.MapPut("/http-push", (HttpPushWrite? body, HttpContext http, GatewayPersistence database) =>
+        api.MapPut("/http-push", (HttpPushWrite? body, HttpContext http, GatewayPersistence database, LicenseService licensing) =>
         {
+            if (body?.Enabled == true && !licensing.Allows(LicenseFeatures.HttpPush))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.HttpPush));
+            }
+
             var error = Validate(body);
             if (error is not null)
             {
@@ -74,8 +81,13 @@ public static class HttpPushEndpoints
             return ApiResults.Ok(new { deleted = true });
         }).RequireWriter();
 
-        api.MapPost("/http-push/{id}/test", async (string id, HttpContext http, HttpPushDispatcher dispatcher, GatewayPersistence database, CancellationToken cancellationToken) =>
+        api.MapPost("/http-push/{id}/test", async (string id, HttpContext http, HttpPushDispatcher dispatcher, GatewayPersistence database, LicenseService licensing, CancellationToken cancellationToken) =>
         {
+            if (!licensing.Allows(LicenseFeatures.HttpPush))
+            {
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "license_feature", licensing.Denial(LicenseFeatures.HttpPush));
+            }
+
             var error = await dispatcher.SendTestAsync(id, cancellationToken);
             if (database.FindHttpPushTarget(id) is null)
             {

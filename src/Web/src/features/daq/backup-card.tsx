@@ -10,6 +10,7 @@ type OpsStatus = {
   database: string
   fileBackup: boolean
   schemaVersion: number
+  postgresTools?: boolean
 }
 
 export function BackupCard() {
@@ -74,7 +75,11 @@ export function BackupCard() {
           {status?.fileBackup
             ? `当前是 SQLite（结构版本 ${status.schemaVersion}）。下载的是一份一致的数据库快照，不含登录口令。`
             : status
-              ? `当前数据库是 ${status.database}。页面只备份 SQLite。PostgreSQL 请在数据库服务器上备份。`
+              ? `当前数据库是 ${status.database}（结构版本 ${status.schemaVersion}）。${
+                  status.postgresTools
+                    ? '将调用本机 PATH 里的 pg_dump / pg_restore。'
+                    : '未在 PATH 中找到 pg_dump 或 pg_restore。安装 PostgreSQL 客户端后再试，否则会看到明确错误。'
+                }`
               : '正在读取数据库状态…'}
         </p>
         <p className='text-muted-foreground'>
@@ -84,14 +89,14 @@ export function BackupCard() {
         <div className='flex flex-wrap gap-2'>
           <Button
             variant='outline'
-            disabled={!admin || !status?.fileBackup}
+            disabled={!admin || !status || (!status.fileBackup && status.database !== 'Postgres')}
             onClick={() => void download().catch((error: unknown) => setMessage(describeError(error)))}
           >
             下载备份
           </Button>
           <Button
             variant='destructive'
-            disabled={!admin || !status?.fileBackup}
+            disabled={!admin || !status || (!status.fileBackup && status.database !== 'Postgres')}
             onClick={() => fileRef.current?.click()}
           >
             从文件恢复

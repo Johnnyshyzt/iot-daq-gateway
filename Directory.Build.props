@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- Site zip / startup logs. SDK pin stays in global.json; published win-x64 is self-contained. -->
-    <Version>0.7.0</Version>
+    <Version>0.8.0</Version>
     <Product>IoT DAQ Gateway</Product>
     <Authors>iot-daq-gateway</Authors>
   </PropertyGroup>

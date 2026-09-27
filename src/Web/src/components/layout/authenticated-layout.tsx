@@ -9,6 +9,7 @@ import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
+import { LicenseBanner } from '@/features/daq/license-banner'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -62,6 +63,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
               'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
             )}
           >
+            <LicenseBanner />
             {children ?? <Outlet />}
           </SidebarInset>
         </SidebarProvider>
