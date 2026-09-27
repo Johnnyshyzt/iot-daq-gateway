@@ -379,3 +379,125 @@ public sealed class AuditEventRow
 
     public string Detail { get; set; } = "";
 }
+
+public sealed class NotificationChannelRow
+{
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public string Kind { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+
+    public string WebhookUrl { get; set; } = "";
+
+    public string Secret { get; set; } = "";
+
+    public string SecretFromEnv { get; set; } = "";
+
+    public string SmtpHost { get; set; } = "";
+
+    public int SmtpPort { get; set; } = 25;
+
+    public string SmtpUser { get; set; } = "";
+
+    public string MailFrom { get; set; } = "";
+
+    public string MailTo { get; set; } = "";
+
+    public bool SmtpSsl { get; set; } = true;
+
+    public long UpdatedUnixMs { get; set; }
+}
+
+public sealed class NotificationRuleRow
+{
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+
+    public string ChannelId { get; set; } = "";
+
+    public string EscalationChannelId { get; set; } = "";
+
+    public int EscalationMinutes { get; set; }
+
+    public string DeviceIdsJson { get; set; } = "[]";
+
+    public string GroupsJson { get; set; } = "[]";
+
+    public string SeveritiesJson { get; set; } = "[]";
+
+    public string CodeFilter { get; set; } = "";
+
+    public bool OnRaise { get; set; } = true;
+
+    public bool OnClear { get; set; }
+
+    public string QuietStart { get; set; } = "";
+
+    public string QuietEnd { get; set; } = "";
+
+    public int DedupSeconds { get; set; } = 300;
+
+    public int RatePerHour { get; set; } = 30;
+
+    public long UpdatedUnixMs { get; set; }
+}
+
+public sealed class NotificationDeliveryRow
+{
+    public long Id { get; set; }
+
+    public string ChannelId { get; set; } = "";
+
+    public string RuleId { get; set; } = "";
+
+    public string AlarmId { get; set; } = "";
+
+    public string Kind { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public string Code { get; set; } = "";
+
+    public string Severity { get; set; } = "";
+
+    public string Summary { get; set; } = "";
+
+    public string Status { get; set; } = "pending";
+
+    public int Attempts { get; set; }
+
+    public string LastError { get; set; } = "";
+
+    public long CreatedUnixMs { get; set; }
+
+    public long? SentUnixMs { get; set; }
+
+    public long NextAttemptUnixMs { get; set; }
+}
+
+public sealed class ReportScheduleRow
+{
+    public string Id { get; set; } = "default";
+
+    public bool Enabled { get; set; }
+
+    public bool DailyEnabled { get; set; } = true;
+
+    public string DailyTime { get; set; } = "08:00";
+
+    public bool ShiftEnabled { get; set; }
+
+    public string ChannelIdsJson { get; set; } = "[]";
+
+    public string LastDailyKey { get; set; } = "";
+
+    public string LastShiftKey { get; set; } = "";
+
+    public long UpdatedUnixMs { get; set; }
+}

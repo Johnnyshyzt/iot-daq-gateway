@@ -93,6 +93,14 @@ public sealed class DeviceDetail
 
     public string ConnectionMessage { get; set; } = "";
 
+    public string LinkPhase { get; set; } = "";
+
+    public long? NextRetryUnixMs { get; set; }
+
+    public string LastError { get; set; } = "";
+
+    public int LinkAttempt { get; set; }
+
     public long? LastSeenUnixMs { get; set; }
 
     public string? Program { get; set; }

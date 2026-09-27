@@ -37,7 +37,7 @@
 
 https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest
 
-文件名是 `iot-daq-gateway-<version>-win-x64.zip`。源码 `Directory.Build.props` 的 `Version` 现为 `0.5.0`，对应附件名 `iot-daq-gateway-0.5.0-win-x64.zip`（版本号没有前缀 `v`）。已发布的 GitHub Release 仍可能是更早的 `v0.4.0`，推送标签 `v0.5.0` 之后才会出现新包。
+文件名是 `iot-daq-gateway-<version>-win-x64.zip`。源码 `Directory.Build.props` 的 `Version` 现为 `0.6.0`，对应附件名 `iot-daq-gateway-0.6.0-win-x64.zip`（版本号没有前缀 `v`）。已发布的 GitHub Release 仍可能是更早的标签，推送标签 `v0.6.0` 之后才会出现新包。
 
 还没有 Release 时，用 GitHub Actions 里 `pack-win-x64` 作业的同名 artifact，或在构建机执行上面的脚本。zip 里有 `Host.exe`、`wwwroot`、`data/seed` 和 `install-service.bat` 等安装脚本，没有 `Fwlib64.dll`。
 
@@ -187,6 +187,6 @@ sc delete IotDaqGateway
 | MQTT 已认证但连不上 | `service.env` 未注入。重新以管理员运行 `install-service.bat`，并确认配置里的变量名是 `MQTT_USER` / `MQTT_PASSWORD` |
 | `$status=offline` 且日志含 `Fwlib64` | DLL 未放、位数不是 x64、或缺 VC 运行库（按 FANUC 说明补齐）。设备测试会给出同样的中文原因，而不是 TCP 成功 |
 | `EW_SOCKET` / 连不上 | 采集机到机床 8193 不通；选件未开 |
-| MQTT 反复重连 | broker 地址/端口错；发布被丢弃，采集仍继续 |
+| MQTT 反复重连 | broker 地址/端口错。采集仍继续。待发报文在 `data\mqtt-spool`，深度可在页面和 `/healthz` 看到。见 [reliability.md](reliability.md) |
 | 两台网关互踢 | `mqtt.clientId` 重复 |
 | 改了页面但采集没变化 | 还没在「发布」页发布。发布后同一进程会重载数据库里的已发布配置 |

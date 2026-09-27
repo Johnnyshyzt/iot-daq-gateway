@@ -29,13 +29,15 @@ journalctl -u iot-daq-gateway -f
 sudo systemctl restart iot-daq-gateway
 ```
 
+单元文件是 `Restart=on-failure`、`RestartSec=5`、`StartLimitIntervalSec=0`。进程异常退出会拉起；`systemctl stop` 不会。设备级停顿由进程内看门狗处理，见 [reliability.md](reliability.md)。
+
 健康检查不需要登录：
 
 ```bash
 curl -s http://127.0.0.1:5080/healthz
 ```
 
-返回版本、数据库种类和运行秒数，没有路径或账号。升级时保留 `/var/lib/iot-daq-gateway`（`gateway.db` 和 `auth`）。停服务后再拷贝数据库，见 [ops-field.md](ops-field.md)。
+返回版本、数据库种类、schema 版本、运行秒数、`mqttConnected`、`mqttSpoolDepth`、`mqttSpoolDropped`，没有路径、账号或报文。升级时保留 `/var/lib/iot-daq-gateway`（`gateway.db`、`auth`，以及还没发完的 `mqtt-spool`）。停服务后再拷贝数据库，见 [ops-field.md](ops-field.md)。
 
 ## Docker Compose（Fake 演示）
 

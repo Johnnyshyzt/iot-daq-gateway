@@ -386,6 +386,7 @@ public sealed class RuntimeQueries
             Status = status,
             LastSeen = status == "online" ? now : null,
             Message = message,
+            LinkPhase = status == "online" ? "connected" : status == "disabled" ? "" : "connecting",
             StatusTopic = TopicOrEmpty(
                 () => DaqTopics.StatusTopic(
                     published.Mqtt.Spec.StatusTopic,

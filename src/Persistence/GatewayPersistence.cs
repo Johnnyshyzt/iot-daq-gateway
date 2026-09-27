@@ -17,9 +17,9 @@ namespace IotDaq.Persistence;
 /// configuration, and stores samples. SQLite is the default file under the data directory.
 /// PostgreSQL is selected with Database:Provider=Postgres.
 /// </summary>
-public sealed class GatewayPersistence : ISampleWriter
+public sealed partial class GatewayPersistence : ISampleWriter
 {
-    public const int SchemaVersion = 3;
+    public const int SchemaVersion = 4;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

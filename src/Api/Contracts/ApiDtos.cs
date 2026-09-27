@@ -266,6 +266,12 @@ public sealed class RuntimeStatus
 
     public DateTimeOffset UtcNow { get; set; }
 
+    public bool MqttConnected { get; set; }
+
+    public int MqttSpoolDepth { get; set; }
+
+    public long MqttSpoolDropped { get; set; }
+
     public List<DeviceHealthView> Devices { get; set; } = [];
 
     public List<string> RecentErrors { get; set; } = [];
@@ -288,6 +294,14 @@ public sealed class DeviceHealthView
     public string Message { get; set; } = "";
 
     public string StatusTopic { get; set; } = "";
+
+    public string LinkPhase { get; set; } = "";
+
+    public DateTimeOffset? NextRetry { get; set; }
+
+    public string LastError { get; set; } = "";
+
+    public int Attempt { get; set; }
 }
 
 public sealed class ObservationView

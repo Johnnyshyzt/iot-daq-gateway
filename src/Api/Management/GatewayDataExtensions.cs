@@ -1,6 +1,7 @@
 using Gateway.Abstractions.Contracts;
 using IotDaq.Persistence;
 using Studio.Host.Config;
+using Studio.Host.Notifications;
 using Studio.Host.Visualization;
 
 namespace Studio.Host;
@@ -12,6 +13,8 @@ public static class GatewayDataExtensions
         services.AddSingleton(store.Database);
         services.AddSingleton<ISampleWriter>(store.Database);
         services.AddSingleton<VisualizationService>();
+        services.AddSingleton<NotificationDispatcher>();
+        services.AddHostedService<NotificationWorker>();
         services.AddHostedService<SampleRetentionService>();
         return services;
     }

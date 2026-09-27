@@ -2,12 +2,16 @@ using Adapters.Cnc;
 using Adapters.Fanuc;
 using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Contracts;
+using Gateway.Abstractions.Reliability;
 using Gateway.Host.Acquisition;
 using Gateway.Host.Configuration;
 using Gateway.Host.Logging;
 using Gateway.Host.Programs;
+using Gateway.Host.Reliability;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Sinks.Mqtt;
 
 namespace Gateway.Host;
 
@@ -41,6 +45,19 @@ public static class CollectorHost
     public static IServiceCollection AddCollector(this IServiceCollection services)
     {
         services.AddSingleton(sp => new GatewayConfigHolder(sp.GetRequiredService<IRuntimeConfigSource>().Load().Configuration));
+        services.AddSingleton(sp => ReliabilityOptionsLoader.Load(sp.GetRequiredService<IConfiguration>()));
+        services.AddSingleton<MqttBufferStatus>();
+        services.AddSingleton<IMqttBufferStatus>(sp => sp.GetRequiredService<MqttBufferStatus>());
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<ReliabilityOptions>();
+            return new MqttSpool(options.SpoolDirectory, new ReliabilityLimits
+            {
+                MaxMessages = () => options.SpoolMessageCap,
+                MaxAge = () => options.SpoolMaxAge,
+                MaxBytes = () => options.SpoolByteCap
+            });
+        });
         services.AddFanucAdapters();
         services.AddCncAdapters();
         services.AddSingleton<LiveGateway>();
@@ -48,6 +65,7 @@ public static class CollectorHost
         services.AddHostedService(sp => sp.GetRequiredService<LiveGateway>());
         services.AddSingleton<IProgramService, FeatureGatedProgramService>();
         services.AddHostedService<AcquisitionWorker>();
+        services.AddHostedService<AcquisitionWatchdog>();
         return services;
     }
 

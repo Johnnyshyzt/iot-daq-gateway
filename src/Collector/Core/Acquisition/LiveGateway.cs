@@ -6,6 +6,8 @@ using Gateway.Abstractions.Models;
 using Gateway.Abstractions.Topics;
 using Gateway.Host.Configuration;
 using Gateway.Host.Logging;
+using Gateway.Abstractions.Reliability;
+using Gateway.Host.Reliability;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sinks.Mqtt;
@@ -23,12 +25,19 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LiveGateway> _logger;
     private readonly IReadOnlyList<ISampleWriter> _samples;
+    private readonly ReliabilityOptions _reliability;
+    private readonly MqttSpool _spool;
+    private readonly MqttBufferStatus _buffer;
+    private readonly DeviceLinkBook _links = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _stateLock = new();
+    private readonly object _ctsLock = new();
+    private readonly Dictionary<string, CancellationTokenSource> _collectCts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Queue<Observation> _observations = new();
     private readonly List<string> _recentErrors = [];
     private Dictionary<string, DeviceHealth> _health = new(StringComparer.OrdinalIgnoreCase);
     private Session? _session;
+    private DateTimeOffset _lastSweepCompleted = DateTimeOffset.UtcNow;
 
     public LiveGateway(
         IRuntimeConfigSource configs,
@@ -36,7 +45,10 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         IEnumerable<ISouthboundAdapterFactory> factories,
         ILoggerFactory loggerFactory,
         ILogger<LiveGateway> logger,
-        IEnumerable<ISampleWriter> samples)
+        IEnumerable<ISampleWriter> samples,
+        ReliabilityOptions reliability,
+        MqttSpool spool,
+        MqttBufferStatus buffer)
     {
         _configs = configs;
         _holder = holder;
@@ -44,6 +56,9 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         _loggerFactory = loggerFactory;
         _logger = logger;
         _samples = samples.ToList();
+        _reliability = reliability;
+        _spool = spool;
+        _buffer = buffer;
     }
 
     public string? ActiveRevision
@@ -169,15 +184,56 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         try
         {
             var session = CurrentSession();
-            foreach (var adapter in session.Adapters)
+            foreach (var adapter in session.Adapters.ToArray())
             {
                 await SweepAdapterAsync(session, adapter, cancellationToken).ConfigureAwait(false);
             }
+
+            _lastSweepCompleted = DateTimeOffset.UtcNow;
         }
         finally
         {
             _gate.Release();
         }
+    }
+
+    public int HealStalled(DateTimeOffset now)
+    {
+        var stalled = _links.Stalled(now, _reliability.Stall);
+        var cancelled = 0;
+        foreach (var deviceId in stalled)
+        {
+            CancellationTokenSource? cts;
+            lock (_ctsLock)
+            {
+                _collectCts.TryGetValue(deviceId, out cts);
+            }
+
+            if (cts is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                cts.Cancel();
+                cancelled++;
+                _logger.LogWarning("Watchdog cancelling stalled collect for {DeviceId}", deviceId);
+            }
+            catch (ObjectDisposedException)
+            {
+                // The sweep already finished this collect.
+            }
+        }
+
+        if (cancelled == 0 && now - _lastSweepCompleted > _reliability.Stall + _reliability.Stall)
+        {
+            _logger.LogWarning(
+                "Acquisition loop has not completed a sweep since {Since}",
+                _lastSweepCompleted);
+        }
+
+        return cancelled;
     }
 
     public object StatusDocument()
@@ -196,47 +252,27 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         var devices = config.Devices.Select(device =>
         {
             var displayName = OptionText(device.Options, "displayName") ?? device.Id;
+            var link = _links.Find(device.Id);
             if (!device.Enabled)
             {
-                return new
-                {
-                    id = device.Id,
-                    displayName,
-                    enabled = false,
-                    adapter = device.Adapter,
-                    status = "disabled",
-                    lastSeen = (DateTimeOffset?)null,
-                    message = "设备已禁用",
-                    statusTopic = StatusTopic(config, device.Id)
-                };
+                return DeviceStatus(device.Id, displayName, false, device.Adapter, "disabled", null, "设备已禁用", config, link);
             }
 
             if (!health.TryGetValue(device.Id, out var item))
             {
-                return new
-                {
-                    id = device.Id,
-                    displayName,
-                    enabled = true,
-                    adapter = device.Adapter,
-                    status = "offline",
-                    lastSeen = (DateTimeOffset?)null,
-                    message = "尚未完成首轮扫描",
-                    statusTopic = StatusTopic(config, device.Id)
-                };
+                return DeviceStatus(device.Id, displayName, true, device.Adapter, "offline", null, "尚未完成首轮扫描", config, link);
             }
 
-            return new
-            {
-                id = device.Id,
+            return DeviceStatus(
+                device.Id,
                 displayName,
-                enabled = true,
-                adapter = device.Adapter,
-                status = item.Status.ToString().ToLowerInvariant(),
-                lastSeen = (DateTimeOffset?)item.Timestamp,
-                message = item.Message ?? "",
-                statusTopic = StatusTopic(config, device.Id)
-            };
+                true,
+                device.Adapter,
+                item.Status.ToString().ToLowerInvariant(),
+                item.Timestamp,
+                item.Message ?? "",
+                config,
+                link);
         }).ToList();
 
         return new
@@ -247,6 +283,9 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             mode = "live",
             activeRevision = session?.Revision ?? "",
             utcNow = DateTimeOffset.UtcNow,
+            mqttConnected = _buffer.Connected,
+            mqttSpoolDepth = _buffer.Depth,
+            mqttSpoolDropped = _buffer.Dropped,
             devices,
             recentErrors = errors
         };
@@ -291,7 +330,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
 
     private async Task ApplyAsync(LoadedGateway loaded, CancellationToken cancellationToken)
     {
-        var session = await Session.OpenAsync(loaded, _factories, _loggerFactory, _logger, cancellationToken)
+        var session = await Session.OpenAsync(loaded, _factories, _loggerFactory, _logger, _spool, _buffer, cancellationToken)
             .ConfigureAwait(false);
         Session? previous = null;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -304,6 +343,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                 _holder.Current = session.Config;
                 _health = new Dictionary<string, DeviceHealth>(StringComparer.OrdinalIgnoreCase);
                 _observations.Clear();
+                _links.Reset();
             }
         }
         finally
@@ -319,9 +359,43 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
 
     private async Task SweepAdapterAsync(Session session, ISouthboundAdapter adapter, CancellationToken cancellationToken)
     {
+        var now = DateTimeOffset.UtcNow;
+        if (!_links.ShouldAttempt(adapter.DeviceId, now))
+        {
+            var waiting = _links.Find(adapter.DeviceId);
+            var health = new DeviceHealth
+            {
+                DeviceId = adapter.DeviceId,
+                Status = AdapterStatus.Offline,
+                Message = BackoffMessage(waiting),
+                Timestamp = now
+            };
+            Remember(health);
+            NoteSampleStatus(health);
+            await TryPublishStatusAsync(session, health, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var reconnect = _links.Find(adapter.DeviceId)?.Phase != DeviceLinkPhase.Connected;
+        _links.BeginAttempt(adapter.DeviceId, now);
+        using var stall = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        stall.CancelAfter(_reliability.Stall);
+        TrackCollect(adapter.DeviceId, stall);
         try
         {
-            var observations = await adapter.CollectAsync(cancellationToken).ConfigureAwait(false);
+            if (reconnect)
+            {
+                try
+                {
+                    await adapter.ConnectAsync(stall.Token).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogDebug(ex, "Connect failed for {DeviceId}", adapter.DeviceId);
+                }
+            }
+
+            var observations = await adapter.CollectAsync(stall.Token).ConfigureAwait(false);
             foreach (var writer in _samples)
             {
                 try
@@ -345,10 +419,23 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
                 await session.Sink.PublishObservationAsync(observation, cancellationToken).ConfigureAwait(false);
             }
 
-            var health = await adapter.GetHealthAsync(cancellationToken).ConfigureAwait(false);
+            var health = await adapter.GetHealthAsync(stall.Token).ConfigureAwait(false);
+            if (health.Status == AdapterStatus.Offline)
+            {
+                NoteLinkFailure(adapter.DeviceId, string.IsNullOrWhiteSpace(health.Message) ? "设备离线" : health.Message!);
+            }
+            else
+            {
+                _links.Connected(adapter.DeviceId, DateTimeOffset.UtcNow);
+            }
+
             Remember(health);
             NoteSampleStatus(health);
-            await session.Sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
+            await TryPublishStatusAsync(session, health, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            await FailAsync(session, adapter, "采集循环停滞，已重启该设备采集", restart: true, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -358,24 +445,163 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         {
             _logger.LogError(ex, "Sweep failed for {DeviceId} ({Kind})", adapter.DeviceId, adapter.AdapterKind);
             NoteError($"{adapter.DeviceId}: {ex.Message}");
-            var health = new DeviceHealth
+            await FailAsync(session, adapter, ex.Message, restart: false, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            UntrackCollect(adapter.DeviceId, stall);
+        }
+    }
+
+    private async Task FailAsync(Session session, ISouthboundAdapter adapter, string error, bool restart, CancellationToken cancellationToken)
+    {
+        NoteLinkFailure(adapter.DeviceId, error);
+        var waiting = _links.Find(adapter.DeviceId);
+        var health = new DeviceHealth
+        {
+            DeviceId = adapter.DeviceId,
+            Status = AdapterStatus.Offline,
+            Message = BackoffMessage(waiting),
+            Timestamp = DateTimeOffset.UtcNow
+        };
+        Remember(health);
+        NoteSampleStatus(health);
+        await TryPublishStatusAsync(session, health, cancellationToken).ConfigureAwait(false);
+        if (!restart || cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await ReplaceAdapterAsync(session, adapter, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Failed to restart device worker {DeviceId}", adapter.DeviceId);
+        }
+    }
+
+    private async Task ReplaceAdapterAsync(Session session, ISouthboundAdapter current, CancellationToken cancellationToken)
+    {
+        var device = session.Config.Devices.FirstOrDefault(item =>
+            string.Equals(item.Id, current.DeviceId, StringComparison.OrdinalIgnoreCase));
+        if (device is null)
+        {
+            return;
+        }
+
+        var replacement = AdapterFactory.CreateOne(device, _factories);
+        var index = session.Adapters.FindIndex(item => string.Equals(item.DeviceId, current.DeviceId, StringComparison.OrdinalIgnoreCase));
+        if (index >= 0)
+        {
+            session.Adapters[index] = replacement;
+        }
+        else
+        {
+            session.Adapters.Add(replacement);
+        }
+
+        try
+        {
+            await current.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Disposing stalled adapter {DeviceId}", current.DeviceId);
+        }
+
+        _logger.LogInformation("Restarted device worker {DeviceId}", current.DeviceId);
+        try
+        {
+            await replacement.ConnectAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Reconnect after restart failed for {DeviceId}", current.DeviceId);
+        }
+    }
+
+    private void NoteLinkFailure(string deviceId, string error)
+    {
+        _links.Failed(deviceId, error, DateTimeOffset.UtcNow, _reliability, Random.Shared.NextDouble());
+    }
+
+    private void TrackCollect(string deviceId, CancellationTokenSource cts)
+    {
+        lock (_ctsLock)
+        {
+            _collectCts[deviceId] = cts;
+        }
+    }
+
+    private void UntrackCollect(string deviceId, CancellationTokenSource cts)
+    {
+        lock (_ctsLock)
+        {
+            if (_collectCts.TryGetValue(deviceId, out var current) && ReferenceEquals(current, cts))
             {
-                DeviceId = adapter.DeviceId,
-                Status = AdapterStatus.Offline,
-                Message = ex.Message,
-                Timestamp = DateTimeOffset.UtcNow
-            };
-            Remember(health);
-            NoteSampleStatus(health);
-            try
-            {
-                await session.Sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception publishEx) when (publishEx is not OperationCanceledException)
-            {
-                _logger.LogDebug(publishEx, "Status publish failed for {DeviceId}", adapter.DeviceId);
+                _collectCts.Remove(deviceId);
             }
         }
+    }
+
+    private async Task TryPublishStatusAsync(Session session, DeviceHealth health, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await session.Sink.PublishStatusAsync(health, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception publishEx) when (publishEx is not OperationCanceledException)
+        {
+            _logger.LogDebug(publishEx, "Status publish failed for {DeviceId}", health.DeviceId);
+        }
+    }
+
+    private static string BackoffMessage(DeviceLink? link)
+    {
+        if (link is null)
+        {
+            return "等待重连";
+        }
+
+        var when = link.NextRetryUtc?.ToString("HH:mm:ss", CultureInfo.InvariantCulture) ?? "";
+        var error = string.IsNullOrWhiteSpace(link.LastError) ? "连接失败" : link.LastError;
+        return string.IsNullOrEmpty(when) ? error : $"{error}；下次重试 {when} UTC";
+    }
+
+    private object DeviceStatus(
+        string id,
+        string displayName,
+        bool enabled,
+        string adapter,
+        string status,
+        DateTimeOffset? lastSeen,
+        string message,
+        GatewayConfiguration config,
+        DeviceLink? link)
+    {
+        var phase = link?.Phase switch
+        {
+            DeviceLinkPhase.Connected => "connected",
+            DeviceLinkPhase.Backoff => "backoff",
+            _ => enabled ? "connecting" : ""
+        };
+        return new
+        {
+            id,
+            displayName,
+            enabled,
+            adapter,
+            status,
+            lastSeen,
+            message,
+            statusTopic = StatusTopic(config, id),
+            linkPhase = phase,
+            nextRetry = link?.NextRetryUtc,
+            lastError = link?.LastError ?? "",
+            attempt = link?.Attempt ?? 0
+        };
     }
 
     private Session CurrentSession()
@@ -461,7 +687,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             string? revision,
             string displayName,
             INorthboundSink sink,
-            IReadOnlyList<ISouthboundAdapter> adapters,
+            List<ISouthboundAdapter> adapters,
             ChangeOnlyFilter filter)
         {
             Config = config;
@@ -480,7 +706,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
 
         public INorthboundSink Sink { get; }
 
-        public IReadOnlyList<ISouthboundAdapter> Adapters { get; }
+        public List<ISouthboundAdapter> Adapters { get; }
 
         public ChangeOnlyFilter Filter { get; }
 
@@ -489,12 +715,16 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
             IReadOnlyList<ISouthboundAdapterFactory> factories,
             ILoggerFactory loggerFactory,
             ILogger logger,
+            MqttSpool spool,
+            MqttBufferStatus buffer,
             CancellationToken cancellationToken)
         {
             var adapters = AdapterFactory.Create(loaded.Configuration, factories);
             var sink = new MqttObservationSink(
                 loaded.Configuration,
-                loggerFactory.CreateLogger<MqttObservationSink>());
+                loggerFactory.CreateLogger<MqttObservationSink>(),
+                spool,
+                buffer);
             try
             {
                 await sink.StartAsync(cancellationToken).ConfigureAwait(false);

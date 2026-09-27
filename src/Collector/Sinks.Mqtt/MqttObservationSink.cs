@@ -24,13 +24,26 @@ public sealed class MqttObservationSink : INorthboundSink
     private readonly MqttQualityOfServiceLevel _qos;
     private readonly SemaphoreSlim _connectLock = new(1, 1);
     private readonly TimeSpan _reconnectDelay = TimeSpan.FromSeconds(5);
+    private readonly MqttSpool? _spool;
+    private readonly MqttBufferStatus? _buffer;
     private DateTimeOffset _nextConnectAttempt = DateTimeOffset.MinValue;
     private bool _wasConnected;
 
     public MqttObservationSink(GatewayConfiguration config, ILogger<MqttObservationSink> logger)
+        : this(config, logger, spool: null, buffer: null)
+    {
+    }
+
+    public MqttObservationSink(
+        GatewayConfiguration config,
+        ILogger<MqttObservationSink> logger,
+        MqttSpool? spool,
+        MqttBufferStatus? buffer)
     {
         _config = config;
         _logger = logger;
+        _spool = spool;
+        _buffer = buffer;
         _qos = MapQos(config.Mqtt.Qos);
 
         var builder = new MqttClientOptionsBuilder()
@@ -110,27 +123,96 @@ public sealed class MqttObservationSink : INorthboundSink
 
         _client.Dispose();
         _connectLock.Dispose();
+        TouchBuffer();
     }
 
     private async Task PublishAsync<T>(string topic, T payload, CancellationToken cancellationToken)
     {
+        var json = JsonSerializer.Serialize(payload, JsonOptions);
         await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
+        if (_client.IsConnected)
+        {
+            await DrainAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         if (!_client.IsConnected)
         {
-            _logger.LogWarning("MQTT not connected; drop publish to {Topic}", topic);
+            Hold(topic, json);
             return;
         }
 
-        var json = JsonSerializer.Serialize(payload, JsonOptions);
+        try
+        {
+            await SendAsync(topic, json, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("Published {Topic}: {Payload}", topic, json);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "MQTT publish failed; spool {Topic}", topic);
+            Hold(topic, json);
+        }
+    }
+
+    private async Task DrainAsync(CancellationToken cancellationToken)
+    {
+        if (_spool is null)
+        {
+            return;
+        }
+
+        while (_client.IsConnected)
+        {
+            var item = _spool.PeekOldest(DateTimeOffset.UtcNow);
+            if (item is null)
+            {
+                TouchBuffer();
+                return;
+            }
+
+            try
+            {
+                await SendAsync(item.Topic, item.Payload, cancellationToken).ConfigureAwait(false);
+                _spool.Acknowledge(item.Seq);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning("MQTT replay stopped at seq {Seq}: {Message}", item.Seq, ex.Message);
+                TouchBuffer();
+                return;
+            }
+        }
+
+        TouchBuffer();
+    }
+
+    private void Hold(string topic, string json)
+    {
+        if (_spool is null)
+        {
+            _logger.LogWarning("MQTT not connected; drop publish to {Topic}", topic);
+            TouchBuffer();
+            return;
+        }
+
+        _spool.Enqueue(topic, json, (int)_qos, _config.Mqtt.Retain, DateTimeOffset.UtcNow);
+        _logger.LogWarning("MQTT not connected; spooled {Topic} (depth {Depth})", topic, _spool.Depth);
+        TouchBuffer();
+    }
+
+    private void TouchBuffer()
+    {
+        _buffer?.Publish(_spool?.Depth ?? 0, _spool?.Dropped ?? 0, _client.IsConnected);
+    }
+
+    private Task SendAsync(string topic, string json, CancellationToken cancellationToken)
+    {
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(topic)
             .WithPayload(Encoding.UTF8.GetBytes(json))
             .WithQualityOfServiceLevel(_qos)
             .WithRetainFlag(_config.Mqtt.Retain)
             .Build();
-
-        await _client.PublishAsync(message, cancellationToken).ConfigureAwait(false);
-        _logger.LogDebug("Published {Topic}: {Payload}", topic, json);
+        return _client.PublishAsync(message, cancellationToken);
     }
 
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
@@ -161,6 +243,7 @@ public sealed class MqttObservationSink : INorthboundSink
             await _client.ConnectAsync(_options, cancellationToken).ConfigureAwait(false);
             _wasConnected = true;
             _nextConnectAttempt = DateTimeOffset.MinValue;
+            TouchBuffer();
             _logger.LogInformation(
                 "MQTT connected to {Host}:{Port} as {ClientId}",
                 _config.Mqtt.Host,
@@ -170,6 +253,7 @@ public sealed class MqttObservationSink : INorthboundSink
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _nextConnectAttempt = DateTimeOffset.UtcNow + _reconnectDelay;
+            TouchBuffer();
             _logger.LogWarning(
                 "MQTT connect failed ({Host}:{Port}): {Message}. Retry in {Delay}s",
                 _config.Mqtt.Host,

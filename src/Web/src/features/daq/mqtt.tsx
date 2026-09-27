@@ -30,6 +30,7 @@ export function MqttPage() {
   const [sampleDevice, setSampleDevice] = useState('cnc-01')
   const [samplePoint, setSamplePoint] = useState('state')
   const [message, setMessage] = useState('')
+  const [spool, setSpool] = useState<{ connected: boolean; depth: number; dropped: number; maxMessages: number; maxAgeHours: number } | null>(null)
 
   useEffect(() => {
     void studioApi<MqttSinkDocument>('/api/v1/config/sinks/mqtt')
@@ -50,6 +51,26 @@ export function MqttPage() {
       .catch(() => {
         // 预览仍用默认样例；Broker 表单自己的错误已经显示
       })
+  }, [])
+
+  useEffect(() => {
+    let stop = false
+    async function loadSpool() {
+      try {
+        const next = await studioApi<{ connected: boolean; depth: number; dropped: number; maxMessages: number; maxAgeHours: number }>(
+          '/api/v1/ops/mqtt-spool'
+        )
+        if (!stop) setSpool(next)
+      } catch {
+        // 缓冲深度不是草稿的一部分，失败时保留上次读数
+      }
+    }
+    void loadSpool()
+    const timer = window.setInterval(() => void loadSpool(), 3000)
+    return () => {
+      stop = true
+      window.clearInterval(timer)
+    }
   }, [])
 
   async function save() {
@@ -95,8 +116,18 @@ export function MqttPage() {
   return (
     <PageShell
       title='北向 MQTT'
-      description='密码只写环境变量名，不写明文。主题按模板生成，默认 daq/{site}/{deviceId}/{point}。'
+      description='密码只写环境变量名，不写明文。Broker 不可达时报文写入磁盘缓冲，重连后按顺序补发。'
     >
+      {spool ? (
+        <Card className='mb-4'>
+          <CardHeader>
+            <CardTitle>存储转发</CardTitle>
+          </CardHeader>
+          <CardContent className='text-sm'>
+            {spool.connected ? 'Broker 已连接' : 'Broker 未连接'} · 缓冲 {spool.depth} 条 · 因超限丢弃 {spool.dropped} 条 · 上限 {spool.maxMessages} 条 / {spool.maxAgeHours} 小时
+          </CardContent>
+        </Card>
+      ) : null}
       <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]'>
         <Card>
           <CardHeader>

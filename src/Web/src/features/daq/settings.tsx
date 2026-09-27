@@ -150,6 +150,7 @@ export function SettingsPage() {
         </Card>
         <VizSettingsCard />
         <BackupCard />
+        <ReliabilityCard writable={writable} />
         <Card className='lg:col-span-2'>
           <CardHeader>
             <CardTitle>修改密码</CardTitle>
@@ -160,6 +161,72 @@ export function SettingsPage() {
         </Card>
       </div>
     </PageShell>
+  )
+}
+
+function ReliabilityCard({ writable }: { writable: boolean }) {
+  const [form, setForm] = useState({
+    reconnectInitialSeconds: 2,
+    reconnectMultiplier: 2,
+    reconnectCapSeconds: 120,
+    reconnectJitter: 0.2,
+    stallSeconds: 30,
+    spoolMaxMessages: 10000,
+    spoolMaxAgeHours: 24,
+    spoolMaxMegabytes: 64,
+  })
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    void studioApi<typeof form>('/api/v1/ops/reliability')
+      .then(setForm)
+      .catch((error: unknown) => setNote(describeError(error)))
+  }, [])
+
+  async function save() {
+    await studioApi('/api/v1/ops/reliability', { method: 'PUT', body: JSON.stringify(form) })
+    setNote('已保存。重连上限和缓冲限制马上生效，不必重启。')
+    toast.success('可靠性设置已保存')
+  }
+
+  return (
+    <Card className='lg:col-span-2'>
+      <CardHeader>
+        <CardTitle>重连与 MQTT 缓冲</CardTitle>
+      </CardHeader>
+      <CardContent className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+        <Field label='首次重连（秒）'>
+          <Input type='number' disabled={!writable} value={form.reconnectInitialSeconds} onChange={(event) => setForm({ ...form, reconnectInitialSeconds: Number(event.target.value) })} />
+        </Field>
+        <Field label='倍数'>
+          <Input type='number' disabled={!writable} value={form.reconnectMultiplier} onChange={(event) => setForm({ ...form, reconnectMultiplier: Number(event.target.value) })} />
+        </Field>
+        <Field label='上限（秒）'>
+          <Input type='number' disabled={!writable} value={form.reconnectCapSeconds} onChange={(event) => setForm({ ...form, reconnectCapSeconds: Number(event.target.value) })} />
+        </Field>
+        <Field label='抖动比例'>
+          <Input type='number' disabled={!writable} value={form.reconnectJitter} onChange={(event) => setForm({ ...form, reconnectJitter: Number(event.target.value) })} />
+        </Field>
+        <Field label='停滞判定（秒）'>
+          <Input type='number' disabled={!writable} value={form.stallSeconds} onChange={(event) => setForm({ ...form, stallSeconds: Number(event.target.value) })} />
+        </Field>
+        <Field label='缓冲条数上限'>
+          <Input type='number' disabled={!writable} value={form.spoolMaxMessages} onChange={(event) => setForm({ ...form, spoolMaxMessages: Number(event.target.value) })} />
+        </Field>
+        <Field label='缓冲保留（小时）'>
+          <Input type='number' disabled={!writable} value={form.spoolMaxAgeHours} onChange={(event) => setForm({ ...form, spoolMaxAgeHours: Number(event.target.value) })} />
+        </Field>
+        <Field label='缓冲大小（MB）'>
+          <Input type='number' disabled={!writable} value={form.spoolMaxMegabytes} onChange={(event) => setForm({ ...form, spoolMaxMegabytes: Number(event.target.value) })} />
+        </Field>
+        <div className='sm:col-span-2 xl:col-span-4'>
+          <Button disabled={!writable} onClick={() => void save().catch((error: unknown) => setNote(describeError(error)))}>
+            保存可靠性设置
+          </Button>
+          {note ? <p className='mt-2 text-sm text-muted-foreground'>{note}</p> : null}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
