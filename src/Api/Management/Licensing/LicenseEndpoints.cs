@@ -201,6 +201,7 @@ public static class DeliveryEndpoints
             try
             {
                 var result = DemoMode.Seed(store, publish: true);
+                Studio.Host.Shop.ShopDemo.Seed(store.Database);
                 ConfigAudit.Write(http, store.Database, "demo.seed", "devices", result.Message);
                 if (result.Published)
                 {

@@ -52,7 +52,7 @@ YAML / JSON 仍然是导入、导出和现场包种子的格式：
 
 ## 为什么不用两套 EF Migration
 
-SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 8）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions`、`app_settings`、`audit_events`、四张通知表、`link_status`、`http_push_targets`、`api_keys`、`installed_license`、`security_state`、`self_test_runs`，并为 `config_mqtt` 补 `ContractVersion`（默认 `legacy`），再补计算点、规则、停机原因、计划停机、节拍和报废表，以及 `sample_latest` / `sample_history` 的 `Computed` 列，然后 `CREATE INDEX IF NOT EXISTS`。从版本 1 到 7 的库启动会补到 8，不要求手工迁移。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。MQTT 待发报文在数据目录的 `mqtt-spool/`，HTTP 推送待发报文在 `http-spool/`，都不在这些表里。OPC UA 证书在 `data/opcua/pki/`，也不在表里。`app_settings` 键 `opcua` 只存口令的 PBKDF2，不存明文。
+SQLite 和 PostgreSQL 各有一套 EF Core 迁移快照，模型一改两边就会分叉。当前策略是同一套实体模型，启动时 `EnsureCreated`，并用 `schema_info.version`（现在是 9）记录结构版本。已有库在启动时补 `alarms` 的新列、创建 `state_transitions`、`app_settings`、`audit_events`、四张通知表、`link_status`、`http_push_targets`、`api_keys`、`installed_license`、`security_state`、`self_test_runs`，并为 `config_mqtt` 补 `ContractVersion`（默认 `legacy`），再补计算点、规则、停机原因、计划停机、节拍和报废表，以及 `sample_latest` / `sample_history` 的 `Computed` 列，然后 `CREATE INDEX IF NOT EXISTS`。从版本 1 到 8 的库启动会补到 9，不要求手工迁移。版本 9 增加刀具、刀位、寿命、换刀、NC 程序与版本、传输记录，以及中心侧的注册令牌、机队、分组、配置模板、下发、升级推送、告警和汇总审计。边缘和中心用同一套表，各自使用自己的数据库文件。列名沿用 EF 的 PascalCase，两种数据库同一套语句。不维护两份迁移项目。MQTT 待发报文在数据目录的 `mqtt-spool/`，HTTP 推送待发报文在 `http-spool/`，都不在这些表里。OPC UA 证书在 `data/opcua/pki/`，也不在表里。`app_settings` 键 `opcua` 只存口令的 PBKDF2，不存明文。
 
 ## 保留
 

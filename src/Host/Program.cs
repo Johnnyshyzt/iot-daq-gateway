@@ -16,6 +16,8 @@ using Studio.Host.Endpoints;
 using Studio.Host.Licensing;
 using Studio.Host.Runtime;
 using Studio.Host.Security;
+using Studio.Host.Central;
+using Studio.Host.Shop;
 using Studio.Host.Visualization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,7 +50,10 @@ if (httpsCertificate is not null)
         options.ConfigureHttpsDefaults(adapter => adapter.ServerCertificate = httpsCertificate);
     });
 }
-var acquisitionOn = !string.Equals(builder.Configuration["Host:Acquisition"], "off", StringComparison.OrdinalIgnoreCase);
+var centralMode = args.Any(arg => string.Equals(arg, "--central", StringComparison.OrdinalIgnoreCase))
+    || string.Equals(builder.Configuration["Host:Mode"], "central", StringComparison.OrdinalIgnoreCase)
+    || string.Equals(Environment.GetEnvironmentVariable("HOST_MODE"), "central", StringComparison.OrdinalIgnoreCase);
+var acquisitionOn = !centralMode && !string.Equals(builder.Configuration["Host:Acquisition"], "off", StringComparison.OrdinalIgnoreCase);
 var importPath = CollectorHost.UsesPublishedDirectory(args)
     ? null
     : CollectorHost.ResolveConfigPath(args, Path.Combine(dataDirectory, "published"));
@@ -59,6 +64,11 @@ var store = new ConfigStore(dataDirectory);
 var licensing = new LicenseService(store.Database, builder.Configuration, dataDirectory);
 store.LimitIncrease = licensing.RejectIncrease;
 store.SecurityBlock = licensing.ConfigBlockMessage;
+builder.Services.AddSingleton(new HostMode { Central = centralMode });
+builder.Services.AddHttpClient("central");
+builder.Services.AddSingleton<ICentralTransport, HttpCentralTransport>();
+builder.Services.AddSingleton<CentralCoordinator>();
+builder.Services.AddHostedService<CentralWorker>();
 builder.Services.AddSingleton(licensing);
 builder.Services.AddSingleton(store);
 builder.Services.AddSingleton<IRuntimeConfigSource>(_ => new DatabaseRuntimeConfigSource(store));
@@ -101,12 +111,26 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized(importPath);
+if (centralMode)
+{
+    app.Services.GetRequiredService<CentralCoordinator>().EnsureBootstrap();
+}
+
 if (demoRequested)
 {
     try
     {
-        var seeded = DemoMode.Seed(store, publish: true);
-        app.Logger.LogInformation("Demo mode: {Message}", seeded.Message);
+        if (centralMode)
+        {
+            CentralDemo.Seed(store.Database);
+            app.Logger.LogInformation("Central demo mode seeded fleet, templates, and a rollout.");
+        }
+        else
+        {
+            var seeded = DemoMode.Seed(store, publish: true);
+            ShopDemo.Seed(store.Database);
+            app.Logger.LogInformation("Demo mode: {Message}", seeded.Message);
+        }
     }
     catch (ConfigStoreException ex)
     {

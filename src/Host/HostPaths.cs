@@ -4,9 +4,10 @@ public static class HostPaths
 {
     public static string ResolveDataDirectory(IHostEnvironment environment, IConfiguration configuration)
     {
+        var ignoreEnvironment = string.Equals(configuration["Host:IgnoreDataEnvironment"], "true", StringComparison.OrdinalIgnoreCase);
         var fromEnv = Environment.GetEnvironmentVariable("HOST_DATA")
             ?? Environment.GetEnvironmentVariable("STUDIO_DATA");
-        if (!string.IsNullOrWhiteSpace(fromEnv))
+        if (!ignoreEnvironment && !string.IsNullOrWhiteSpace(fromEnv))
         {
             return Path.GetFullPath(fromEnv);
         }

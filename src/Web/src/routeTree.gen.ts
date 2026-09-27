@@ -17,6 +17,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
+import { Route as AuthenticatedCentralRouteImport } from './routes/_authenticated/central'
 import { Route as AuthenticatedCommissionRouteImport } from './routes/_authenticated/commission'
 import { Route as AuthenticatedComputedRouteImport } from './routes/_authenticated/computed'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
@@ -28,11 +29,13 @@ import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/l
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
 import { Route as AuthenticatedOeeRouteImport } from './routes/_authenticated/oee'
 import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated/points'
+import { Route as AuthenticatedProgramsRouteImport } from './routes/_authenticated/programs'
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
+import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
 import { Route as AuthenticatedUpgradeRouteImport } from './routes/_authenticated/upgrade'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
@@ -82,6 +85,11 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
 const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCentralRoute = AuthenticatedCentralRouteImport.update({
+  id: '/central',
+  path: '/central',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCommissionRoute = AuthenticatedCommissionRouteImport.update({
@@ -139,6 +147,11 @@ const AuthenticatedPointsRoute = AuthenticatedPointsRouteImport.update({
   path: '/points',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProgramsRoute = AuthenticatedProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPublishRoute = AuthenticatedPublishRouteImport.update({
   id: '/publish',
   path: '/publish',
@@ -162,6 +175,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUpgradeRoute = AuthenticatedUpgradeRouteImport.update({
@@ -235,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/board': typeof AuthenticatedBoardRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/catalog': typeof AuthenticatedCatalogRoute
+  '/central': typeof AuthenticatedCentralRoute
   '/commission': typeof AuthenticatedCommissionRoute
   '/computed': typeof AuthenticatedComputedRoute
   '/devices': typeof AuthenticatedDevicesRoute
@@ -246,11 +265,13 @@ export interface FileRoutesByFullPath {
   '/mqtt': typeof AuthenticatedMqttRoute
   '/oee': typeof AuthenticatedOeeRoute
   '/points': typeof AuthenticatedPointsRoute
+  '/programs': typeof AuthenticatedProgramsRoute
   '/publish': typeof AuthenticatedPublishRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
+  '/tools': typeof AuthenticatedToolsRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
   '/users': typeof AuthenticatedUsersRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
@@ -270,6 +291,7 @@ export interface FileRoutesByTo {
   '/board': typeof AuthenticatedBoardRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/catalog': typeof AuthenticatedCatalogRoute
+  '/central': typeof AuthenticatedCentralRoute
   '/commission': typeof AuthenticatedCommissionRoute
   '/computed': typeof AuthenticatedComputedRoute
   '/devices': typeof AuthenticatedDevicesRoute
@@ -281,11 +303,13 @@ export interface FileRoutesByTo {
   '/mqtt': typeof AuthenticatedMqttRoute
   '/oee': typeof AuthenticatedOeeRoute
   '/points': typeof AuthenticatedPointsRoute
+  '/programs': typeof AuthenticatedProgramsRoute
   '/publish': typeof AuthenticatedPublishRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
+  '/tools': typeof AuthenticatedToolsRoute
   '/upgrade': typeof AuthenticatedUpgradeRoute
   '/users': typeof AuthenticatedUsersRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
@@ -308,6 +332,7 @@ export interface FileRoutesById {
   '/_authenticated/board': typeof AuthenticatedBoardRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
+  '/_authenticated/central': typeof AuthenticatedCentralRoute
   '/_authenticated/commission': typeof AuthenticatedCommissionRoute
   '/_authenticated/computed': typeof AuthenticatedComputedRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
@@ -319,11 +344,13 @@ export interface FileRoutesById {
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
   '/_authenticated/oee': typeof AuthenticatedOeeRoute
   '/_authenticated/points': typeof AuthenticatedPointsRoute
+  '/_authenticated/programs': typeof AuthenticatedProgramsRoute
   '/_authenticated/publish': typeof AuthenticatedPublishRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
+  '/_authenticated/tools': typeof AuthenticatedToolsRoute
   '/_authenticated/upgrade': typeof AuthenticatedUpgradeRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
@@ -347,6 +374,7 @@ export interface FileRouteTypes {
     | '/board'
     | '/calendar'
     | '/catalog'
+    | '/central'
     | '/commission'
     | '/computed'
     | '/devices'
@@ -358,11 +386,13 @@ export interface FileRouteTypes {
     | '/mqtt'
     | '/oee'
     | '/points'
+    | '/programs'
     | '/publish'
     | '/rules'
     | '/runtime'
     | '/settings'
     | '/setup'
+    | '/tools'
     | '/upgrade'
     | '/users'
     | '/utilization'
@@ -382,6 +412,7 @@ export interface FileRouteTypes {
     | '/board'
     | '/calendar'
     | '/catalog'
+    | '/central'
     | '/commission'
     | '/computed'
     | '/devices'
@@ -393,11 +424,13 @@ export interface FileRouteTypes {
     | '/mqtt'
     | '/oee'
     | '/points'
+    | '/programs'
     | '/publish'
     | '/rules'
     | '/runtime'
     | '/settings'
     | '/setup'
+    | '/tools'
     | '/upgrade'
     | '/users'
     | '/utilization'
@@ -419,6 +452,7 @@ export interface FileRouteTypes {
     | '/_authenticated/board'
     | '/_authenticated/calendar'
     | '/_authenticated/catalog'
+    | '/_authenticated/central'
     | '/_authenticated/commission'
     | '/_authenticated/computed'
     | '/_authenticated/devices'
@@ -430,11 +464,13 @@ export interface FileRouteTypes {
     | '/_authenticated/mqtt'
     | '/_authenticated/oee'
     | '/_authenticated/points'
+    | '/_authenticated/programs'
     | '/_authenticated/publish'
     | '/_authenticated/rules'
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
     | '/_authenticated/setup'
+    | '/_authenticated/tools'
     | '/_authenticated/upgrade'
     | '/_authenticated/users'
     | '/_authenticated/utilization'
@@ -510,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/catalog'
       fullPath: '/catalog'
       preLoaderRoute: typeof AuthenticatedCatalogRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/central': {
+      id: '/_authenticated/central'
+      path: '/central'
+      fullPath: '/central'
+      preLoaderRoute: typeof AuthenticatedCentralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/commission': {
@@ -589,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPointsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/programs': {
+      id: '/_authenticated/programs'
+      path: '/programs'
+      fullPath: '/programs'
+      preLoaderRoute: typeof AuthenticatedProgramsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/publish': {
       id: '/_authenticated/publish'
       path: '/publish'
@@ -622,6 +672,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools': {
+      id: '/_authenticated/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AuthenticatedToolsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/upgrade': {
@@ -710,6 +767,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
+  AuthenticatedCentralRoute: typeof AuthenticatedCentralRoute
   AuthenticatedCommissionRoute: typeof AuthenticatedCommissionRoute
   AuthenticatedComputedRoute: typeof AuthenticatedComputedRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
@@ -721,11 +779,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
   AuthenticatedOeeRoute: typeof AuthenticatedOeeRoute
   AuthenticatedPointsRoute: typeof AuthenticatedPointsRoute
+  AuthenticatedProgramsRoute: typeof AuthenticatedProgramsRoute
   AuthenticatedPublishRoute: typeof AuthenticatedPublishRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
+  AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
   AuthenticatedUpgradeRoute: typeof AuthenticatedUpgradeRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
@@ -746,6 +806,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBoardRoute: AuthenticatedBoardRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
+  AuthenticatedCentralRoute: AuthenticatedCentralRoute,
   AuthenticatedCommissionRoute: AuthenticatedCommissionRoute,
   AuthenticatedComputedRoute: AuthenticatedComputedRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
@@ -757,11 +818,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
   AuthenticatedOeeRoute: AuthenticatedOeeRoute,
   AuthenticatedPointsRoute: AuthenticatedPointsRoute,
+  AuthenticatedProgramsRoute: AuthenticatedProgramsRoute,
   AuthenticatedPublishRoute: AuthenticatedPublishRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
+  AuthenticatedToolsRoute: AuthenticatedToolsRoute,
   AuthenticatedUpgradeRoute: AuthenticatedUpgradeRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,

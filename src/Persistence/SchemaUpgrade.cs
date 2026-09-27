@@ -45,6 +45,26 @@ internal static class SchemaUpgrade
             EnsureFromScript(db, connection, "planned_stops");
             EnsureFromScript(db, connection, "cycle_times");
             EnsureFromScript(db, connection, "scrap_entries");
+            EnsureFromScript(db, connection, "tools");
+            EnsureFromScript(db, connection, "tool_pockets");
+            EnsureFromScript(db, connection, "tool_life");
+            EnsureFromScript(db, connection, "tool_cursors");
+            EnsureFromScript(db, connection, "tool_changes");
+            EnsureFromScript(db, connection, "nc_programs");
+            EnsureFromScript(db, connection, "nc_program_versions");
+            EnsureFromScript(db, connection, "nc_program_devices");
+            EnsureFromScript(db, connection, "nc_transfers");
+            EnsureFromScript(db, connection, "enrollment_tokens");
+            EnsureFromScript(db, connection, "fleet_gateways");
+            EnsureFromScript(db, connection, "fleet_groups");
+            EnsureFromScript(db, connection, "central_templates");
+            EnsureFromScript(db, connection, "config_pushes");
+            EnsureFromScript(db, connection, "config_push_targets");
+            EnsureFromScript(db, connection, "rollouts");
+            EnsureFromScript(db, connection, "rollout_targets");
+            EnsureFromScript(db, connection, "central_alerts");
+            EnsureFromScript(db, connection, "central_audits");
+            EnsureFromScript(db, connection, "central_documents");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_self_test_device_time ON self_test_runs ("DeviceId", "FinishedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_audit_unix ON audit_events ("UnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_created ON notification_deliveries ("CreatedUnixMs")""");
@@ -91,6 +111,17 @@ internal static class SchemaUpgrade
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_rule_event_pending ON rule_events ("Published", "UnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_downtime_device_time ON downtime_events ("DeviceId", "StartedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_scrap_device_time ON scrap_entries ("DeviceId", "UnixMs")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_tools_number ON tools ("ToolNumber")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_tool_pocket ON tool_pockets ("DeviceId", "Pocket")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_tool_life_device ON tool_life ("DeviceId", "ToolNumber")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_tool_change_time ON tool_changes ("DeviceId", "UnixMs")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_nc_version ON nc_program_versions ("ProgramId", "Version")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_nc_transfer_time ON nc_transfers ("UnixMs")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_enroll_hash ON enrollment_tokens ("TokenHash")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_central_template_ver ON central_templates ("Key", "Version")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_push_target ON config_push_targets ("PushId", "GatewayId")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_rollout_target ON rollout_targets ("RolloutId", "GatewayId")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_central_audit_time ON central_audits ("UnixMs")""");
             if (sqlite)
             {
                 AddColumn(connection, "sample_latest", "Computed", "INTEGER NOT NULL DEFAULT 0");

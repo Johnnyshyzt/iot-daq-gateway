@@ -377,6 +377,36 @@ MQTT 上的 JSON 另含 `gatewayId`、`site`，时间字段名为 `ts`，主题�
 | `PUT` / `DELETE` | `/api/v1/oee/cycles/{id}` | 理想节拍 |
 | `PUT` / `DELETE` | `/api/v1/oee/states/{id}` | 状态映射 |
 
+### 刀具寿命、NC 程序和中心
+
+`tool-life`、`nc-programs`、`central` 默认在 `Licensing:GatedFeatures` 里。未授权时 `GET /api/v1/tools`、`GET /api/v1/programs` 和 `GET /api/v1/central/gateways` 返回 200 且 `licensed: false`。写操作是 `403 license_feature`。操作员可以 `POST /api/v1/tools/change` 和 `POST /api/v1/tools/count`。批准程序、创建注册令牌和暂存升级包需要管理员。`/api/central/v1/*` 不登录，用注册令牌或会话。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/tools` | 刀具、刀位、寿命、换刀和品牌计数说明 |
+| `PUT` / `DELETE` | `/api/v1/tools/{id}` | 刀具主数据 |
+| `PUT` | `/api/v1/tools/pockets/{id}` | 刀位 |
+| `POST` | `/api/v1/tools/change` | 换刀，可重置寿命 |
+| `POST` | `/api/v1/tools/count` | 手动加件数 |
+| `GET` | `/api/v1/tools/report` | CSV |
+| `GET` | `/api/v1/programs/capability` | 各品牌能否下发，不看许可证 |
+| `GET` | `/api/v1/programs` | 程序、版本、传输记录、品牌能力 |
+| `POST` | `/api/v1/programs` | 上传草稿 |
+| `POST` | `/api/v1/programs/{id}/versions` | 新版本 |
+| `GET` | `/api/v1/programs/{id}/diff` | `from` `to` 行差异 |
+| `POST` | `/api/v1/programs/{id}/approve` | 管理员批准 |
+| `POST` | `/api/v1/programs/{id}/send` | 未批准时 `409 program_not_approved` |
+| `GET` | `/api/v1/central/gateways` | 机队。非中心模式时 `mode` 为 `edge` |
+| `PUT` | `/api/v1/central/templates/{key}` | 新版本模板 |
+| `GET` | `/api/v1/central/templates/{key}/diff` | 版本差异 |
+| `POST` | `/api/v1/central/pushes` | 下发。`conflictPolicy` 为 `central-wins` 或 `local-wins` |
+| `POST` | `/api/v1/central/pushes/{id}/rollback` | 下发上一版 |
+| `POST` | `/api/v1/central/rollouts?gateways=` | 正文是签名 zip |
+| `POST` | `/api/central/v1/enroll` | 边缘注册 |
+| `POST` | `/api/central/v1/heartbeat` | 心跳，返回待下发项 |
+
+冲突字段和 NAT 说明见 [central.md](../central.md)。
+
 ### `POST /api/v1/runtime/reload`
 
 无正文。只在网关回环上提供。重新读取数据库里的已发布配置，换上一份新的采集会话。失败时保留上一份会话，响应仍是 `200`：`{ "reloaded": false }`。同一进程里，Studio 在发布和回滚之后直接调用采集重载，不经过这个回环。

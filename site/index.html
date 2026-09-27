@@ -27,14 +27,14 @@
 </head>
 <body>
   <header>
-    <div class="kicker">IoT DAQ Gateway 0.10.0</div>
+    <div class="kicker">IoT DAQ Gateway 0.11.0</div>
     <h1>采集网关</h1>
     <p class="lead">放在车间边上的工业采集程序。读数控设备，把数据留在本机，再按需要送到 MQTT、HTTP、查询接口或 OPC UA。Studio 和采集是同一个进程。</p>
   </header>
   <main>
     <div class="row">
       <section class="card"><h2>采集不中断</h2><p>许可证过期或功能未授权时，已经在跑的设备继续采集。页面说明原因，不把进程打崩。</p></section>
-      <section class="card"><h2>库是唯一事实</h2><p>SQLite 开箱即用，PostgreSQL 可选。配置、报警和采样都在库里。从旧库启动会自己补到结构版本 7。</p></section>
+      <section class="card"><h2>库是唯一事实</h2><p>SQLite 开箱即用，PostgreSQL 可选。配置、报警和采样都在库里。从旧库启动会自己补到结构版本 9。</p></section>
       <section class="card"><h2>价格未定</h2><p>社区版上限和功能清单可以改。下面的对照表不写金额，标成待定。</p></section>
     </div>
 
@@ -44,11 +44,19 @@
       <tbody>
         <tr><td>采集、Studio、MQTT</td><td>包含</td><td>包含</td></tr>
         <tr><td>设备数 / 点位数</td><td>配置默认，可改</td><td>许可证里写，也可不限制</td></tr>
-        <tr><td>OPC UA、HTTP 推送、报警通知、定时报表、查询接口</td><td>默认关闭，清单可改</td><td>按功能标记开通</td></tr>
+        <tr><td>OPC UA、HTTP 推送、报警通知、定时报表、查询接口、规则、OEE</td><td>默认关闭，清单可改</td><td>按功能标记开通</td></tr>
+        <tr><td>刀具寿命、NC 程序、多网关中心</td><td>默认关闭，清单可改</td><td>按功能标记开通。中心管机队，边缘仍用自己的许可证</td></tr>
         <tr><td>到期</td><td>无许可证</td><td>可写到期日，另有宽限期</td></tr>
         <tr><td>价格</td><td>待定</td><td>待定</td></tr>
       </tbody>
     </table>
+
+    <h2>0.11.0</h2>
+    <div class="row">
+      <section class="card"><h2>刀具寿命</h2><p>按刀号累计件数和切削时间。驱动没有刀号时用手动计数或计算点。预警和到寿进入原来的报警。</p></section>
+      <section class="card"><h2>NC 程序</h2><p>版本、差异和批准。未批准不能下发。只使用已经实现的 DNC 目录、已挂载共享或 FTP，不发明厂商 SDK。</p></section>
+      <section class="card"><h2>多网关中心</h2><p>边缘主动连出。机队、配置模板的差异和回滚、签名升级包分批暂存。中心不可达时边缘继续采集。</p></section>
+    </div>
 
     <h2>界面</h2>
     <div class="row">
@@ -59,7 +67,7 @@
     </div>
 
     <h2 class="en">English</h2>
-    <p class="en">Edge software for CNC collection. SQLite by default, PostgreSQL optional. An offline ES256 license file sets edition, optional device and point caps, expiry, feature flags, and an optional machine fingerprint. Without a file the gateway runs as community edition using limits from configuration, not a price list. Collection keeps running when a feature is blocked. In-app upgrade verifies a signed zip, backs up the database, and applies on restart. Docker image swaps stay outside the UI.</p>
+    <p class="en">Edge software for CNC collection. SQLite by default, PostgreSQL optional. Version 0.11.0 adds tool life, an NC program library with approval, and a central console for many edge gateways. Program transfer uses only paths the existing drivers implement, plus a DNC folder, a mounted share, or FTP. Edges dial out to central and keep running when central is unreachable. An offline ES256 license file sets edition, optional device and point caps, expiry, feature flags, and an optional machine fingerprint. Without a file the gateway runs as community edition using limits from configuration, not a price list. Collection keeps running when a feature is blocked.</p>
   </main>
   <footer>Apache-2.0。厂商 SDK 不在本仓库里。手册见仓库 docs/manual。</footer>
 </body>

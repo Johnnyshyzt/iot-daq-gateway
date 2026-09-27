@@ -16,6 +16,9 @@ const featureTitle: Record<string, string> = {
   'query-api': '只读查询接口',
   rules: '边缘规则引擎',
   oee: 'OEE 与停机原因',
+  'tool-life': '刀具寿命',
+  'nc-programs': 'NC 程序',
+  central: '中心管理',
 }
 
 const statusLabel: Record<string, string> = {

@@ -92,7 +92,7 @@ public static class RoleEnforcement
     internal static string Denied(string access) => access switch
     {
         ApiPolicy.Admin => "只有管理员可以执行此操作。",
-        ApiPolicy.Operate => "当前角色不能填写停机原因或报废。",
+        ApiPolicy.Operate => "当前角色不能执行这项现场操作。操作员可以填写停机原因、报废和换刀。",
         _ => "当前角色无权修改配置"
     };
 }

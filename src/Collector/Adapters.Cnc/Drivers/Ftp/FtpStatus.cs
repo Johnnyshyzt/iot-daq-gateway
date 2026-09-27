@@ -86,6 +86,66 @@ public static class FtpStatus
         return body;
     }
 
+    public static async Task UploadAsync(
+        string host,
+        int port,
+        string path,
+        string username,
+        string password,
+        int timeoutMs,
+        byte[] content,
+        CancellationToken cancellationToken)
+    {
+        using var client = new TcpClient();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(timeoutMs);
+        await client.ConnectAsync(host, port, linked.Token).ConfigureAwait(false);
+        await using var stream = client.GetStream();
+        using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
+        using var writer = new StreamWriter(stream, Encoding.ASCII, leaveOpen: true) { NewLine = "\r\n", AutoFlush = true };
+        await ExpectAsync(reader, 220, linked.Token).ConfigureAwait(false);
+        await writer.WriteLineAsync($"USER {(string.IsNullOrWhiteSpace(username) ? "anonymous" : username)}".AsMemory(), linked.Token).ConfigureAwait(false);
+        var user = await ReadReplyAsync(reader, linked.Token).ConfigureAwait(false);
+        if (user.Code == 331)
+        {
+            await writer.WriteLineAsync($"PASS {password}".AsMemory(), linked.Token).ConfigureAwait(false);
+            user = await ReadReplyAsync(reader, linked.Token).ConfigureAwait(false);
+        }
+
+        if (user.Code is not (230 or 202))
+        {
+            throw new InvalidOperationException($"FTP 登录失败：{user.Text}");
+        }
+
+        await writer.WriteLineAsync("TYPE I".AsMemory(), linked.Token).ConfigureAwait(false);
+        await ExpectAsync(reader, 200, linked.Token).ConfigureAwait(false);
+        await writer.WriteLineAsync("PASV".AsMemory(), linked.Token).ConfigureAwait(false);
+        var passive = await ReadReplyAsync(reader, linked.Token).ConfigureAwait(false);
+        if (passive.Code != 227)
+        {
+            throw new InvalidOperationException($"FTP PASV 失败：{passive.Text}");
+        }
+
+        var endpoint = ParsePassive(passive.Text);
+        using var dataClient = new TcpClient();
+        await dataClient.ConnectAsync(endpoint.Address, endpoint.Port, linked.Token).ConfigureAwait(false);
+        var remote = string.IsNullOrWhiteSpace(path) ? "/program.nc" : path;
+        await writer.WriteLineAsync($"STOR {remote}".AsMemory(), linked.Token).ConfigureAwait(false);
+        var stor = await ReadReplyAsync(reader, linked.Token).ConfigureAwait(false);
+        if (stor.Code is not (150 or 125))
+        {
+            throw new InvalidOperationException($"FTP STOR 失败：{stor.Text}");
+        }
+
+        await using (var data = dataClient.GetStream())
+        {
+            await data.WriteAsync(content, linked.Token).ConfigureAwait(false);
+        }
+
+        dataClient.Close();
+        await ReadReplyAsync(reader, linked.Token).ConfigureAwait(false);
+    }
+
     public static IPEndPoint ParsePassive(string text)
     {
         var open = text.IndexOf('(');
