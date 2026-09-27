@@ -54,6 +54,9 @@ public sealed class MqttOptions
     public string TopicTemplate { get; set; } = "daq/{site}/{deviceId}/{point}";
 
     public string StatusTopic { get; set; } = "daq/{site}/{deviceId}/$status";
+
+    /// <summary>legacy keeps the original point and status JSON. v1 adds schema and kind.</summary>
+    public string ContractVersion { get; set; } = "legacy";
 }
 
 public sealed class DeviceBinding

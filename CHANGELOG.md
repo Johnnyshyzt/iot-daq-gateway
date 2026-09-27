@@ -1,5 +1,18 @@
 # 变更记录
 
+## 0.7.0
+
+给 MES / SCADA / 云侧一条稳定的北向合同，以及 HTTP 推送、只读查询和可选 OPC UA 服务器。说明见 [docs/integration.md](docs/integration.md)。
+
+- JSON Schema 放在 `docs/contract/`，标识 `northbound/1.0`。Host 无需登录提供 `GET /api/contract/v1` 和对应 schema 文件。
+- MQTT 点位和 `$status` 默认仍是 0.6.0 的字段（契约版本 `legacy`）。改成 `v1` 并发布后，这两类多 `schema` 与 `kind`。报警 `$alarm`、产量 `$parts`、稼动 `$utilization` 是新增主题，始终为 v1。Broker 不可达时仍进原来的 `mqtt-spool/`。
+- Studio「北向 HTTP」可配 URL、POST/PUT、附加头和认证（无、Basic、Bearer、HMAC-SHA256）。点位按变化或周期发送，状态和报警可单独开关。失败写入 `data/http-spool/`，按条数、体积和 24 小时丢最旧，重试带退避。页面显示送达、失败、缓冲深度和丢弃。密钥与头的值不以明文返回。
+- Studio「查询接口」签发只读 API 密钥。明文只显示一次，库存 SHA-256，可吊销。`GET /api/query/v1` 提供设备、当前值、历史、报警和稼动。`GET /api/query/v1/openapi.json` 无需密钥。
+- Studio「OPC UA」可开关服务器，默认端口 48400，端点 `opc.tcp://127.0.0.1:48400/iot-daq-gateway`。策略为 None 与 Basic256Sha256 Sign&Encrypt，可选匿名和用户名。地址空间按车间 / 产线 / 设备展开，变量带质量和源时间戳。证书在 `data/opcua/pki/`。
+- 上述配置变更写入审计。数据库结构版本为 5。已有的 1、2、3、4 在启动时补 `link_status`、`http_push_targets`、`api_keys` 和 `config_mqtt.ContractVersion`。
+
+没有做的事：不为厂商 SDK 品牌发明调用；不把 Linux 当成 FOCAS 生产路径；不在页面里备份 PostgreSQL。OPC UA 没有用户证书登录，也没有历史访问，只提供当前值。HTTP 推送不补发目标创建之前的采样。稼动 MQTT 是约 60 秒一次的滚动 24 小时汇总，不是按班次补历史。产量主题只认点位 Id `partCount` 与 `partCountTotal`。Swagger 是 OpenAPI JSON，没有交互式浏览器。未信任的 OPC UA 客户端证书不会自动接受。MQTT 缓冲的磁盘格式没有改成 HTTP 那套队列。`InvariantGlobalization` 下 OPC 状态码文本不本地化。从地址空间去掉的设备节点要等进程重启才消失。0.6.0 里安静时段不补发、停机后只补最近一个班次报表、`mqtt-spool/` 不在 SQLite 页面备份里，这些仍然成立。`http-spool/` 同样不在页面备份里；API 密钥哈希、HTTP 密钥和 OPC UA 口令哈希在数据库里，备份文件要妥善保管。
+
 ## 0.6.0
 
 现场可靠性，以及报警通知和稼动报表。

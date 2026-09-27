@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iot-daq-gateway.local/contract/northbound/1.0/device-status",
+  "title": "Device status / 设备连接状态",
+  "description": "Connection status. status is online, degraded, or offline. Legacy MQTT omits schema and kind.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["gatewayId", "site", "deviceId", "status", "ts"],
+  "properties": {
+    "schema": { "const": "northbound/1.0" },
+    "kind": { "const": "deviceStatus" },
+    "gatewayId": { "type": "string", "minLength": 1 },
+    "site": { "type": "string", "minLength": 1 },
+    "deviceId": { "type": "string", "minLength": 1 },
+    "status": { "type": "string" },
+    "message": { "type": ["string", "null"] },
+    "ts": { "type": "string", "format": "date-time" }
+  }
+}

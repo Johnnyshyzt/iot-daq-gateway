@@ -63,6 +63,12 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<ReportScheduleRow> ReportSchedules => Set<ReportScheduleRow>();
 
+    public DbSet<LinkStatusRow> LinkStatus => Set<LinkStatusRow>();
+
+    public DbSet<HttpPushTargetRow> HttpPushTargets => Set<HttpPushTargetRow>();
+
+    public DbSet<ApiKeyRow> ApiKeys => Set<ApiKeyRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -123,5 +129,11 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<NotificationDeliveryRow>().HasIndex(row => row.CreatedUnixMs).HasDatabaseName("ix_delivery_created");
         modelBuilder.Entity<NotificationDeliveryRow>().HasIndex(row => new { row.Status, row.CreatedUnixMs }).HasDatabaseName("ix_delivery_status");
         modelBuilder.Entity<ReportScheduleRow>().ToTable("report_schedules").HasKey(row => row.Id);
+
+        modelBuilder.Entity<LinkStatusRow>().ToTable("link_status").HasKey(row => row.DeviceId);
+        modelBuilder.Entity<HttpPushTargetRow>().ToTable("http_push_targets").HasKey(row => row.Id);
+        modelBuilder.Entity<ApiKeyRow>().ToTable("api_keys").HasKey(row => row.Id);
+        modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.KeyHash).IsUnique().HasDatabaseName("ix_api_keys_hash");
+        modelBuilder.Entity<ApiKeyRow>().HasIndex(row => row.Prefix).HasDatabaseName("ix_api_keys_prefix");
     }
 }

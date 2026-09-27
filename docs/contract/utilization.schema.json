@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iot-daq-gateway.local/contract/northbound/1.0/utilization",
+  "title": "Utilization summary / 稼动摘要",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "kind", "gatewayId", "site", "from", "to", "devices", "ts"],
+  "properties": {
+    "schema": { "const": "northbound/1.0" },
+    "kind": { "const": "utilization" },
+    "gatewayId": { "type": "string", "minLength": 1 },
+    "site": { "type": "string", "minLength": 1 },
+    "from": { "type": "string", "format": "date-time" },
+    "to": { "type": "string", "format": "date-time" },
+    "ts": { "type": "string", "format": "date-time" },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["deviceId", "runningMs", "utilization", "partCount"],
+        "properties": {
+          "deviceId": { "type": "string" },
+          "workshop": { "type": "string" },
+          "line": { "type": "string" },
+          "runningMs": { "type": "integer" },
+          "idleMs": { "type": "integer" },
+          "alarmMs": { "type": "integer" },
+          "offlineMs": { "type": "integer" },
+          "utilization": { "type": "number" },
+          "partCount": { "type": "number" }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Adapters.Fanuc.Focas;
 using Gateway.Abstractions.Configuration;
+using Gateway.Abstractions.Contract;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
 using Gateway.Abstractions.Topics;
@@ -14,7 +15,7 @@ using Sinks.Mqtt;
 
 namespace Gateway.Host.Acquisition;
 
-internal sealed class LiveGateway : IHostedService, ICollectorControl
+internal sealed class LiveGateway : IHostedService, ICollectorControl, IContractPublisher
 {
     private const int MaxObservations = 200;
     private const int MaxErrors = 8;
@@ -25,6 +26,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LiveGateway> _logger;
     private readonly IReadOnlyList<ISampleWriter> _samples;
+    private readonly IReadOnlyList<ILinkStatusWriter> _linkStatus;
     private readonly ReliabilityOptions _reliability;
     private readonly MqttSpool _spool;
     private readonly MqttBufferStatus _buffer;
@@ -46,6 +48,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         ILoggerFactory loggerFactory,
         ILogger<LiveGateway> logger,
         IEnumerable<ISampleWriter> samples,
+        IEnumerable<ILinkStatusWriter> linkStatus,
         ReliabilityOptions reliability,
         MqttSpool spool,
         MqttBufferStatus buffer)
@@ -56,6 +59,7 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         _loggerFactory = loggerFactory;
         _logger = logger;
         _samples = samples.ToList();
+        _linkStatus = linkStatus.ToList();
         _reliability = reliability;
         _spool = spool;
         _buffer = buffer;
@@ -639,11 +643,56 @@ internal sealed class LiveGateway : IHostedService, ICollectorControl
         }
     }
 
-    private void Remember(DeviceHealth health)
+    public bool TryLease(out ContractLease? lease)
     {
         lock (_stateLock)
         {
+            if (_session is null)
+            {
+                lease = null;
+                return false;
+            }
+
+            var sink = _session.Sink;
+            var config = _session.Config;
+            lease = new ContractLease
+            {
+                GatewayId = config.Gateway.Id,
+                Site = config.Gateway.Site,
+                ContractVersion = config.Mqtt.ContractVersion,
+                TopicTemplate = config.Mqtt.TopicTemplate,
+                PublishAsync = (topic, json, cancellationToken) => sink.PublishDocumentAsync(topic, json, cancellationToken)
+            };
+            return true;
+        }
+    }
+
+    private void Remember(DeviceHealth health)
+    {
+        DeviceHealth? previous;
+        lock (_stateLock)
+        {
+            _health.TryGetValue(health.DeviceId, out previous);
             _health[health.DeviceId] = health;
+        }
+
+        if (previous is not null
+            && previous.Status == health.Status
+            && string.Equals(previous.Message, health.Message, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        foreach (var writer in _linkStatus)
+        {
+            try
+            {
+                writer.Upsert(health.DeviceId, health.Status.ToString().ToLowerInvariant(), health.Message, health.Timestamp);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogDebug(ex, "Link status write failed for {DeviceId}", health.DeviceId);
+            }
         }
     }
 

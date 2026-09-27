@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iot-daq-gateway.local/contract/northbound/1.0/point-value",
+  "title": "Point value / 点位值",
+  "description": "One sampled point. Legacy MQTT omits schema and kind. Contract v1 includes them. Additional properties are allowed.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["gatewayId", "site", "deviceId", "point", "quality", "ts"],
+  "properties": {
+    "schema": { "const": "northbound/1.0" },
+    "kind": { "const": "pointValue" },
+    "gatewayId": { "type": "string", "minLength": 1 },
+    "site": { "type": "string", "minLength": 1 },
+    "deviceId": { "type": "string", "minLength": 1 },
+    "point": { "type": "string", "minLength": 1 },
+    "value": {},
+    "quality": { "type": "string" },
+    "unit": { "type": ["string", "null"] },
+    "ts": { "type": "string", "format": "date-time" }
+  }
+}

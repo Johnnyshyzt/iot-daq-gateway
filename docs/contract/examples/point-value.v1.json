@@ -1,0 +1,12 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "pointValue",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "deviceId": "cnc-01",
+  "point": "spindleSpeed",
+  "value": 1200,
+  "quality": "good",
+  "unit": "rpm",
+  "ts": "2026-09-27T08:00:01+00:00"
+}

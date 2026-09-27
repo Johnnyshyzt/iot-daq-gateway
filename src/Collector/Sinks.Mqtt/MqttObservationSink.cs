@@ -1,6 +1,6 @@
 using System.Text;
-using System.Text.Json;
 using Gateway.Abstractions.Configuration;
+using Gateway.Abstractions.Contract;
 using Gateway.Abstractions.Contracts;
 using Gateway.Abstractions.Models;
 using Gateway.Abstractions.Topics;
@@ -12,11 +12,6 @@ namespace Sinks.Mqtt;
 
 public sealed class MqttObservationSink : INorthboundSink
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private readonly GatewayConfiguration _config;
     private readonly ILogger<MqttObservationSink> _logger;
     private readonly IMqttClient _client;
@@ -79,19 +74,17 @@ public sealed class MqttObservationSink : INorthboundSink
             _config.Gateway.Site,
             observation.DeviceId,
             observation.Point);
-        var payload = new ObservationEnvelope
-        {
-            GatewayId = _config.Gateway.Id,
-            Site = _config.Gateway.Site,
-            DeviceId = observation.DeviceId,
-            Point = observation.Point,
-            Value = observation.Value,
-            Quality = observation.Quality,
-            Unit = observation.Unit,
-            Ts = observation.Timestamp
-        };
-
-        await PublishAsync(topic, payload, cancellationToken).ConfigureAwait(false);
+        var json = NorthboundPayload.Point(
+            _config.Gateway.Id,
+            _config.Gateway.Site,
+            observation.DeviceId,
+            observation.Point,
+            observation.Value,
+            observation.Quality,
+            observation.Unit,
+            observation.Timestamp,
+            NorthboundPayload.IsV1(_config.Mqtt.ContractVersion));
+        await PublishRawAsync(topic, json, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task PublishStatusAsync(DeviceHealth health, CancellationToken cancellationToken)
@@ -100,18 +93,19 @@ public sealed class MqttObservationSink : INorthboundSink
             _config.Mqtt.StatusTopic,
             _config.Gateway.Site,
             health.DeviceId);
-        var payload = new StatusEnvelope
-        {
-            GatewayId = _config.Gateway.Id,
-            Site = _config.Gateway.Site,
-            DeviceId = health.DeviceId,
-            Status = health.Status.ToString().ToLowerInvariant(),
-            Message = health.Message,
-            Ts = health.Timestamp
-        };
-
-        await PublishAsync(topic, payload, cancellationToken).ConfigureAwait(false);
+        var json = NorthboundPayload.Status(
+            _config.Gateway.Id,
+            _config.Gateway.Site,
+            health.DeviceId,
+            health.Status.ToString().ToLowerInvariant(),
+            health.Message,
+            health.Timestamp,
+            NorthboundPayload.IsV1(_config.Mqtt.ContractVersion));
+        await PublishRawAsync(topic, json, cancellationToken).ConfigureAwait(false);
     }
+
+    public Task PublishDocumentAsync(string topic, string json, CancellationToken cancellationToken) =>
+        PublishRawAsync(topic, json, cancellationToken);
 
     public async ValueTask DisposeAsync()
     {
@@ -126,9 +120,8 @@ public sealed class MqttObservationSink : INorthboundSink
         TouchBuffer();
     }
 
-    private async Task PublishAsync<T>(string topic, T payload, CancellationToken cancellationToken)
+    private async Task PublishRawAsync(string topic, string json, CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(payload, JsonOptions);
         await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
         if (_client.IsConnected)
         {
@@ -284,38 +277,4 @@ public sealed class MqttObservationSink : INorthboundSink
         2 => MqttQualityOfServiceLevel.ExactlyOnce,
         _ => MqttQualityOfServiceLevel.AtLeastOnce
     };
-
-    private sealed class ObservationEnvelope
-    {
-        public required string GatewayId { get; init; }
-
-        public required string Site { get; init; }
-
-        public required string DeviceId { get; init; }
-
-        public required string Point { get; init; }
-
-        public object? Value { get; init; }
-
-        public required string Quality { get; init; }
-
-        public string? Unit { get; init; }
-
-        public DateTimeOffset Ts { get; init; }
-    }
-
-    private sealed class StatusEnvelope
-    {
-        public required string GatewayId { get; init; }
-
-        public required string Site { get; init; }
-
-        public required string DeviceId { get; init; }
-
-        public required string Status { get; init; }
-
-        public string? Message { get; init; }
-
-        public DateTimeOffset Ts { get; init; }
-    }
 }

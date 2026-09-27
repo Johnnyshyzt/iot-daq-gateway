@@ -47,6 +47,12 @@ const actionLabels: Record<string, string> = {
   'notify.report': '报表计划',
   'reliability.update': '可靠性设置',
   'ops.restore': '恢复数据库',
+  'httppush.save': '保存 HTTP 推送',
+  'httppush.delete': '删除 HTTP 推送',
+  'httppush.test': '测试 HTTP 推送',
+  'apikey.create': '创建查询密钥',
+  'apikey.revoke': '吊销查询密钥',
+  'opcua.update': 'OPC UA 设置',
   'onboarding.dismiss': '关闭引导',
 }
 

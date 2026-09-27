@@ -62,6 +62,7 @@ public static class CollectorHost
         services.AddCncAdapters();
         services.AddSingleton<LiveGateway>();
         services.AddSingleton<ICollectorControl>(sp => sp.GetRequiredService<LiveGateway>());
+        services.AddSingleton<IContractPublisher>(sp => sp.GetRequiredService<LiveGateway>());
         services.AddHostedService(sp => sp.GetRequiredService<LiveGateway>());
         services.AddSingleton<IProgramService, FeatureGatedProgramService>();
         services.AddHostedService<AcquisitionWorker>();

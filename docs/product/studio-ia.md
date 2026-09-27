@@ -10,6 +10,9 @@ Studio
 ├── 设备            /devices
 ├── 点位            /points
 ├── 北向 MQTT       /sinks/mqtt
+├── 北向 HTTP       /sinks/http
+├── 查询接口        /integrate/query
+├── OPC UA          /integrate/opcua
 ├── 发布            /publish
 ├── 运行态          /runtime
 └── 系统            /settings
@@ -20,7 +23,10 @@ Studio
 | 概览 | `/` | 看网关是否在跑、当前 revision、在线设备数、最近错误 | `GET /api/v1/runtime/status`，`GET /api/v1/config` | 只读 |
 | 设备 | `/devices` | 新建或编辑一台 Fanuc / Fake，做连接测试 | `GET/PUT/DELETE /api/v1/config/devices/{id}`，`POST /api/v1/devices/{id}/test` | engineer、admin |
 | 点位模板 | `/points` | 编辑设备类模板（启用、单位、倍率、死区）；看哪些设备在用。CSV 导入导出仍作用在模板上 | `GET/PUT/DELETE /api/v1/config/point-templates/{id}` | engineer、admin |
-| 北向 MQTT | `/sinks/mqtt` | 填写 Broker、环境变量引用、Topic 模板，并预览 JSON 字段 | `GET/PUT /api/v1/config/sinks/mqtt` | engineer、admin |
+| 北向 MQTT | `/sinks/mqtt` | 填写 Broker、环境变量引用、Topic 模板、契约版本，并预览 JSON 字段 | `GET/PUT /api/v1/config/sinks/mqtt` | engineer、admin |
+| 北向 HTTP | `/sinks/http` | 配置推送 URL、认证、发送内容和查看送达统计 | `GET/PUT/DELETE /api/v1/http-push`，`POST /api/v1/http-push/{id}/test` | engineer、admin |
+| 查询接口 | `/integrate/query` | 创建或吊销只读密钥，打开 OpenAPI | `GET/POST /api/v1/api-keys`，`POST /api/v1/api-keys/{id}/revoke` | engineer、admin |
+| OPC UA | `/integrate/opcua` | 开关服务器、端口、安全策略和用户名 | `GET/PUT /api/v1/opcua` | engineer、admin |
 | 发布 | `/publish` | 看草稿与已发布的差异，校验，发布，或回滚到历史 revision | `POST /api/v1/config/validate`，`POST /api/v1/config/publish`，`GET /api/v1/config/revisions`，`POST /api/v1/config/rollback` | engineer、admin |
 | 运行态 | `/runtime` | 看设备健康、最近观测、日志尾 | `GET /api/v1/runtime/status`，`GET /api/v1/runtime/observations`，`GET /api/v1/runtime/logs/tail` | 只读 |
 | 系统 | `/settings` | 改站点名（写入 Gateway 草稿）、查看许可证、管理用户 | `GET/PUT /api/v1/config/gateway`；许可证与用户走 API 的认证说明，不进配置 hash | 站点名：engineer、admin；许可证与用户：admin |
@@ -53,7 +59,7 @@ CSV 导入导出作用在当前模板上。导入只接受目录中的点位 Id�
 
 编辑唯一的 MqttSink（`sinks/mqtt.yaml`）。认证只填环境变量名，不填密码。Topic 模板默认 `daq/{site}/{deviceId}/{point}`，状态主题默认 `daq/{site}/{deviceId}/$status`。
 
-JSON 预览只在浏览器里用模板和一条样例点拼出载荷，不连 Broker。载荷字段与运行时 MQTT JSON 一致：`gatewayId`、`site`、`deviceId`、`point`、`value`、`quality`、`unit`、`ts`。v1 加载后 `gatewayId` 是 `gw-` 加上 `metadata.siteId`，主题里的 `{site}` 就是 `siteId`。
+JSON 预览只在浏览器里用模板和一条样例点拼出载荷，不连 Broker。契约版本 `legacy` 的字段是 `gatewayId`、`site`、`deviceId`、`point`、`value`、`quality`、`unit`、`ts`。`v1` 再加 `schema` 与 `kind`。`gatewayId` 是 `gw-` 加上 `metadata.siteId`，主题里的 `{site}` 就是 `siteId`。HTTP、查询和 OPC UA 见 [integration.md](../integration.md)。
 
 ### 发布 `/publish`
 

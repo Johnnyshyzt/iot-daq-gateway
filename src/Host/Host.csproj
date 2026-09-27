@@ -9,10 +9,14 @@
   <ItemGroup>
     <ProjectReference Include="..\Api\Management\Api.csproj" />
     <ProjectReference Include="..\Collector\Core\Collector.csproj" />
+    <ProjectReference Include="..\Collector\Sinks.OpcUa\Sinks.OpcUa.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\data\seed\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="data\seed\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\docs\contract\**\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="contract\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup Condition="Exists('..\Web\dist\index.html')">
     <Content Include="..\Web\dist\**\*" CopyToPublishDirectory="PreserveNewest" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" />

@@ -134,6 +134,13 @@ public sealed class StudioAuthMiddleware(RequestDelegate next)
             return;
         }
 
+        if (context.Request.Path.StartsWithSegments("/api/query")
+            || (HttpMethods.IsGet(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/contract")))
+        {
+            await next(context);
+            return;
+        }
+
         if (IsAnonymous(context.Request))
         {
             await next(context);

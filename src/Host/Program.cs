@@ -58,6 +58,9 @@ builder.Services.AddSingleton(sp => new AccountStore(
     sp.GetRequiredService<ILogger<AccountStore>>()));
 builder.Services.AddFocasConnectProbe();
 builder.Services.AddDriverServices();
+builder.Services.AddSingleton<OpcUaWorker>();
+builder.Services.AddSingleton<IOpcUaControl>(sp => sp.GetRequiredService<OpcUaWorker>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<OpcUaWorker>());
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<RuntimeQueries>();
 builder.Services.AddSingleton<GatewayReloadClient>();
@@ -116,6 +119,7 @@ if (webRoot is not null)
     app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
 }
 
+app.UseMiddleware<Studio.Host.Northbound.ApiKeyMiddleware>();
 app.UseMiddleware<StudioAuthMiddleware>();
 var startedAt = DateTimeOffset.UtcNow;
 app.MapGet("/healthz", (IEnumerable<IMqttBufferStatus> buffers) =>
@@ -131,8 +135,35 @@ app.MapGet("/healthz", (IEnumerable<IMqttBufferStatus> buffers) =>
         uptimeSeconds = Math.Max(0, (long)(DateTimeOffset.UtcNow - startedAt).TotalSeconds),
         mqttConnected = buffer?.Connected ?? false,
         mqttSpoolDepth = buffer?.Depth ?? 0,
-        mqttSpoolDropped = buffer?.Dropped ?? 0
+        mqttSpoolDropped = buffer?.Dropped ?? 0,
+        opcUaEnabled = app.Services.GetService<IOpcUaControl>()?.Current.Enabled ?? false,
+        opcUaListening = app.Services.GetService<IOpcUaControl>()?.Current.Listening ?? false
     }, StudioJson.Options);
+});
+app.MapGet("/api/contract/v1", () =>
+{
+    var directory = ContractDirectory();
+    var names = directory is null
+        ? []
+        : Directory.EnumerateFiles(directory, "*.schema.json").Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+    return Results.Json(new { schema = "northbound/1.0", files = names }, StudioJson.Options);
+});
+app.MapGet("/api/contract/v1/{name}", (string name) =>
+{
+    if (name.Contains("..", StringComparison.Ordinal) || name.IndexOfAny(['/', '\\']) >= 0 || !name.EndsWith(".schema.json", StringComparison.Ordinal))
+    {
+        return Results.NotFound();
+    }
+
+    var directory = ContractDirectory();
+    var path = directory is null ? null : Path.Combine(directory, name);
+    return path is not null && File.Exists(path) ? Results.File(path, "application/schema+json") : Results.NotFound();
+});
+app.MapGet("/api/query/v1/openapi.json", () =>
+{
+    var directory = ContractDirectory();
+    var path = directory is null ? null : Path.Combine(directory, "openapi.json");
+    return path is not null && File.Exists(path) ? Results.File(path, "application/json") : Results.NotFound();
 });
 app.MapStudioApi();
 
@@ -203,5 +234,28 @@ if (app.Services.GetService<IProgramService>() is { } programs)
 }
 
 app.Run();
+
+static string? ContractDirectory()
+{
+    var output = Path.Combine(AppContext.BaseDirectory, "contract");
+    if (Directory.Exists(output) && Directory.EnumerateFiles(output, "*.schema.json").Any())
+    {
+        return output;
+    }
+
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null)
+    {
+        var candidate = Path.Combine(dir.FullName, "docs", "contract");
+        if (Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        dir = dir.Parent;
+    }
+
+    return Directory.Exists(output) ? output : null;
+}
 
 public partial class Program;

@@ -1,0 +1,22 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "utilization",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "from": "2026-09-26T08:00:00+00:00",
+  "to": "2026-09-27T08:00:00+00:00",
+  "devices": [
+    {
+      "deviceId": "cnc-01",
+      "workshop": "机加",
+      "line": "一线",
+      "runningMs": 3600000,
+      "idleMs": 600000,
+      "alarmMs": 0,
+      "offlineMs": 0,
+      "utilization": 0.85,
+      "partCount": 40
+    }
+  ],
+  "ts": "2026-09-27T08:00:00+00:00"
+}

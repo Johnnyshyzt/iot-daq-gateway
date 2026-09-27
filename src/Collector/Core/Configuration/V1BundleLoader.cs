@@ -238,6 +238,7 @@ internal static class V1BundleLoader
             Retain = OptionalBool(spec, "retain") ?? false,
             TopicTemplate = OptionalString(spec, "topicTemplate") ?? "daq/{site}/{deviceId}/{point}",
             StatusTopic = OptionalString(spec, "statusTopic") ?? "daq/{site}/{deviceId}/$status",
+            ContractVersion = OptionalString(spec, "contractVersion") ?? "legacy",
             Username = ResolveEnv(OptionalString(broker, "usernameFromEnv")),
             Password = ResolveEnv(OptionalString(broker, "passwordFromEnv"))
         };

@@ -27,9 +27,12 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
+import { Route as AuthenticatedIntegrateOpcuaRouteImport } from './routes/_authenticated/integrate/opcua'
+import { Route as AuthenticatedIntegrateQueryRouteImport } from './routes/_authenticated/integrate/query'
 import { Route as AuthenticatedMonitorDeviceIdRouteImport } from './routes/_authenticated/monitor.$deviceId'
 import { Route as AuthenticatedNotifyIndexRouteImport } from './routes/_authenticated/notify/index'
 import { Route as AuthenticatedNotifyHistoryRouteImport } from './routes/_authenticated/notify/history'
+import { Route as AuthenticatedSinksHttpRouteImport } from './routes/_authenticated/sinks/http'
 import { Route as AuthenticatedSinksMqttRouteImport } from './routes/_authenticated/sinks/mqtt'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -123,6 +126,18 @@ const AuthenticatedAccountPasswordRoute =
     path: '/account/password',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIntegrateOpcuaRoute =
+  AuthenticatedIntegrateOpcuaRouteImport.update({
+    id: '/integrate/opcua',
+    path: '/integrate/opcua',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIntegrateQueryRoute =
+  AuthenticatedIntegrateQueryRouteImport.update({
+    id: '/integrate/query',
+    path: '/integrate/query',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMonitorDeviceIdRoute =
   AuthenticatedMonitorDeviceIdRouteImport.update({
     id: '/monitor/$deviceId',
@@ -141,6 +156,11 @@ const AuthenticatedNotifyHistoryRoute =
     path: '/notify/history',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSinksHttpRoute = AuthenticatedSinksHttpRouteImport.update({
+  id: '/sinks/http',
+  path: '/sinks/http',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
   id: '/sinks/mqtt',
   path: '/sinks/mqtt',
@@ -165,8 +185,11 @@ export interface FileRoutesByFullPath {
   '/setup': typeof AuthenticatedSetupRoute
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/integrate/opcua': typeof AuthenticatedIntegrateOpcuaRoute
+  '/integrate/query': typeof AuthenticatedIntegrateQueryRoute
   '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/notify/history': typeof AuthenticatedNotifyHistoryRoute
+  '/sinks/http': typeof AuthenticatedSinksHttpRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
   '/notify/': typeof AuthenticatedNotifyIndexRoute
 }
@@ -188,8 +211,11 @@ export interface FileRoutesByTo {
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/integrate/opcua': typeof AuthenticatedIntegrateOpcuaRoute
+  '/integrate/query': typeof AuthenticatedIntegrateQueryRoute
   '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/notify/history': typeof AuthenticatedNotifyHistoryRoute
+  '/sinks/http': typeof AuthenticatedSinksHttpRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
   '/notify': typeof AuthenticatedNotifyIndexRoute
 }
@@ -213,8 +239,11 @@ export interface FileRoutesById {
   '/_authenticated/utilization': typeof AuthenticatedUtilizationRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
+  '/_authenticated/integrate/opcua': typeof AuthenticatedIntegrateOpcuaRoute
+  '/_authenticated/integrate/query': typeof AuthenticatedIntegrateQueryRoute
   '/_authenticated/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
   '/_authenticated/notify/history': typeof AuthenticatedNotifyHistoryRoute
+  '/_authenticated/sinks/http': typeof AuthenticatedSinksHttpRoute
   '/_authenticated/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
   '/_authenticated/notify/': typeof AuthenticatedNotifyIndexRoute
 }
@@ -238,8 +267,11 @@ export interface FileRouteTypes {
     | '/setup'
     | '/utilization'
     | '/account/password'
+    | '/integrate/opcua'
+    | '/integrate/query'
     | '/monitor/$deviceId'
     | '/notify/history'
+    | '/sinks/http'
     | '/sinks/mqtt'
     | '/notify/'
   fileRoutesByTo: FileRoutesByTo
@@ -261,8 +293,11 @@ export interface FileRouteTypes {
     | '/utilization'
     | '/'
     | '/account/password'
+    | '/integrate/opcua'
+    | '/integrate/query'
     | '/monitor/$deviceId'
     | '/notify/history'
+    | '/sinks/http'
     | '/sinks/mqtt'
     | '/notify'
   id:
@@ -285,8 +320,11 @@ export interface FileRouteTypes {
     | '/_authenticated/utilization'
     | '/_authenticated/'
     | '/_authenticated/account/password'
+    | '/_authenticated/integrate/opcua'
+    | '/_authenticated/integrate/query'
     | '/_authenticated/monitor/$deviceId'
     | '/_authenticated/notify/history'
+    | '/_authenticated/sinks/http'
     | '/_authenticated/sinks/mqtt'
     | '/_authenticated/notify/'
   fileRoutesById: FileRoutesById
@@ -424,6 +462,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountPasswordRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/integrate/opcua': {
+      id: '/_authenticated/integrate/opcua'
+      path: '/integrate/opcua'
+      fullPath: '/integrate/opcua'
+      preLoaderRoute: typeof AuthenticatedIntegrateOpcuaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/integrate/query': {
+      id: '/_authenticated/integrate/query'
+      path: '/integrate/query'
+      fullPath: '/integrate/query'
+      preLoaderRoute: typeof AuthenticatedIntegrateQueryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/monitor/$deviceId': {
       id: '/_authenticated/monitor/$deviceId'
       path: '/monitor/$deviceId'
@@ -443,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/notify/history'
       fullPath: '/notify/history'
       preLoaderRoute: typeof AuthenticatedNotifyHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sinks/http': {
+      id: '/_authenticated/sinks/http'
+      path: '/sinks/http'
+      fullPath: '/sinks/http'
+      preLoaderRoute: typeof AuthenticatedSinksHttpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/sinks/mqtt': {
@@ -472,8 +531,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUtilizationRoute: typeof AuthenticatedUtilizationRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
+  AuthenticatedIntegrateOpcuaRoute: typeof AuthenticatedIntegrateOpcuaRoute
+  AuthenticatedIntegrateQueryRoute: typeof AuthenticatedIntegrateQueryRoute
   AuthenticatedMonitorDeviceIdRoute: typeof AuthenticatedMonitorDeviceIdRoute
   AuthenticatedNotifyHistoryRoute: typeof AuthenticatedNotifyHistoryRoute
+  AuthenticatedSinksHttpRoute: typeof AuthenticatedSinksHttpRoute
   AuthenticatedSinksMqttRoute: typeof AuthenticatedSinksMqttRoute
   AuthenticatedNotifyIndexRoute: typeof AuthenticatedNotifyIndexRoute
 }
@@ -495,8 +557,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUtilizationRoute: AuthenticatedUtilizationRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,
+  AuthenticatedIntegrateOpcuaRoute: AuthenticatedIntegrateOpcuaRoute,
+  AuthenticatedIntegrateQueryRoute: AuthenticatedIntegrateQueryRoute,
   AuthenticatedMonitorDeviceIdRoute: AuthenticatedMonitorDeviceIdRoute,
   AuthenticatedNotifyHistoryRoute: AuthenticatedNotifyHistoryRoute,
+  AuthenticatedSinksHttpRoute: AuthenticatedSinksHttpRoute,
   AuthenticatedSinksMqttRoute: AuthenticatedSinksMqttRoute,
   AuthenticatedNotifyIndexRoute: AuthenticatedNotifyIndexRoute,
 }
