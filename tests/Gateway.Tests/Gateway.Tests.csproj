@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="MQTTnet" />
     <PackageReference Include="MQTTnet.Server" />
+    <PackageReference Include="JsonSchema.Net" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Collector\Adapters.Fanuc\Adapters.Fanuc.csproj" />
@@ -22,6 +23,7 @@
     <ProjectReference Include="..\..\src\Shared\Abstractions\Gateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Collector\Core\Collector.csproj" />
     <ProjectReference Include="..\..\src\Collector\Sinks.Mqtt\Sinks.Mqtt.csproj" />
+    <ProjectReference Include="..\..\src\Collector\Sinks.OpcUa\Sinks.OpcUa.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\configs\examples\*.yaml" Link="examples\%(Filename)%(Extension)">

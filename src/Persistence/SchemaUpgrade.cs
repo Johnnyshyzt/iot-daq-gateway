@@ -29,9 +29,22 @@ internal static class SchemaUpgrade
             EnsureFromScript(db, connection, "notification_rules");
             EnsureFromScript(db, connection, "notification_deliveries");
             EnsureFromScript(db, connection, "report_schedules");
+            EnsureFromScript(db, connection, "link_status");
+            EnsureFromScript(db, connection, "http_push_targets");
+            EnsureFromScript(db, connection, "api_keys");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_audit_unix ON audit_events ("UnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_created ON notification_deliveries ("CreatedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_status ON notification_deliveries ("Status", "CreatedUnixMs")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_api_keys_hash ON api_keys ("KeyHash")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_api_keys_prefix ON api_keys ("Prefix")""");
+            if (sqlite)
+            {
+                AddColumn(connection, "config_mqtt", "ContractVersion", "TEXT NOT NULL DEFAULT 'legacy'");
+            }
+            else
+            {
+                AddColumn(connection, "config_mqtt", "ContractVersion", "text NOT NULL DEFAULT 'legacy'");
+            }
             if (sqlite)
             {
                 AddColumn(connection, "alarms", "Code", "TEXT NOT NULL DEFAULT ''");

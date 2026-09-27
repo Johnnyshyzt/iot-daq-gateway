@@ -1,0 +1,14 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "alarm",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "deviceId": "cnc-01",
+  "alarmId": "a1",
+  "action": "raise",
+  "code": "100",
+  "message": "servo",
+  "severity": "alarm",
+  "point": "alarm",
+  "ts": "2026-09-27T08:01:00+00:00"
+}

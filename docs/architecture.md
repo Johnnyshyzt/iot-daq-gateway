@@ -1,6 +1,6 @@
 # 架构说明 / Architecture
 
-设备无关的采集网关：南向适配器采集，北向 MQTT 发布。抽象层独立设计，不依赖、不 fork Ladder99 base-driver。
+设备无关的采集网关：南向适配器采集，北向发布 MQTT、可选 HTTP 推送和 OPC UA。抽象层独立设计，不依赖、不 fork Ladder99 base-driver。集成说明见 [integration.md](integration.md)。
 
 ```
 docs/catalog/cnc-catalog.json
@@ -17,9 +17,11 @@ AcquisitionWorker
     adapter.Collect() → Observation
     断线：指数退避；停顿：看门狗重建该设备适配器
     ISampleWriter → sample_latest + sample_history
-    optional change_only → MQTT JSON
+    optional change_only → MQTT JSON（legacy 或契约 v1）
     Broker 不可达 → mqtt-spool/ 按序重放
+    报警 / 产量 / 稼动 → 附加 MQTT 主题，以及可选 HTTP 推送（http-spool/）
     报警 → 通知通道（企业微信 / 钉钉 / 飞书 / SMTP / Webhook）
+    可选 OPC UA 服务器、只读 /api/query/v1
 ```
 
 | 项目 | 职责 |
@@ -32,7 +34,7 @@ AcquisitionWorker
 | `src/Host` | 唯一可执行文件：Api、Collector、Web、数据库 |
 | `src/Web` | shadcn-admin（React + Vite）。MIT 归属见 [src/Web/README.md](../src/Web/README.md) |
 
-数据库、保留策略和切换 PostgreSQL 见 [database.md](database.md)。目录来源和同义词规则见 [catalog/README.md](catalog/README.md)。总览、历史曲线、报警和稼动率见 [visualization.md](visualization.md)。断线重连、MQTT 缓冲和看门狗见 [reliability.md](reliability.md)。报警通知和稼动报表见 [notifications.md](notifications.md)。
+数据库、保留策略和切换 PostgreSQL 见 [database.md](database.md)。目录来源和同义词规则见 [catalog/README.md](catalog/README.md)。总览、历史曲线、报警和稼动率见 [visualization.md](visualization.md)。断线重连、MQTT 缓冲和看门狗见 [reliability.md](reliability.md)。报警通知和稼动报表见 [notifications.md](notifications.md)。北向合同、HTTP 推送、查询 API 和 OPC UA 见 [integration.md](integration.md)。
 
 `fanuc.fake` 与 `fanuc.focas` 保持原行为。每个品牌另有 `{brand}.sim`，只产出该品牌目录中的点。真实协议类（OPC UA、MTConnect、LSV2、FTP 等）在 `Adapters.Cnc` 里是不连接、不附带厂商 SDK 的桩，发布时给出警告，设备保持离线。
 

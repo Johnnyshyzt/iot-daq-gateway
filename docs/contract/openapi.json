@@ -1,0 +1,67 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "采集网关只读查询接口 / IoT DAQ Gateway Query API",
+    "version": "1.0.0",
+    "description": "Read-only integrator API. Authenticate with header X-Api-Key or Authorization: Bearer daq_…. Keys are created in Studio and stored as SHA-256. This document is anonymous. 只读查询。密钥在 Studio「查询接口」创建，只返回一次，库内只存 SHA-256。"
+  },
+  "servers": [{ "url": "/api/query/v1" }],
+  "components": {
+    "securitySchemes": {
+      "apiKey": { "type": "apiKey", "in": "header", "name": "X-Api-Key" }
+    }
+  },
+  "security": [{ "apiKey": [] }],
+  "paths": {
+    "/devices": {
+      "get": {
+        "summary": "List devices / 设备列表",
+        "responses": { "200": { "description": "Devices with last connection status" }, "401": { "description": "Missing or revoked key" } }
+      }
+    },
+    "/devices/{id}/values": {
+      "get": {
+        "summary": "Current point values / 当前值",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "pointValue documents" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/devices/{id}/history": {
+      "get": {
+        "summary": "History range / 历史区间",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "point", "in": "query", "schema": { "type": "string" }, "description": "Comma-separated point ids. Empty means all points." },
+          { "name": "from", "in": "query", "schema": { "type": "string" }, "description": "Unix milliseconds or ISO-8601. Default is one hour before to." },
+          { "name": "to", "in": "query", "schema": { "type": "string" } },
+          { "name": "bucketMs", "in": "query", "schema": { "type": "integer" }, "description": "0 returns raw samples, capped at 20000 rows." }
+        ],
+        "responses": { "200": { "description": "pointValue documents in the range" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/alarms": {
+      "get": {
+        "summary": "Alarms / 报警",
+        "parameters": [
+          { "name": "deviceId", "in": "query", "schema": { "type": "string" } },
+          { "name": "active", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 200 } }
+        ],
+        "responses": { "200": { "description": "alarm documents. action is raise while active, otherwise clear." }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/utilization": {
+      "get": {
+        "summary": "Utilization summary / 稼动摘要",
+        "parameters": [
+          { "name": "deviceId", "in": "query", "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "schema": { "type": "string" }, "description": "Default is 24 hours before to." },
+          { "name": "to", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "utilization document" }, "401": { "description": "Unauthorized" } }
+      }
+    }
+  }
+}

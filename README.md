@@ -1,6 +1,6 @@
 # IoT DAQ Gateway
 
-Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound V1 is Fanuc FOCAS over panel Ethernet via an adapter interface plus `FakeFanucAdapter` — no vendor FOCAS binaries in this repo. Northbound V1 is MQTT JSON.
+Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound V1 is Fanuc FOCAS over panel Ethernet via an adapter interface plus `FakeFanucAdapter` — no vendor FOCAS binaries in this repo. Northbound is MQTT JSON, plus HTTP push, a read-only query API, and an optional OPC UA server. See [docs/integration.md](docs/integration.md).
 
 面向产线的开源工业物联网采集网关骨架：设备无关、先覆盖 CNC，后续可扩展注塑等机型。以普通服务或容器运行，不依赖工控机镜像或 Ladder99 base-driver。
 
@@ -18,6 +18,7 @@ Device-agnostic industrial IoT data-acquisition gateway (CNC first). Southbound 
 - **Studio 可视化：** 总览大屏（含深色全屏 `/board`）、单机详情、历史曲线、报警、稼动率与产量。统计在 Host 聚合，页面不拉原始历史。见 [docs/visualization.md](docs/visualization.md)
 - **上手引导、审计和 SQLite 备份：** 总览上的五步引导、配置变更审计、管理员在「系统」页下载或恢复数据库。`GET /healthz` 不登录即可看版本和 MQTT 缓冲深度。Linux systemd 见 [docs/linux-install.md](docs/linux-install.md)
 - **断线与通知：** 设备按退避重连，MQTT 断线时磁盘缓冲并按序重放，采集停顿会重启该设备工人。报警可发到企业微信、钉钉、飞书、邮件或 Webhook。见 [docs/reliability.md](docs/reliability.md) 与 [docs/notifications.md](docs/notifications.md)
+- **北向合同：** 点位、状态、报警、产量和稼动有版本化 JSON Schema。MQTT 默认可保持旧字段；HTTP 推送、只读查询 API 和可选 OPC UA 服务器见 [docs/integration.md](docs/integration.md)
 - 许可证 [Apache-2.0](LICENSE)
 
 ## 仓库结构
@@ -137,7 +138,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 生产路径是 **自包含 win-x64 zip**（内含 .NET 10 运行时、`Host.exe`、`wwwroot`、`data/seed` 和安装脚本）。工厂工控机不需要安装 SDK 10.0.203，也不需要 git 检出。页面上发布后，同一进程从数据库重载已发布配置。
 
-1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.6.0**，附件名是 `iot-daq-gateway-0.6.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.6.0` 之后 Release 才会换成新 zip。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
+1. 从 [Releases](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/latest) 下载 Host 包。源码版本是 **0.7.0**，附件名是 `iot-daq-gateway-0.7.0-win-x64.zip`（`Host.exe`、Studio、`data/seed`）。已经打过标签的 [v0.4.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.4.0) 仍是更早的 Host 包；推送 `v0.7.0` 之后 Release 才会换成新 zip。更早的 [v0.3.0](https://github.com/Johnnyshyzt/iot-daq-gateway/releases/tag/v0.3.0) 是只有 Gateway 的历史包（`Gateway.Host.exe`，没有 Studio），不要当成现在的 Host。还没有对应 Release 时，用 Actions 里 `pack-win-x64` 的同名 artifact，或在构建机运行 `./scripts/pack-win-x64.sh`（Windows：`powershell -File scripts/pack-win-x64.ps1`）。这些包都走同一套打包脚本，都不含 `Fwlib64.dll`
 2. 解压到例如 `C:\iot-daq-gateway\`
 3. 把授权的 `Fwlib64.dll` 放到与 `Host.exe` 同一目录（不进 git / 不进 zip / 不进镜像）。复制 `service.env.example` 为 `service.env` 并填写 `MQTT_USER` / `MQTT_PASSWORD`
 4. 打开 `http://127.0.0.1:5080`。用 `data/auth/bootstrap-password.txt` 里的一次性密码登录并马上修改。第一次启动把 `data/seed` 导入 `data/gateway.db`，之后采集只读数据库里的已发布配置
@@ -146,7 +147,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 卸载：管理员运行 `uninstall-service.bat`。完整步骤见 [docs/windows-install.md](docs/windows-install.md)。升级与备份见 [docs/ops-field.md](docs/ops-field.md)，故障对照见 [docs/field-fault-guide.md](docs/field-fault-guide.md)，无自有机床时的试点验收见 [docs/product/pilot-acceptance.md](docs/product/pilot-acceptance.md)。Fake 演示见 [docs/product/fake-demo-script.md](docs/product/fake-demo-script.md)，商业边界见 [docs/product/pricing-one-pager.md](docs/product/pricing-one-pager.md)。试点合同附件、销售一页和安全口径见 [docs/product/pilot-contract-appendix.md](docs/product/pilot-contract-appendix.md)、[docs/product/sales-one-pager.md](docs/product/sales-one-pager.md)、[docs/product/security-narrative.md](docs/product/security-narrative.md)。
 
-维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.6.0`：
+维护者发版（合并发版工作流之后；合并本身不会打标签）。`X.Y.Z` 对齐 `Directory.Build.props` 的 `Version`，附件名是 `iot-daq-gateway-<version>-win-x64.zip`（没有前缀 `v`）。源码版本是 `0.7.0`：
 
 ```bash
 git tag vX.Y.Z
@@ -205,7 +206,7 @@ git push origin vX.Y.Z
 - Windows 现场包 / 开机自启 —— 已提供；Linux 官方 FOCAS 库不在本期
 - 注塑等其它南向适配器
 - 程序传输写路径（仍受 `IProgramService` 开关约束）
-- 更多北向（当前仅 MQTT JSON）
+- 更多北向：HTTP 推送、只读查询和 OPC UA 服务器已在 0.7.0 提供。历史访问（OPC UA HA）和按班次补发仍未做
 
 ## License
 

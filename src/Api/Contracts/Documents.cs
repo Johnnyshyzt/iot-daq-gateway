@@ -221,6 +221,8 @@ public sealed class MqttSinkSpec
     public bool Retain { get; set; }
 
     public string StatusTopic { get; set; } = "daq/{site}/{deviceId}/$status";
+
+    public string ContractVersion { get; set; } = "legacy";
 }
 
 public sealed class MqttBrokerSpec

@@ -304,6 +304,14 @@ public static partial class ConfigValidator
             Warning(issues, "sinks/mqtt.statusTopic", "状态主题建议包含 {deviceId}");
         }
 
+        var contract = (mqtt.Spec.ContractVersion ?? "").Trim();
+        if (contract.Length > 0
+            && !contract.Equals("legacy", StringComparison.OrdinalIgnoreCase)
+            && !contract.Equals("v1", StringComparison.OrdinalIgnoreCase))
+        {
+            Error(issues, "sinks/mqtt.contractVersion", "契约版本只能是 legacy 或 v1");
+        }
+
         if (string.IsNullOrWhiteSpace(broker.PasswordFromEnv) && !string.IsNullOrWhiteSpace(broker.UsernameFromEnv))
         {
             Warning(issues, "sinks/mqtt.broker.passwordFromEnv", "已填写用户名环境变量，但没有密码环境变量");

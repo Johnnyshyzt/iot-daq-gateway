@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iot-daq-gateway.local/contract/northbound/1.0/batch",
+  "title": "HTTP push batch / HTTP 推送批次",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "kind", "gatewayId", "site", "sentAt", "events"],
+  "properties": {
+    "schema": { "const": "northbound/1.0" },
+    "kind": { "const": "batch" },
+    "gatewayId": { "type": "string", "minLength": 1 },
+    "site": { "type": "string", "minLength": 1 },
+    "sentAt": { "type": "string", "format": "date-time" },
+    "events": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  }
+}

@@ -786,7 +786,8 @@ public sealed partial class ConfigStore
                     Qos = config.Mqtt.Qos,
                     Retain = config.Mqtt.Retain,
                     TopicTemplate = config.Mqtt.TopicTemplate,
-                    StatusTopic = config.Mqtt.StatusTopic
+                    StatusTopic = config.Mqtt.StatusTopic,
+                    ContractVersion = string.IsNullOrWhiteSpace(config.Mqtt.ContractVersion) ? "legacy" : config.Mqtt.ContractVersion
                 }
             },
             Devices = config.Devices.Select(device => new DeviceDocument

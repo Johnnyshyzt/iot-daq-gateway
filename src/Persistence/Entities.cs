@@ -259,6 +259,8 @@ public sealed class ConfigMqttRow
     public string TopicTemplate { get; set; } = "";
 
     public string StatusTopic { get; set; } = "";
+
+    public string ContractVersion { get; set; } = "legacy";
 }
 
 public sealed class ConfigRevisionRow
@@ -378,6 +380,95 @@ public sealed class AuditEventRow
     public string Target { get; set; } = "";
 
     public string Detail { get; set; } = "";
+}
+
+public sealed class LinkStatusRow
+{
+    public string DeviceId { get; set; } = "";
+
+    public string Status { get; set; } = "";
+
+    public string Message { get; set; } = "";
+
+    public long UnixMs { get; set; }
+}
+
+public sealed class HttpPushTargetRow
+{
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+
+    public string Url { get; set; } = "";
+
+    public string Method { get; set; } = "POST";
+
+    public string HeadersJson { get; set; } = "[]";
+
+    public string AuthKind { get; set; } = "none";
+
+    public string AuthUser { get; set; } = "";
+
+    public string AuthSecret { get; set; } = "";
+
+    public string SignatureHeader { get; set; } = "X-DAQ-Signature";
+
+    public bool SendValues { get; set; } = true;
+
+    public string ValueMode { get; set; } = "change";
+
+    public int PeriodicSeconds { get; set; } = 30;
+
+    public bool SendStatus { get; set; } = true;
+
+    public bool SendAlarms { get; set; } = true;
+
+    public int BatchMax { get; set; } = 50;
+
+    public int BatchIntervalMs { get; set; } = 1000;
+
+    public int TimeoutMs { get; set; } = 8000;
+
+    public int MaxRetries { get; set; } = 8;
+
+    public int BackoffInitialMs { get; set; } = 1000;
+
+    public int BackoffMaxMs { get; set; } = 60_000;
+
+    public long Delivered { get; set; }
+
+    public long Failed { get; set; }
+
+    public long SpoolDropped { get; set; }
+
+    public long LastSuccessUnixMs { get; set; }
+
+    public long LastAttemptUnixMs { get; set; }
+
+    public string LastError { get; set; } = "";
+
+    public long UpdatedUnixMs { get; set; }
+}
+
+public sealed class ApiKeyRow
+{
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public string Prefix { get; set; } = "";
+
+    public string KeyHash { get; set; } = "";
+
+    public long CreatedUnixMs { get; set; }
+
+    public string CreatedBy { get; set; } = "";
+
+    public long? RevokedUnixMs { get; set; }
+
+    public long? LastUsedUnixMs { get; set; }
 }
 
 public sealed class NotificationChannelRow

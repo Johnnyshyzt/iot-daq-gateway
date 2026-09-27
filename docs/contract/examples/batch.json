@@ -1,0 +1,21 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "batch",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "sentAt": "2026-09-27T08:00:05+00:00",
+  "events": [
+    {
+      "schema": "northbound/1.0",
+      "kind": "pointValue",
+      "gatewayId": "gw-plant-a",
+      "site": "plant-a",
+      "deviceId": "cnc-01",
+      "point": "state",
+      "value": "RUNNING",
+      "quality": "good",
+      "unit": null,
+      "ts": "2026-09-27T08:00:00+00:00"
+    }
+  ]
+}

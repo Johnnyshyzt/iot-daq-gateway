@@ -116,7 +116,8 @@ public static class ConfigDefaults
             TopicTemplate = "daq/{site}/{deviceId}/{point}",
             Qos = 1,
             Retain = false,
-            StatusTopic = "daq/{site}/{deviceId}/$status"
+            StatusTopic = "daq/{site}/{deviceId}/$status",
+            ContractVersion = "legacy"
         }
     };
 

@@ -1,0 +1,11 @@
+{
+  "schema": "northbound/1.0",
+  "kind": "partCount",
+  "gatewayId": "gw-plant-a",
+  "site": "plant-a",
+  "deviceId": "cnc-01",
+  "count": 12,
+  "total": 132,
+  "quality": "good",
+  "ts": "2026-09-27T08:02:00+00:00"
+}

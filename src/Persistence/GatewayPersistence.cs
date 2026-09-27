@@ -17,9 +17,9 @@ namespace IotDaq.Persistence;
 /// configuration, and stores samples. SQLite is the default file under the data directory.
 /// PostgreSQL is selected with Database:Provider=Postgres.
 /// </summary>
-public sealed partial class GatewayPersistence : ISampleWriter
+public sealed partial class GatewayPersistence : ISampleWriter, ILinkStatusWriter
 {
-    public const int SchemaVersion = 4;
+    public const int SchemaVersion = 5;
     public const long MaxBackupBytes = 512L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -1360,6 +1360,7 @@ public sealed partial class GatewayPersistence : ISampleWriter
         mqttRow.Retain = mqtt.Retain;
         mqttRow.TopicTemplate = mqtt.TopicTemplate;
         mqttRow.StatusTopic = mqtt.StatusTopic;
+        mqttRow.ContractVersion = string.IsNullOrWhiteSpace(mqtt.ContractVersion) ? "legacy" : mqtt.ContractVersion.Trim().ToLowerInvariant();
     }
 
     private static void RememberGroup(GatewayDbContext db, DeviceDocument device)

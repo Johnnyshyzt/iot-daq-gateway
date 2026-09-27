@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iot-daq-gateway.local/contract/northbound/1.0/alarm",
+  "title": "Alarm raise or clear / 报警发生或恢复",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "kind", "gatewayId", "site", "deviceId", "alarmId", "action", "code", "severity", "point", "ts"],
+  "properties": {
+    "schema": { "const": "northbound/1.0" },
+    "kind": { "const": "alarm" },
+    "gatewayId": { "type": "string", "minLength": 1 },
+    "site": { "type": "string", "minLength": 1 },
+    "deviceId": { "type": "string", "minLength": 1 },
+    "alarmId": { "type": "string", "minLength": 1 },
+    "action": { "enum": ["raise", "clear"] },
+    "code": { "type": "string" },
+    "message": { "type": "string" },
+    "severity": { "type": "string" },
+    "point": { "type": "string" },
+    "ts": { "type": "string", "format": "date-time" }
+  }
+}

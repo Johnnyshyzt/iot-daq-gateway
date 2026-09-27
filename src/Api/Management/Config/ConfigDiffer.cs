@@ -189,6 +189,7 @@ public static class ConfigDiffer
         Field(changes, path, "QoS", before.Spec.Qos.ToString(System.Globalization.CultureInfo.InvariantCulture), after.Spec.Qos.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Field(changes, path, "保留消息", YesNo(before.Spec.Retain), YesNo(after.Spec.Retain));
         Field(changes, path, "状态主题", before.Spec.StatusTopic, after.Spec.StatusTopic);
+        Field(changes, path, "契约版本", before.Spec.ContractVersion, after.Spec.ContractVersion);
     }
 
     private static Dictionary<string, T> ById<T>(IEnumerable<T> items, Func<T, string?> id)

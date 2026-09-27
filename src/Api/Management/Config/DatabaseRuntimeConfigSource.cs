@@ -114,6 +114,7 @@ public static class BundleRuntime
                 Retain = mqtt.Retain,
                 TopicTemplate = string.IsNullOrWhiteSpace(mqtt.TopicTemplate) ? "daq/{site}/{deviceId}/{point}" : mqtt.TopicTemplate,
                 StatusTopic = string.IsNullOrWhiteSpace(mqtt.StatusTopic) ? "daq/{site}/{deviceId}/$status" : mqtt.StatusTopic,
+                ContractVersion = string.IsNullOrWhiteSpace(mqtt.ContractVersion) ? "legacy" : mqtt.ContractVersion.Trim().ToLowerInvariant(),
                 Username = ResolveEnv(broker.UsernameFromEnv),
                 Password = ResolveEnv(broker.PasswordFromEnv)
             },

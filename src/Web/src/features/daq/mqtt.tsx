@@ -111,6 +111,9 @@ export function MqttPage() {
     quality: 'good',
     unit: null,
     ts: '2026-09-25T02:00:00.000Z',
+    ...(mqtt.spec.contractVersion === 'v1'
+      ? { schema: 'northbound/1.0', kind: 'pointValue' }
+      : {}),
   }
 
   return (
@@ -204,6 +207,23 @@ export function MqttPage() {
                   setMqtt({ ...mqtt, spec: { ...mqtt.spec, topicTemplate: event.target.value } })
                 }
               />
+            </Field>
+            <Field label='契约版本'>
+              <Select
+                value={mqtt.spec.contractVersion || 'legacy'}
+                disabled={!writable}
+                onValueChange={(contractVersion) =>
+                  setMqtt({ ...mqtt, spec: { ...mqtt.spec, contractVersion } })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='legacy'>legacy 保持现有点位和状态 JSON</SelectItem>
+                  <SelectItem value='v1'>v1 增加 schema 与 kind</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
             <Field label='状态主题模板'>
               <Input

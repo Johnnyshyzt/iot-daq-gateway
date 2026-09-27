@@ -10,7 +10,7 @@ M1 已锁定的边界：
 | 一个进程 | `src/Host` 在进程内运行 Api 与 Collector，并托管 `src/Web` 的静态构建。浏览器打开 Host 地址即可配置并采集 |
 | 数据库为源 | 草稿、已发布配置和回滚历史以数据库为单一事实源。YAML / JSON 只做空库导入和显式导入导出 |
 | 设备 | M1 只做透 Fanuc：`fanuc.fake` 与 `fanuc.focas`。其他品牌不进 schema |
-| 北向 | M1 只有 MQTT JSON。OPC UA 明确留到后续 |
+| 北向 | M1 只有 MQTT JSON。0.7.0 增加契约 v1、HTTP 推送、只读查询和可选 OPC UA 服务器，见 [integration.md](../integration.md) |
 | 现场 | 采集必须跑在能访问机床的机器上，不是只放在云上的 API |
 
 无自有发那科机床时，销售和试点按 [pilot-acceptance.md](pilot-acceptance.md)：出发前走通 Fake，FOCAS 真机留到客户现场，第一次联调单列实施人天。约 10 分钟演示见 [fake-demo-script.md](fake-demo-script.md)。商业边界见 [pricing-one-pager.md](pricing-one-pager.md)，价格数字不在本文。试点合同附件、销售一页和安全口径见 [pilot-contract-appendix.md](pilot-contract-appendix.md)、[sales-one-pager.md](sales-one-pager.md)、[security-narrative.md](security-narrative.md)。

@@ -4,6 +4,7 @@ using Studio.Contracts;
 using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Runtime;
+using Studio.Host.Northbound;
 using Studio.Host.Notifications;
 using Studio.Host.Visualization;
 
@@ -313,6 +314,10 @@ public static class StudioEndpoints
         OpsEndpoints.Map(api);
         NotificationEndpoints.Map(api);
         VisualizationEndpoints.Map(api);
+        HttpPushEndpoints.Map(api);
+        ApiKeyEndpoints.Map(api);
+        OpcUaEndpoints.Map(api);
+        QueryApi.Map(app);
     }
 
     private static SettingsView BuildSettings(HttpContext http, ConfigStore store, AccountStore accounts)
