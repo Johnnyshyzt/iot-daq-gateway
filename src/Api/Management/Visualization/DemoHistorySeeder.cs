@@ -32,12 +32,14 @@ public static class DemoHistorySeeder
     {
         if (string.Equals(database.GetSetting("demoHistorySeeded"), "1", StringComparison.Ordinal))
         {
+            DemoEdgeSeed.Apply(database, bundle);
             return 0;
         }
 
         if (database.HasHistory())
         {
             database.SetSetting("demoHistorySeeded", "1");
+            DemoEdgeSeed.Apply(database, bundle);
             return 0;
         }
 
@@ -101,6 +103,7 @@ public static class DemoHistorySeeder
         }
 
         database.SetSetting("demoHistorySeeded", "1");
+        DemoEdgeSeed.Apply(database, bundle);
         return written;
     }
 

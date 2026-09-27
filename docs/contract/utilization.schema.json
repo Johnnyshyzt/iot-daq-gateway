@@ -28,7 +28,12 @@
           "alarmMs": { "type": "integer" },
           "offlineMs": { "type": "integer" },
           "utilization": { "type": "number" },
-          "partCount": { "type": "number" }
+          "partCount": { "type": "number" },
+          "availability": { "type": ["number", "null"], "description": "OEE availability. Omitted when the OEE feature is not licensed." },
+          "performance": { "type": ["number", "null"] },
+          "quality": { "type": ["number", "null"] },
+          "oee": { "type": ["number", "null"] },
+          "oeeFlag": { "type": ["string", "null"], "description": "noPlannedTime, missingIdealCycle, or noRunTime when a factor cannot be computed." }
         }
       }
     }

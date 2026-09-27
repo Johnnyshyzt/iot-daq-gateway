@@ -238,17 +238,22 @@ public sealed class VisualizationService(ConfigStore store, GatewayPersistence d
         {
             HistoryRetentionDays = database.HistoryRetentionDays,
             TimeZone = calendar.TimeZone,
-            Shifts = calendar.Shifts
+            Shifts = calendar.Shifts,
+            Breaks = calendar.Breaks,
+            Holidays = calendar.Holidays
         };
     }
 
     public IReadOnlyList<string> SaveSettings(VizSettings input)
     {
         var days = Math.Clamp(input.HistoryRetentionDays <= 0 ? 14 : input.HistoryRetentionDays, 1, 3650);
+        var existing = Calendar();
         var calendar = new ShiftCalendar
         {
             TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "Asia/Shanghai" : input.TimeZone.Trim(),
-            Shifts = input.Shifts ?? []
+            Shifts = input.Shifts ?? [],
+            Breaks = input.Breaks ?? existing.Breaks,
+            Holidays = input.Holidays ?? existing.Holidays
         };
         var issues = calendar.Validate();
         if (issues.Count > 0)

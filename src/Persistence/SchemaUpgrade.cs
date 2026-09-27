@@ -35,6 +35,16 @@ internal static class SchemaUpgrade
             EnsureFromScript(db, connection, "installed_license");
             EnsureFromScript(db, connection, "security_state");
             EnsureFromScript(db, connection, "self_test_runs");
+            EnsureFromScript(db, connection, "computed_points");
+            EnsureFromScript(db, connection, "edge_rules");
+            EnsureFromScript(db, connection, "rule_logs");
+            EnsureFromScript(db, connection, "rule_events");
+            EnsureFromScript(db, connection, "downtime_reasons");
+            EnsureFromScript(db, connection, "downtime_events");
+            EnsureFromScript(db, connection, "state_maps");
+            EnsureFromScript(db, connection, "planned_stops");
+            EnsureFromScript(db, connection, "cycle_times");
+            EnsureFromScript(db, connection, "scrap_entries");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_self_test_device_time ON self_test_runs ("DeviceId", "FinishedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_audit_unix ON audit_events ("UnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_delivery_created ON notification_deliveries ("CreatedUnixMs")""");
@@ -76,6 +86,21 @@ internal static class SchemaUpgrade
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_alarms_device_code ON alarms ("DeviceId", "Code")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_state_device_started ON state_transitions ("DeviceId", "StartedUnixMs")""");
             Execute(connection, """CREATE INDEX IF NOT EXISTS ix_state_ended ON state_transitions ("EndedUnixMs")""");
+            Execute(connection, """CREATE UNIQUE INDEX IF NOT EXISTS ix_computed_owner_point ON computed_points ("Scope", "OwnerId", "PointId")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_rule_log_time ON rule_logs ("UnixMs")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_rule_event_pending ON rule_events ("Published", "UnixMs")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_downtime_device_time ON downtime_events ("DeviceId", "StartedUnixMs")""");
+            Execute(connection, """CREATE INDEX IF NOT EXISTS ix_scrap_device_time ON scrap_entries ("DeviceId", "UnixMs")""");
+            if (sqlite)
+            {
+                AddColumn(connection, "sample_latest", "Computed", "INTEGER NOT NULL DEFAULT 0");
+                AddColumn(connection, "sample_history", "Computed", "INTEGER NOT NULL DEFAULT 0");
+            }
+            else
+            {
+                AddColumn(connection, "sample_latest", "Computed", "boolean NOT NULL DEFAULT false");
+                AddColumn(connection, "sample_history", "Computed", "boolean NOT NULL DEFAULT false");
+            }
         }
         finally
         {

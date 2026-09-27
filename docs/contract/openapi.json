@@ -60,7 +60,7 @@
           { "name": "from", "in": "query", "schema": { "type": "string" }, "description": "Default is 24 hours before to." },
           { "name": "to", "in": "query", "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "utilization document" }, "401": { "description": "Unauthorized" } }
+        "responses": { "200": { "description": "utilization document. Optional availability, performance, quality, oee, and oeeFlag appear when OEE is licensed. Existing fields are unchanged." }, "401": { "description": "Unauthorized" } }
       }
     }
   }

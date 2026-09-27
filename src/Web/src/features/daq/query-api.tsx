@@ -114,7 +114,7 @@ export function QueryApiPage() {
             </div>
           ))}
           <p className='text-sm text-muted-foreground'>
-            接口：GET /api/query/v1/devices、/devices/&#123;id&#125;/values、/devices/&#123;id&#125;/history、/alarms、/utilization。契约文件在 /api/contract/v1。
+            接口：GET /api/query/v1/devices、/devices/&#123;id&#125;/values、/devices/&#123;id&#125;/history、/alarms、/utilization。计算点多一个 computed。授权包含 OEE 时，稼动摘要额外带可用率、性能率、质量率、OEE 和标记。契约文件在 /api/contract/v1。
           </p>
         </CardContent>
       </Card>

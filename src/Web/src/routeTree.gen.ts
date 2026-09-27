@@ -15,16 +15,21 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAlarmsRouteImport } from './routes/_authenticated/alarms'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCatalogRouteImport } from './routes/_authenticated/catalog'
 import { Route as AuthenticatedCommissionRouteImport } from './routes/_authenticated/commission'
+import { Route as AuthenticatedComputedRouteImport } from './routes/_authenticated/computed'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
+import { Route as AuthenticatedDowntimeRouteImport } from './routes/_authenticated/downtime'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHttpsRouteImport } from './routes/_authenticated/https'
 import { Route as AuthenticatedLicenseRouteImport } from './routes/_authenticated/license'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated/live'
 import { Route as AuthenticatedMqttRouteImport } from './routes/_authenticated/mqtt'
+import { Route as AuthenticatedOeeRouteImport } from './routes/_authenticated/oee'
 import { Route as AuthenticatedPointsRouteImport } from './routes/_authenticated/points'
 import { Route as AuthenticatedPublishRouteImport } from './routes/_authenticated/publish'
+import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedRuntimeRouteImport } from './routes/_authenticated/runtime'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
@@ -69,6 +74,11 @@ const AuthenticatedBoardRoute = AuthenticatedBoardRouteImport.update({
   path: '/board',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCatalogRoute = AuthenticatedCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
@@ -79,9 +89,19 @@ const AuthenticatedCommissionRoute = AuthenticatedCommissionRouteImport.update({
   path: '/commission',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedComputedRoute = AuthenticatedComputedRouteImport.update({
+  id: '/computed',
+  path: '/computed',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDowntimeRoute = AuthenticatedDowntimeRouteImport.update({
+  id: '/downtime',
+  path: '/downtime',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
@@ -109,6 +129,11 @@ const AuthenticatedMqttRoute = AuthenticatedMqttRouteImport.update({
   path: '/mqtt',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOeeRoute = AuthenticatedOeeRouteImport.update({
+  id: '/oee',
+  path: '/oee',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPointsRoute = AuthenticatedPointsRouteImport.update({
   id: '/points',
   path: '/points',
@@ -117,6 +142,11 @@ const AuthenticatedPointsRoute = AuthenticatedPointsRouteImport.update({
 const AuthenticatedPublishRoute = AuthenticatedPublishRouteImport.update({
   id: '/publish',
   path: '/publish',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRuntimeRoute = AuthenticatedRuntimeRouteImport.update({
@@ -203,16 +233,21 @@ export interface FileRoutesByFullPath {
   '/alarms': typeof AuthenticatedAlarmsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/commission': typeof AuthenticatedCommissionRoute
+  '/computed': typeof AuthenticatedComputedRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/downtime': typeof AuthenticatedDowntimeRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/https': typeof AuthenticatedHttpsRoute
   '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
+  '/oee': typeof AuthenticatedOeeRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
+  '/rules': typeof AuthenticatedRulesRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
@@ -233,16 +268,21 @@ export interface FileRoutesByTo {
   '/alarms': typeof AuthenticatedAlarmsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/board': typeof AuthenticatedBoardRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
   '/catalog': typeof AuthenticatedCatalogRoute
   '/commission': typeof AuthenticatedCommissionRoute
+  '/computed': typeof AuthenticatedComputedRoute
   '/devices': typeof AuthenticatedDevicesRoute
+  '/downtime': typeof AuthenticatedDowntimeRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/https': typeof AuthenticatedHttpsRoute
   '/license': typeof AuthenticatedLicenseRoute
   '/live': typeof AuthenticatedLiveRoute
   '/mqtt': typeof AuthenticatedMqttRoute
+  '/oee': typeof AuthenticatedOeeRoute
   '/points': typeof AuthenticatedPointsRoute
   '/publish': typeof AuthenticatedPublishRoute
+  '/rules': typeof AuthenticatedRulesRoute
   '/runtime': typeof AuthenticatedRuntimeRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/setup': typeof AuthenticatedSetupRoute
@@ -266,16 +306,21 @@ export interface FileRoutesById {
   '/_authenticated/alarms': typeof AuthenticatedAlarmsRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/board': typeof AuthenticatedBoardRoute
+  '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/catalog': typeof AuthenticatedCatalogRoute
   '/_authenticated/commission': typeof AuthenticatedCommissionRoute
+  '/_authenticated/computed': typeof AuthenticatedComputedRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
+  '/_authenticated/downtime': typeof AuthenticatedDowntimeRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/https': typeof AuthenticatedHttpsRoute
   '/_authenticated/license': typeof AuthenticatedLicenseRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/mqtt': typeof AuthenticatedMqttRoute
+  '/_authenticated/oee': typeof AuthenticatedOeeRoute
   '/_authenticated/points': typeof AuthenticatedPointsRoute
   '/_authenticated/publish': typeof AuthenticatedPublishRoute
+  '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/runtime': typeof AuthenticatedRuntimeRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
@@ -300,16 +345,21 @@ export interface FileRouteTypes {
     | '/alarms'
     | '/audit'
     | '/board'
+    | '/calendar'
     | '/catalog'
     | '/commission'
+    | '/computed'
     | '/devices'
+    | '/downtime'
     | '/history'
     | '/https'
     | '/license'
     | '/live'
     | '/mqtt'
+    | '/oee'
     | '/points'
     | '/publish'
+    | '/rules'
     | '/runtime'
     | '/settings'
     | '/setup'
@@ -330,16 +380,21 @@ export interface FileRouteTypes {
     | '/alarms'
     | '/audit'
     | '/board'
+    | '/calendar'
     | '/catalog'
     | '/commission'
+    | '/computed'
     | '/devices'
+    | '/downtime'
     | '/history'
     | '/https'
     | '/license'
     | '/live'
     | '/mqtt'
+    | '/oee'
     | '/points'
     | '/publish'
+    | '/rules'
     | '/runtime'
     | '/settings'
     | '/setup'
@@ -362,16 +417,21 @@ export interface FileRouteTypes {
     | '/_authenticated/alarms'
     | '/_authenticated/audit'
     | '/_authenticated/board'
+    | '/_authenticated/calendar'
     | '/_authenticated/catalog'
     | '/_authenticated/commission'
+    | '/_authenticated/computed'
     | '/_authenticated/devices'
+    | '/_authenticated/downtime'
     | '/_authenticated/history'
     | '/_authenticated/https'
     | '/_authenticated/license'
     | '/_authenticated/live'
     | '/_authenticated/mqtt'
+    | '/_authenticated/oee'
     | '/_authenticated/points'
     | '/_authenticated/publish'
+    | '/_authenticated/rules'
     | '/_authenticated/runtime'
     | '/_authenticated/settings'
     | '/_authenticated/setup'
@@ -438,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBoardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/catalog': {
       id: '/_authenticated/catalog'
       path: '/catalog'
@@ -452,11 +519,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCommissionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/computed': {
+      id: '/_authenticated/computed'
+      path: '/computed'
+      fullPath: '/computed'
+      preLoaderRoute: typeof AuthenticatedComputedRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/devices': {
       id: '/_authenticated/devices'
       path: '/devices'
       fullPath: '/devices'
       preLoaderRoute: typeof AuthenticatedDevicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/downtime': {
+      id: '/_authenticated/downtime'
+      path: '/downtime'
+      fullPath: '/downtime'
+      preLoaderRoute: typeof AuthenticatedDowntimeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/history': {
@@ -494,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMqttRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/oee': {
+      id: '/_authenticated/oee'
+      path: '/oee'
+      fullPath: '/oee'
+      preLoaderRoute: typeof AuthenticatedOeeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/points': {
       id: '/_authenticated/points'
       path: '/points'
@@ -506,6 +594,13 @@ declare module '@tanstack/react-router' {
       path: '/publish'
       fullPath: '/publish'
       preLoaderRoute: typeof AuthenticatedPublishRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rules': {
+      id: '/_authenticated/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof AuthenticatedRulesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/runtime': {
@@ -613,16 +708,21 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAlarmsRoute: typeof AuthenticatedAlarmsRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
+  AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCatalogRoute: typeof AuthenticatedCatalogRoute
   AuthenticatedCommissionRoute: typeof AuthenticatedCommissionRoute
+  AuthenticatedComputedRoute: typeof AuthenticatedComputedRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
+  AuthenticatedDowntimeRoute: typeof AuthenticatedDowntimeRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHttpsRoute: typeof AuthenticatedHttpsRoute
   AuthenticatedLicenseRoute: typeof AuthenticatedLicenseRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedMqttRoute: typeof AuthenticatedMqttRoute
+  AuthenticatedOeeRoute: typeof AuthenticatedOeeRoute
   AuthenticatedPointsRoute: typeof AuthenticatedPointsRoute
   AuthenticatedPublishRoute: typeof AuthenticatedPublishRoute
+  AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedRuntimeRoute: typeof AuthenticatedRuntimeRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
@@ -644,16 +744,21 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAlarmsRoute: AuthenticatedAlarmsRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedBoardRoute: AuthenticatedBoardRoute,
+  AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCatalogRoute: AuthenticatedCatalogRoute,
   AuthenticatedCommissionRoute: AuthenticatedCommissionRoute,
+  AuthenticatedComputedRoute: AuthenticatedComputedRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
+  AuthenticatedDowntimeRoute: AuthenticatedDowntimeRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHttpsRoute: AuthenticatedHttpsRoute,
   AuthenticatedLicenseRoute: AuthenticatedLicenseRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedMqttRoute: AuthenticatedMqttRoute,
+  AuthenticatedOeeRoute: AuthenticatedOeeRoute,
   AuthenticatedPointsRoute: AuthenticatedPointsRoute,
   AuthenticatedPublishRoute: AuthenticatedPublishRoute,
+  AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedRuntimeRoute: AuthenticatedRuntimeRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,

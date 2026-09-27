@@ -293,6 +293,8 @@ public sealed class SampleLatestRow
     public string? Unit { get; set; }
 
     public long TimestampUnixMs { get; set; }
+
+    public bool Computed { get; set; }
 }
 
 public sealed class SampleHistoryRow
@@ -312,6 +314,8 @@ public sealed class SampleHistoryRow
     public string? Unit { get; set; }
 
     public long TimestampUnixMs { get; set; }
+
+    public bool Computed { get; set; }
 }
 
 public sealed class AlarmRow
@@ -632,4 +636,188 @@ public sealed class SelfTestRunRow
     public long StartedUnixMs { get; set; }
 
     public long FinishedUnixMs { get; set; }
+}
+
+public sealed class ComputedPointRow
+{
+    public string Id { get; set; } = "";
+
+    public string Scope { get; set; } = "device";
+
+    public string OwnerId { get; set; } = "";
+
+    public string PointId { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public string Unit { get; set; } = "";
+
+    public string Expression { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+
+    public long UpdatedUnixMs { get; set; }
+
+    public string UpdatedBy { get; set; } = "";
+}
+
+public sealed class EdgeRuleRow
+{
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+
+    public string Scope { get; set; } = "all";
+
+    public string OwnerId { get; set; } = "";
+
+    public string Expression { get; set; } = "";
+
+    public long DurationMs { get; set; }
+
+    public long DebounceMs { get; set; }
+
+    public string ActionsJson { get; set; } = "[]";
+
+    public string TemplateKey { get; set; } = "";
+
+    public long UpdatedUnixMs { get; set; }
+
+    public string UpdatedBy { get; set; } = "";
+}
+
+public sealed class RuleLogRow
+{
+    public long Id { get; set; }
+
+    public string RuleId { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public long UnixMs { get; set; }
+
+    public bool Fired { get; set; }
+
+    public string Message { get; set; } = "";
+
+    public string Detail { get; set; } = "";
+}
+
+public sealed class RuleEventRow
+{
+    public long Id { get; set; }
+
+    public string RuleId { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public string Message { get; set; } = "";
+
+    public long UnixMs { get; set; }
+
+    public bool Published { get; set; }
+}
+
+public sealed class DowntimeReasonRow
+{
+    public string Id { get; set; } = "";
+
+    public string? ParentId { get; set; }
+
+    public string Code { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public int Sort { get; set; }
+
+    public bool Enabled { get; set; } = true;
+}
+
+public sealed class DowntimeEventRow
+{
+    public string Id { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public string State { get; set; } = "";
+
+    public long StartedUnixMs { get; set; }
+
+    public long? EndedUnixMs { get; set; }
+
+    public string? ReasonId { get; set; }
+
+    public string Note { get; set; } = "";
+
+    public string Source { get; set; } = "";
+
+    public string? RuleId { get; set; }
+
+    public string? AssignedBy { get; set; }
+
+    public long? AssignedUnixMs { get; set; }
+
+    public string? TransitionId { get; set; }
+}
+
+public sealed class StateMapRow
+{
+    public string Id { get; set; } = "";
+
+    public string Scope { get; set; } = "brand";
+
+    public string OwnerId { get; set; } = "";
+
+    public string RawValue { get; set; } = "";
+
+    public string State { get; set; } = "";
+}
+
+public sealed class PlannedStopRow
+{
+    public string Id { get; set; } = "";
+
+    public string Scope { get; set; } = "device";
+
+    public string OwnerId { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public long StartUnixMs { get; set; }
+
+    public long EndUnixMs { get; set; }
+}
+
+public sealed class CycleTimeRow
+{
+    public string Id { get; set; } = "";
+
+    public string Scope { get; set; } = "device";
+
+    public string OwnerId { get; set; } = "";
+
+    public string Program { get; set; } = "";
+
+    public double IdealSeconds { get; set; }
+}
+
+public sealed class ScrapEntryRow
+{
+    public string Id { get; set; } = "";
+
+    public string DeviceId { get; set; } = "";
+
+    public long UnixMs { get; set; }
+
+    public double Quantity { get; set; }
+
+    public string Note { get; set; } = "";
+
+    public string EnteredBy { get; set; } = "";
+
+    public string Source { get; set; } = "manual";
 }

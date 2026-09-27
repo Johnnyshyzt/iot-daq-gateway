@@ -14,6 +14,8 @@ const featureTitle: Record<string, string> = {
   'alarm-notifications': '报警通知',
   'scheduled-reports': '定时报表',
   'query-api': '只读查询接口',
+  rules: '边缘规则引擎',
+  oee: 'OEE 与停机原因',
 }
 
 const statusLabel: Record<string, string> = {

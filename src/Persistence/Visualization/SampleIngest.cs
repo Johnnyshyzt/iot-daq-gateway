@@ -1,5 +1,6 @@
 using System.Globalization;
 using Gateway.Abstractions.Models;
+using IotDaq.Persistence.Rules;
 
 namespace IotDaq.Persistence.Visualization;
 
@@ -12,6 +13,11 @@ public sealed class SampleIngest
     private readonly Dictionary<string, SampleLatestRow> _latest = new(StringComparer.Ordinal);
     private readonly Dictionary<string, AlarmRow> _openAlarms = new(StringComparer.Ordinal);
     private readonly Dictionary<string, StateTransitionRow> _openStates = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DowntimeEventRow> _openDowntime = new(StringComparer.Ordinal);
+
+    public Dictionary<string, (string? Brand, string? Template)> Devices { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public List<StateMapRule> Maps { get; } = [];
 
     public List<SampleLatestRow> NewLatest { get; } = [];
 
@@ -20,6 +26,8 @@ public sealed class SampleIngest
     public List<AlarmRow> NewAlarms { get; } = [];
 
     public List<StateTransitionRow> NewTransitions { get; } = [];
+
+    public List<DowntimeEventRow> NewDowntime { get; } = [];
 
     public static SampleIngest Load(GatewayDbContext db, IReadOnlyCollection<string> deviceIds)
     {
@@ -42,6 +50,27 @@ public sealed class SampleIngest
         foreach (var row in db.StateTransitions.Where(row => deviceIds.Contains(row.DeviceId) && row.EndedUnixMs == null))
         {
             ingest._openStates[row.DeviceId] = row;
+        }
+
+        foreach (var row in db.DowntimeEvents.Where(row => deviceIds.Contains(row.DeviceId) && row.EndedUnixMs == null))
+        {
+            ingest._openDowntime[row.DeviceId] = row;
+        }
+
+        foreach (var row in db.ConfigDevices.Where(row => row.Slot == "published" && deviceIds.Contains(row.Id)))
+        {
+            ingest.Devices[row.Id] = (row.BrandId, row.PointTemplateId);
+        }
+
+        foreach (var row in db.StateMaps)
+        {
+            ingest.Maps.Add(new StateMapRule
+            {
+                Scope = row.Scope,
+                OwnerId = row.OwnerId,
+                RawValue = row.RawValue,
+                State = row.State
+            });
         }
 
         return ingest;
@@ -78,14 +107,16 @@ public sealed class SampleIngest
                     NumericValue = ToNumber(observation.Value),
                     Quality = observation.Quality,
                     Unit = observation.Unit,
-                    TimestampUnixMs = when
+                    TimestampUnixMs = when,
+                    Computed = observation.Computed
                 });
 
                 if (string.Equals(observation.Point, "state", StringComparison.OrdinalIgnoreCase))
                 {
+                    Devices.TryGetValue(observation.DeviceId, out var scope);
                     var normalized = string.Equals(observation.Quality, "bad", StringComparison.OrdinalIgnoreCase)
                         ? MachineState.Offline
-                        : MachineState.Normalize(text);
+                        : StateClassifier.Classify(text, observation.DeviceId, scope.Brand, scope.Template, Maps);
                     TouchState(observation.DeviceId, normalized, text ?? "", when);
                 }
 
@@ -126,6 +157,11 @@ public sealed class SampleIngest
         {
             db.StateTransitions.AddRange(NewTransitions);
         }
+
+        if (NewDowntime.Count > 0)
+        {
+            db.DowntimeEvents.AddRange(NewDowntime);
+        }
     }
 
     private void TouchLatest(Observation observation, string? text, long when)
@@ -147,6 +183,7 @@ public sealed class SampleIngest
         latest.Quality = observation.Quality;
         latest.Unit = observation.Unit;
         latest.TimestampUnixMs = when;
+        latest.Computed = observation.Computed;
     }
 
     private void ApplyAlarm(Observation observation, string? text, long when, Observation? preferred, Observation? codeSource)
@@ -255,7 +292,37 @@ public sealed class SampleIngest
         };
         _openStates[deviceId] = created;
         NewTransitions.Add(created);
+        TouchDowntime(deviceId, state, when, created.Id);
         return true;
+    }
+
+    private void TouchDowntime(string deviceId, string state, long when, string transitionId)
+    {
+        if (_openDowntime.TryGetValue(deviceId, out var open))
+        {
+            if (when >= open.StartedUnixMs)
+            {
+                open.EndedUnixMs = when;
+            }
+
+            _openDowntime.Remove(deviceId);
+        }
+
+        if (!MachineState.IsStop(state))
+        {
+            return;
+        }
+
+        var created = new DowntimeEventRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            DeviceId = deviceId,
+            State = state,
+            StartedUnixMs = when,
+            TransitionId = transitionId
+        };
+        _openDowntime[deviceId] = created;
+        NewDowntime.Add(created);
     }
 
     private static string Key(string deviceId, string point) => deviceId + "\n" + point;

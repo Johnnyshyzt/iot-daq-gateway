@@ -108,7 +108,7 @@ public sealed class SchemaUpgradeV6Tests
 
             store.Database.EnsureReady();
             using var check = store.Database.CreateContext();
-            Assert.Equal(7, check.SchemaInfo.AsNoTracking().Single().Version);
+            Assert.Equal(GatewayPersistence.SchemaVersion, check.SchemaInfo.AsNoTracking().Single().Version);
             Assert.Empty(check.InstalledLicense.ToList());
             Assert.Empty(check.SecurityState.ToList());
             Assert.Empty(check.SelfTestRuns.ToList());

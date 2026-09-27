@@ -59,7 +59,8 @@ public sealed partial class GatewayPersistence
                     NumericValue = row.NumericValue,
                     Quality = row.Quality,
                     Unit = row.Unit,
-                    TimestampUnixMs = row.TimestampUnixMs
+                    TimestampUnixMs = row.TimestampUnixMs,
+                    Computed = row.Computed
                 })
                 .ToList();
         }
@@ -84,7 +85,8 @@ public sealed partial class GatewayPersistence
                     NumericValue = row.NumericValue,
                     Quality = row.Quality,
                     Unit = row.Unit,
-                    TimestampUnixMs = row.TimestampUnixMs
+                    TimestampUnixMs = row.TimestampUnixMs,
+                    Computed = row.Computed
                 })
                 .ToList();
         }

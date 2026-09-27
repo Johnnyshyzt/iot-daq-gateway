@@ -36,7 +36,8 @@ public static class NorthboundPayload
         string quality,
         string? unit,
         DateTimeOffset timestamp,
-        bool versioned) =>
+        bool versioned,
+        bool computed = false) =>
         Serialize(new PointDocument
         {
             Schema = versioned ? SchemaId : null,
@@ -48,7 +49,8 @@ public static class NorthboundPayload
             Value = value,
             Quality = quality,
             Unit = unit,
-            Ts = timestamp
+            Ts = timestamp,
+            Computed = computed
         });
 
     public static string Status(
@@ -138,6 +140,27 @@ public static class NorthboundPayload
             Ts = timestamp
         });
 
+    public static string RuleEvent(
+        string gatewayId,
+        string site,
+        string deviceId,
+        string ruleId,
+        string name,
+        string message,
+        DateTimeOffset timestamp) =>
+        Serialize(new RuleEventDocument
+        {
+            Schema = SchemaId,
+            Kind = "ruleEvent",
+            GatewayId = gatewayId,
+            Site = site,
+            DeviceId = deviceId,
+            RuleId = ruleId,
+            Name = name,
+            Message = message,
+            Ts = timestamp
+        });
+
     public static string Batch(
         string gatewayId,
         string site,
@@ -181,6 +204,9 @@ public static class NorthboundPayload
         public string? Unit { get; set; }
 
         public DateTimeOffset Ts { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Computed { get; set; }
     }
 
     public sealed class StatusDocument
@@ -272,6 +298,21 @@ public static class NorthboundPayload
         public double Utilization { get; set; }
 
         public double PartCount { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Availability { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Performance { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Quality { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double? Oee { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? OeeFlag { get; set; }
     }
 
     public sealed class UtilizationDocument
@@ -289,6 +330,27 @@ public static class NorthboundPayload
         public DateTimeOffset To { get; set; }
 
         public required IReadOnlyList<UtilizationDevice> Devices { get; set; }
+
+        public DateTimeOffset Ts { get; set; }
+    }
+
+    public sealed class RuleEventDocument
+    {
+        public required string Schema { get; set; }
+
+        public required string Kind { get; set; }
+
+        public required string GatewayId { get; set; }
+
+        public required string Site { get; set; }
+
+        public required string DeviceId { get; set; }
+
+        public required string RuleId { get; set; }
+
+        public required string Name { get; set; }
+
+        public string Message { get; set; } = "";
 
         public DateTimeOffset Ts { get; set; }
     }
@@ -316,6 +378,9 @@ public static class NorthboundTopics
 
     public static string Parts(string? template, string site, string deviceId) =>
         DaqTopics.PointTopic(template, site, deviceId, "$parts");
+
+    public static string Event(string? template, string site, string deviceId) =>
+        DaqTopics.PointTopic(template, site, deviceId, "$event");
 
     public static string Utilization(string? template, string site)
     {

@@ -17,10 +17,15 @@ public sealed class RoleEnforcementMiddleware(RequestDelegate next)
         }
 
         var role = http.Items["studio.role"] as string ?? "";
-        var allowed = access == ApiPolicy.Admin ? role == StudioRoles.Admin : StudioRoles.CanWrite(role);
+        var allowed = access switch
+        {
+            ApiPolicy.Admin => role == StudioRoles.Admin,
+            ApiPolicy.Operate => StudioRoles.CanOperate(role),
+            _ => StudioRoles.CanWrite(role)
+        };
         if (!allowed)
         {
-            await Write(http, StatusCodes.Status403Forbidden, "forbidden", access == ApiPolicy.Admin ? "只有管理员可以执行此操作。" : "当前角色无权修改配置");
+            await Write(http, StatusCodes.Status403Forbidden, "forbidden", RoleEnforcement.Denied(access));
             return;
         }
 
@@ -58,13 +63,15 @@ public static class RoleEnforcement
             }
 
             var role = http.Items["studio.role"] as string ?? "";
-            var allowed = access == ApiPolicy.Admin ? role == StudioRoles.Admin : StudioRoles.CanWrite(role);
+            var allowed = access switch
+            {
+                ApiPolicy.Admin => role == StudioRoles.Admin,
+                ApiPolicy.Operate => StudioRoles.CanOperate(role),
+                _ => StudioRoles.CanWrite(role)
+            };
             if (!allowed)
             {
-                return ApiResults.Error(
-                    StatusCodes.Status403Forbidden,
-                    "forbidden",
-                    access == ApiPolicy.Admin ? "只有管理员可以执行此操作。" : "当前角色无权修改配置");
+                return ApiResults.Error(StatusCodes.Status403Forbidden, "forbidden", Denied(access));
             }
 
             if (ApiPolicy.BlocksConfigWhenTampered(access, http.Request.Path.Value))
@@ -81,4 +88,11 @@ public static class RoleEnforcement
         });
         return api;
     }
+
+    internal static string Denied(string access) => access switch
+    {
+        ApiPolicy.Admin => "只有管理员可以执行此操作。",
+        ApiPolicy.Operate => "当前角色不能填写停机原因或报废。",
+        _ => "当前角色无权修改配置"
+    };
 }

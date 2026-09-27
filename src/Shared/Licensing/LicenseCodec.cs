@@ -12,6 +12,8 @@ public static class LicenseFeatures
     public const string AlarmNotifications = "alarm-notifications";
     public const string ScheduledReports = "scheduled-reports";
     public const string QueryApi = "query-api";
+    public const string Rules = "rules";
+    public const string Oee = "oee";
     public const string All = "*";
 
     public static readonly string[] DefaultGated =
@@ -20,7 +22,9 @@ public static class LicenseFeatures
         HttpPush,
         AlarmNotifications,
         ScheduledReports,
-        QueryApi
+        QueryApi,
+        Rules,
+        Oee
     ];
 
     public static string Title(string feature) => feature switch
@@ -30,6 +34,8 @@ public static class LicenseFeatures
         AlarmNotifications => "报警通知",
         ScheduledReports => "定时报表",
         QueryApi => "只读查询接口",
+        Rules => "边缘规则引擎",
+        Oee => "OEE 与停机原因",
         _ => feature
     };
 }

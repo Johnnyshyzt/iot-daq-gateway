@@ -18,12 +18,13 @@ This release keeps the existing MQTT point and status JSON, and adds a versioned
 | `deviceStatus` | 设备链路状态 | 同上，外加 `status`；`message` 可空 |
 | `alarm` | 报警发生或恢复 | `alarmId` `action`（`raise` / `clear`）`code` `message` `severity` `point` |
 | `partCount` | 产量点 | `count` `quality`；`total` 可省略 |
-| `utilization` | 稼动汇总 | `from` `to` `devices[]`（运行/空闲/报警/离线毫秒、稼动比、产量） |
+| `utilization` | 稼动汇总 | `from` `to` `devices[]`（运行/空闲/报警/离线毫秒、稼动比、产量）。授权包含 OEE 时同一对象多 `availability`、`performance`、`quality`、`oee`、`oeeFlag`，缺省时省略，旧字段不变 |
+| `ruleEvent` | 规则事件 | MQTT `$event`。`ruleId`、`name`、`message`。HTTP 推送不单独开关这类事件 |
 | `batch` | HTTP 推送 | `sentAt` `events[]`，元素是上面几种文档 |
 
 `quality` 沿用采集侧的 `good` / `bad` / `uncertain`。报警、产量、稼动和 HTTP 批次始终带 `schema` 与 `kind`。点位和状态在 MQTT 上分两种外形，见下一节。
 
-Examples: [point-value.v1.json](contract/examples/point-value.v1.json), [alarm.json](contract/examples/alarm.json), [part-count.json](contract/examples/part-count.json), [utilization.json](contract/examples/utilization.json), [batch.json](contract/examples/batch.json).
+Examples: [point-value.v1.json](contract/examples/point-value.v1.json), [point-value.computed.json](contract/examples/point-value.computed.json), [alarm.json](contract/examples/alarm.json), [part-count.json](contract/examples/part-count.json), [utilization.json](contract/examples/utilization.json), [rule-event.json](contract/examples/rule-event.json), [batch.json](contract/examples/batch.json).
 
 ## MQTT 主题 / MQTT topics
 
@@ -36,6 +37,7 @@ Examples: [point-value.v1.json](contract/examples/point-value.v1.json), [alarm.j
 | `daq/plant-a/cnc-01/$alarm` | 报警发生或恢复 | 采集在跑时，新发生或新恢复 |
 | `daq/plant-a/cnc-01/$parts` | 产量 | 点位 Id 为 `partCount` 或 `partCountTotal`，且数值变化 |
 | `daq/plant-a/$utilization` | 最近 24 小时稼动 | 约每 60 秒一条 |
+| `daq/plant-a/{deviceId}/$event` | 规则触发的北向事件 | 规则动作里配置了事件时 |
 
 `$alarm`、`$parts`、`$utilization` 的前缀从点位模板推导：取模板展开后 `/{site}/` 之前的那段，再接 `/{site}/...`。模板里没有 `/{site}/` 时退回 `daq/{site}/$utilization`。这三条始终是 v1 外形，不随下面的「契约版本」开关省略 `schema` / `kind`。
 
@@ -123,7 +125,7 @@ Delivery is at-least-once. Verify `X-DAQ-Signature` against the raw body when au
 | GET | `/api/query/v1/devices/{id}/values` | 当前点位，v1 `pointValue` |
 | GET | `/api/query/v1/devices/{id}/history` | `point`（可逗号分隔）、`from`、`to`（Unix 毫秒或 ISO-8601）、`bucketMs`。默认最近 1 小时，最多 20000 行 |
 | GET | `/api/query/v1/alarms` | `deviceId`、`active`、`from`、`to`、`limit`（默认 200）。每条是 v1 `alarm` |
-| GET | `/api/query/v1/utilization` | `deviceId`、`from`、`to`。默认最近 24 小时，正文是一条 v1 `utilization` |
+| GET | `/api/query/v1/utilization` | `deviceId`、`from`、`to`。默认最近 24 小时，正文是一条 v1 `utilization`。契约仍是 `northbound/1.0`。OEE 字段只在授权允许时出现 |
 | GET | `/api/query/v1/openapi.json` | 无需密钥 |
 
 ```bash

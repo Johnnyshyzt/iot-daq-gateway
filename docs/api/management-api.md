@@ -351,7 +351,31 @@ MQTT 上的 JSON 另含 `gatewayId`、`site`，时间字段名为 `ts`，主题�
 | `GET` | `/api/v1/utilization.csv?view=shift\|day\|line` | 上表之一的 CSV。默认 `shift` |
 | `GET` | `/api/v1/utilization.xls?view=shift\|day\|line` | SpreadsheetML，用 Excel 打开 |
 | `GET` | `/api/v1/viz/settings` | `historyRetentionDays`、`timeZone`、`shifts` |
-| `PUT` | `/api/v1/viz/settings` | 保存。班次重叠或计划时间超出班次长度时 `400 invalid_settings` |
+| `PUT` | `/api/v1/viz/settings` | 保存。班次重叠或计划时间超出班次长度时 `400 invalid_settings`。请求里没有 `breaks` / `holidays` 时保留库里已有的休息和节假日 |
+
+### 计算点、规则和 OEE
+
+计算点社区版可用。规则和 OEE 默认在 `Licensing:GatedFeatures` 里。配置变更写入审计。操作员可以 `POST /downtime/assign`、`POST /downtime/bulk` 和 `POST /oee/scrap`，不能改原因树、日历、规则或计算点。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/computed` | 计算点和函数说明 |
+| `PUT` / `DELETE` | `/api/v1/computed/{id}` | 保存或删除。范围是 `device` 或 `template` |
+| `POST` | `/api/v1/computed/preview` | 用当前值预览。只校验时可以不带设备 |
+| `GET` | `/api/v1/rules` | 规则、模板，以及是否已授权 |
+| `PUT` / `DELETE` | `/api/v1/rules/{id}` | 保存或删除。未授权时 `403 license_feature` |
+| `POST` | `/api/v1/rules/backtest` | 用最近历史回测持续时间和防抖 |
+| `GET` | `/api/v1/rules/log` | 执行记录 |
+| `GET` | `/api/v1/oee` | 报表。未授权时 200，`licensed: false`，带公式 |
+| `GET` | `/api/v1/oee.csv` / `/api/v1/oee.xls` | `view=shift\|day\|line`。未授权时 `403 license_feature` |
+| `GET` | `/api/v1/downtime` | 原因树和停机记录 |
+| `POST` | `/api/v1/downtime/assign` / `/downtime/bulk` | 填写原因。操作员可用 |
+| `PUT` / `DELETE` | `/api/v1/oee/reasons/{id}` | 原因树。工程师或管理员 |
+| `POST` | `/api/v1/oee/scrap` | 手工报废。操作员可用 |
+| `GET` / `PUT` | `/api/v1/oee/calendar` | 班次、休息、节假日 |
+| `PUT` / `DELETE` | `/api/v1/oee/planned/{id}` | 计划停机 |
+| `PUT` / `DELETE` | `/api/v1/oee/cycles/{id}` | 理想节拍 |
+| `PUT` / `DELETE` | `/api/v1/oee/states/{id}` | 状态映射 |
 
 ### `POST /api/v1/runtime/reload`
 

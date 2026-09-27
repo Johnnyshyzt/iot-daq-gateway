@@ -16,6 +16,7 @@
     "value": {},
     "quality": { "type": "string" },
     "unit": { "type": ["string", "null"] },
-    "ts": { "type": "string", "format": "date-time" }
+    "ts": { "type": "string", "format": "date-time" },
+    "computed": { "type": "boolean", "description": "Present and true when the point is computed. Omitted for sampled points." }
   }
 }

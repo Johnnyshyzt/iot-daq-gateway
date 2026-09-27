@@ -15,10 +15,12 @@ public sealed class NorthboundContractTests
         var contract = Path.Combine(root, "docs", "contract");
         AssertValid(contract, "point-value.schema.json", "examples/point-value.legacy.json");
         AssertValid(contract, "point-value.schema.json", "examples/point-value.v1.json");
+        AssertValid(contract, "point-value.schema.json", "examples/point-value.computed.json");
         AssertValid(contract, "device-status.schema.json", "examples/device-status.legacy.json");
         AssertValid(contract, "alarm.schema.json", "examples/alarm.json");
         AssertValid(contract, "part-count.schema.json", "examples/part-count.json");
         AssertValid(contract, "utilization.schema.json", "examples/utilization.json");
+        AssertValid(contract, "rule-event.schema.json", "examples/rule-event.json");
         AssertValid(contract, "batch.schema.json", "examples/batch.json");
     }
 

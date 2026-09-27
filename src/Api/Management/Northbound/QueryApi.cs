@@ -8,6 +8,7 @@ using IotDaq.Licensing;
 using Studio.Host.Config;
 using Studio.Host.Endpoints;
 using Studio.Host.Licensing;
+using Studio.Host.Oee;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Northbound;
@@ -90,12 +91,13 @@ public static class QueryApi
             return Results.Json(new { schema = NorthboundPayload.SchemaId, gatewayId, site, alarms }, NorthboundPayload.Json);
         });
 
-        api.MapGet("/utilization", (string? deviceId, string? from, string? to, ConfigStore store, VisualizationService visualization) =>
+        api.MapGet("/utilization", (string? deviceId, string? from, string? to, ConfigStore store, VisualizationService visualization, LicenseService licensing, OeeService oee) =>
         {
             var (gatewayId, site) = Identity(store);
             var end = ParseTime(to, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             var start = ParseTime(from, end - 86_400_000);
             var report = visualization.Utilization(start, end, deviceId);
+            OeeReport? oeeReport = licensing.Allows(LicenseFeatures.Oee) ? oee.Build(start, end, deviceId, null) : null;
             var devices = report.Shifts
                 .GroupBy(row => row.DeviceId, StringComparer.Ordinal)
                 .Select(group =>
@@ -103,7 +105,7 @@ public static class QueryApi
                     var first = group.First();
                     var run = group.Sum(row => row.RunMs);
                     var planned = group.Sum(row => row.PlannedMs);
-                    return new NorthboundPayload.UtilizationDevice
+                    var device = new NorthboundPayload.UtilizationDevice
                     {
                         DeviceId = first.DeviceId,
                         Workshop = first.Workshop,
@@ -115,6 +117,25 @@ public static class QueryApi
                         Utilization = UtilizationMath.Ratio(run, planned),
                         PartCount = group.Sum(row => row.PartCount)
                     };
+                    var oeeRows = oeeReport?.Rows.Where(row => string.Equals(row.DeviceId, first.DeviceId, StringComparison.Ordinal)).ToList();
+                    if (oeeRows is { Count: > 0 })
+                    {
+                        var factors = IotDaq.Persistence.Rules.OeeMath.Compute(new IotDaq.Persistence.Rules.OeeInput
+                        {
+                            PlannedMs = oeeRows.Sum(row => row.PlannedMs),
+                            RunMs = oeeRows.Sum(row => row.RunMs),
+                            TotalParts = oeeRows.Sum(row => row.TotalParts),
+                            ScrapParts = oeeRows.Sum(row => row.ScrapParts),
+                            IdealCycleSeconds = oeeRows.Select(row => row.IdealCycleSeconds).FirstOrDefault(value => value is > 0)
+                        });
+                        device.Availability = factors.Availability;
+                        device.Performance = factors.Performance;
+                        device.Quality = factors.Quality;
+                        device.Oee = factors.Oee;
+                        device.OeeFlag = string.IsNullOrEmpty(factors.Flag) ? null : factors.Flag;
+                    }
+
+                    return device;
                 })
                 .ToList();
             var json = NorthboundPayload.Utilization(
@@ -140,7 +161,8 @@ public static class QueryApi
             string.IsNullOrWhiteSpace(sample.Quality) ? "good" : sample.Quality,
             sample.Unit,
             DateTimeOffset.FromUnixTimeMilliseconds(sample.TimestampUnixMs),
-            versioned: true));
+            versioned: true,
+            computed: sample.Computed));
     }
 
     public static (string GatewayId, string Site) Identity(ConfigStore store)
