@@ -66,4 +66,4 @@ Studio 的总览、单机、历史曲线、报警和稼动率都由 Host 计算�
 
 `SampleRetentionService` 每小时删除早于保留期的 `sample_history`、已恢复报警，以及已结束的 `state_transitions`。保留天数优先读 `app_settings.historyRetentionDays`，否则用 `Database:HistoryRetentionDays` / `DATABASE_HISTORY_DAYS`，默认 14。
 
-`sample_history`、`alarms`、`state_transitions` 的索引名在 SQLite 和 PostgreSQL 上相同，列名是 EF 的 PascalCase。已有库启动时补列、补表、补索引，并把 `schema_info.version` 写成 3（含 `audit_events`）。细节见 [database.md](database.md)。
+`sample_history`、`alarms`、`state_transitions` 的索引名在 SQLite 和 PostgreSQL 上相同，列名是 EF 的 PascalCase。已有库启动时补列、补表、补索引，并把 `schema_info.version` 写成 4（含 `audit_events` 和通知表）。细节见 [database.md](database.md)。报警通知和稼动报表见 [notifications.md](notifications.md)。

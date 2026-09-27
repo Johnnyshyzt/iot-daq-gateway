@@ -55,6 +55,14 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
 
     public DbSet<AuditEventRow> AuditEvents => Set<AuditEventRow>();
 
+    public DbSet<NotificationChannelRow> NotificationChannels => Set<NotificationChannelRow>();
+
+    public DbSet<NotificationRuleRow> NotificationRules => Set<NotificationRuleRow>();
+
+    public DbSet<NotificationDeliveryRow> NotificationDeliveries => Set<NotificationDeliveryRow>();
+
+    public DbSet<ReportScheduleRow> ReportSchedules => Set<ReportScheduleRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SchemaInfoRow>().ToTable("schema_info").HasKey(row => row.Id);
@@ -107,5 +115,13 @@ public sealed class GatewayDbContext(DbContextOptions<GatewayDbContext> options)
         modelBuilder.Entity<AuditEventRow>().ToTable("audit_events").HasKey(row => row.Id);
         modelBuilder.Entity<AuditEventRow>().Property(row => row.Id).ValueGeneratedOnAdd();
         modelBuilder.Entity<AuditEventRow>().HasIndex(row => row.UnixMs).HasDatabaseName("ix_audit_unix");
+
+        modelBuilder.Entity<NotificationChannelRow>().ToTable("notification_channels").HasKey(row => row.Id);
+        modelBuilder.Entity<NotificationRuleRow>().ToTable("notification_rules").HasKey(row => row.Id);
+        modelBuilder.Entity<NotificationDeliveryRow>().ToTable("notification_deliveries").HasKey(row => row.Id);
+        modelBuilder.Entity<NotificationDeliveryRow>().Property(row => row.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<NotificationDeliveryRow>().HasIndex(row => row.CreatedUnixMs).HasDatabaseName("ix_delivery_created");
+        modelBuilder.Entity<NotificationDeliveryRow>().HasIndex(row => new { row.Status, row.CreatedUnixMs }).HasDatabaseName("ix_delivery_status");
+        modelBuilder.Entity<ReportScheduleRow>().ToTable("report_schedules").HasKey(row => row.Id);
     }
 }

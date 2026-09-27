@@ -325,6 +325,9 @@ export type RuntimeStatus = {
   mode: string
   activeRevision: string
   utcNow: string
+  mqttConnected?: boolean
+  mqttSpoolDepth?: number
+  mqttSpoolDropped?: number
   devices: Array<{
     id: string
     displayName: string
@@ -334,6 +337,10 @@ export type RuntimeStatus = {
     lastSeen?: string | null
     message: string
     statusTopic?: string
+    linkPhase?: string
+    nextRetry?: string | null
+    lastError?: string
+    attempt?: number
   }>
   recentErrors: string[]
 }

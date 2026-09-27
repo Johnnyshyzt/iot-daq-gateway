@@ -51,7 +51,14 @@ if errorlevel 1 (
 )
 
 sc description "%SERVICE_NAME%" "内网 CNC 采集网关。浏览器打开 http://127.0.0.1:5080 发布配置，同一进程会重新加载数据库里的已发布配置。现场不需要 .NET SDK。"
-sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul
+sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/5000/restart/10000/restart/30000
+if errorlevel 1 (
+  echo [警告] 未能写入服务失败恢复策略。可稍后手动执行：
+  echo         sc failure %SERVICE_NAME% reset= 86400 actions= restart/5000/restart/10000/restart/30000
+) else (
+  echo 已设置失败恢复：5 秒、10 秒、30 秒后重启，计数每天清零。
+)
+sc failureflag "%SERVICE_NAME%" 1 >nul 2>&1
 
 if not exist "%~dp0service.env" (
   echo [警告] 没有 service.env。MQTT 密码不会注入。

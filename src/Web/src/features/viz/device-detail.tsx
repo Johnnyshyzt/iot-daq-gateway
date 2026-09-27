@@ -97,9 +97,14 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
                 <Row label='稼动率' value={formatPercent(detail.todayUtilization)} />
                 <Row label='产量' value={formatNumber(detail.todayPartCount, 0)} />
                 <Row label='连接' value={connectionLabel(detail.connection)} />
+                <Row label='链路' value={linkText(detail.linkPhase, detail.linkAttempt)} />
                 <Row label='驱动' value={detail.adapter} />
                 <Row label='地址' value={detail.host ? `${detail.host}:${detail.port}` : '—'} />
                 <p className='text-xs text-muted-foreground'>{detail.connectionMessage || '等待采集状态'}</p>
+                {detail.linkPhase === 'backoff' && detail.nextRetryUnixMs ? (
+                  <p className='text-xs text-muted-foreground'>下次重试 {formatTime(detail.nextRetryUnixMs)}</p>
+                ) : null}
+                {detail.lastError ? <p className='text-xs text-destructive'>{detail.lastError}</p> : null}
                 {detail.lastSeenUnixMs ? (
                   <p className='text-xs text-muted-foreground'>最近通讯 {formatTime(detail.lastSeenUnixMs)}</p>
                 ) : null}
@@ -225,4 +230,9 @@ function connectionLabel(status: string) {
   if (status === 'degraded') return '降级'
   if (status === 'disabled') return '已停用'
   return status || '—'
+}
+
+function linkText(phase?: string, attempt?: number) {
+  const name = phase === 'connected' ? '已连接' : phase === 'connecting' ? '连接中' : phase === 'backoff' ? '退避重连' : '—'
+  return attempt ? `${name} · 第 ${attempt} 次` : name
 }

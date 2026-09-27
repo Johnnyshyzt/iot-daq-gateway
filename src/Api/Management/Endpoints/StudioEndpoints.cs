@@ -4,6 +4,7 @@ using Studio.Contracts;
 using Studio.Host.Auth;
 using Studio.Host.Config;
 using Studio.Host.Runtime;
+using Studio.Host.Notifications;
 using Studio.Host.Visualization;
 
 namespace Studio.Host.Endpoints;
@@ -310,6 +311,7 @@ public static class StudioEndpoints
         }).RequireWriter();
 
         OpsEndpoints.Map(api);
+        NotificationEndpoints.Map(api);
         VisualizationEndpoints.Map(api);
     }
 

@@ -113,9 +113,10 @@ public sealed class Phase4ApiTests : IClassFixture<StudioApiFactory>
         var healthBody = await health.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, health.StatusCode);
         Assert.Contains("\"status\":\"ok\"", healthBody, StringComparison.Ordinal);
-        Assert.Contains("0.5.0", healthBody, StringComparison.Ordinal);
+        Assert.Contains("0.6.0", healthBody, StringComparison.Ordinal);
         Assert.Contains("Sqlite", healthBody, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\":3", healthBody, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\":4", healthBody, StringComparison.Ordinal);
+        Assert.Contains("mqttSpoolDepth", healthBody, StringComparison.Ordinal);
 
         var audit = await client.GetAsync("/api/v1/audit");
         Assert.Equal(HttpStatusCode.Unauthorized, audit.StatusCode);

@@ -66,6 +66,10 @@ export type DeviceDetail = {
   stateLabel: string
   connection: string
   connectionMessage: string
+  linkPhase?: string
+  nextRetryUnixMs?: number | null
+  lastError?: string
+  linkAttempt?: number
   lastSeenUnixMs?: number | null
   program?: string | null
   programLine?: number | null

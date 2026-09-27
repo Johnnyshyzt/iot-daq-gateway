@@ -28,6 +28,8 @@ import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedUtilizationRouteImport } from './routes/_authenticated/utilization'
 import { Route as AuthenticatedAccountPasswordRouteImport } from './routes/_authenticated/account/password'
 import { Route as AuthenticatedMonitorDeviceIdRouteImport } from './routes/_authenticated/monitor.$deviceId'
+import { Route as AuthenticatedNotifyIndexRouteImport } from './routes/_authenticated/notify/index'
+import { Route as AuthenticatedNotifyHistoryRouteImport } from './routes/_authenticated/notify/history'
 import { Route as AuthenticatedSinksMqttRouteImport } from './routes/_authenticated/sinks/mqtt'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -127,6 +129,18 @@ const AuthenticatedMonitorDeviceIdRoute =
     path: '/monitor/$deviceId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedNotifyIndexRoute =
+  AuthenticatedNotifyIndexRouteImport.update({
+    id: '/notify/',
+    path: '/notify/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedNotifyHistoryRoute =
+  AuthenticatedNotifyHistoryRouteImport.update({
+    id: '/notify/history',
+    path: '/notify/history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSinksMqttRoute = AuthenticatedSinksMqttRouteImport.update({
   id: '/sinks/mqtt',
   path: '/sinks/mqtt',
@@ -152,7 +166,9 @@ export interface FileRoutesByFullPath {
   '/utilization': typeof AuthenticatedUtilizationRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
   '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
+  '/notify/history': typeof AuthenticatedNotifyHistoryRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
+  '/notify/': typeof AuthenticatedNotifyIndexRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
@@ -173,7 +189,9 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/account/password': typeof AuthenticatedAccountPasswordRoute
   '/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
+  '/notify/history': typeof AuthenticatedNotifyHistoryRoute
   '/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
+  '/notify': typeof AuthenticatedNotifyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -196,7 +214,9 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/account/password': typeof AuthenticatedAccountPasswordRoute
   '/_authenticated/monitor/$deviceId': typeof AuthenticatedMonitorDeviceIdRoute
+  '/_authenticated/notify/history': typeof AuthenticatedNotifyHistoryRoute
   '/_authenticated/sinks/mqtt': typeof AuthenticatedSinksMqttRoute
+  '/_authenticated/notify/': typeof AuthenticatedNotifyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -219,7 +239,9 @@ export interface FileRouteTypes {
     | '/utilization'
     | '/account/password'
     | '/monitor/$deviceId'
+    | '/notify/history'
     | '/sinks/mqtt'
+    | '/notify/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -240,7 +262,9 @@ export interface FileRouteTypes {
     | '/'
     | '/account/password'
     | '/monitor/$deviceId'
+    | '/notify/history'
     | '/sinks/mqtt'
+    | '/notify'
   id:
     | '__root__'
     | '/_authenticated'
@@ -262,7 +286,9 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/account/password'
     | '/_authenticated/monitor/$deviceId'
+    | '/_authenticated/notify/history'
     | '/_authenticated/sinks/mqtt'
+    | '/_authenticated/notify/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -405,6 +431,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMonitorDeviceIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/notify/': {
+      id: '/_authenticated/notify/'
+      path: '/notify'
+      fullPath: '/notify/'
+      preLoaderRoute: typeof AuthenticatedNotifyIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notify/history': {
+      id: '/_authenticated/notify/history'
+      path: '/notify/history'
+      fullPath: '/notify/history'
+      preLoaderRoute: typeof AuthenticatedNotifyHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sinks/mqtt': {
       id: '/_authenticated/sinks/mqtt'
       path: '/sinks/mqtt'
@@ -433,7 +473,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountPasswordRoute: typeof AuthenticatedAccountPasswordRoute
   AuthenticatedMonitorDeviceIdRoute: typeof AuthenticatedMonitorDeviceIdRoute
+  AuthenticatedNotifyHistoryRoute: typeof AuthenticatedNotifyHistoryRoute
   AuthenticatedSinksMqttRoute: typeof AuthenticatedSinksMqttRoute
+  AuthenticatedNotifyIndexRoute: typeof AuthenticatedNotifyIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -454,7 +496,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountPasswordRoute: AuthenticatedAccountPasswordRoute,
   AuthenticatedMonitorDeviceIdRoute: AuthenticatedMonitorDeviceIdRoute,
+  AuthenticatedNotifyHistoryRoute: AuthenticatedNotifyHistoryRoute,
   AuthenticatedSinksMqttRoute: AuthenticatedSinksMqttRoute,
+  AuthenticatedNotifyIndexRoute: AuthenticatedNotifyIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

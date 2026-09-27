@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Gateway.Abstractions.Contracts;
+using Gateway.Abstractions.Reliability;
 using Gateway.Host;
 using Microsoft.Extensions.Hosting;
 using IotDaq.Host;
@@ -32,6 +33,7 @@ builder.Logging.AddSimpleConsole(options =>
 builder.Logging.AddCollectorFileLog();
 
 var dataDirectory = HostPaths.ResolveDataDirectory(builder.Environment, builder.Configuration);
+builder.Configuration["Host:DataDirectory"] = dataDirectory;
 var acquisitionOn = !string.Equals(builder.Configuration["Host:Acquisition"], "off", StringComparison.OrdinalIgnoreCase);
 var importPath = CollectorHost.UsesPublishedDirectory(args)
     ? null
@@ -43,6 +45,11 @@ builder.Services.AddGatewayData(store);
 if (acquisitionOn)
 {
     builder.Services.AddCollector();
+}
+else
+{
+    builder.Services.AddSingleton<MqttBufferStatus>();
+    builder.Services.AddSingleton<IMqttBufferStatus>(sp => sp.GetRequiredService<MqttBufferStatus>());
 }
 AccountStore.AccountsChanged = path => store.Database.SyncUsers(path);
 builder.Services.AddSingleton(sp => new AccountStore(
@@ -66,6 +73,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.Services.GetRequiredService<ConfigStore>().EnsureInitialized(importPath);
+if (app.Services.GetService<ReliabilityOptions>() is { } reliability)
+{
+    reliability.OverlayJson(store.Database.GetSetting("reliability"));
+}
+
 DemoHistorySeeder.SeedIfEmpty(store.Database, store.ReadPublished());
 var accounts = app.Services.GetRequiredService<AccountStore>();
 accounts.EnsureInitialized();
@@ -106,15 +118,22 @@ if (webRoot is not null)
 
 app.UseMiddleware<StudioAuthMiddleware>();
 var startedAt = DateTimeOffset.UtcNow;
-app.MapGet("/healthz", () => Results.Json(new
+app.MapGet("/healthz", (IEnumerable<IMqttBufferStatus> buffers) =>
 {
-    status = "ok",
-    version = HostInfo.Version,
-    acquisition = acquisitionOn,
-    database = store.Database.Provider,
-    schemaVersion = store.Database.CurrentSchemaVersion,
-    uptimeSeconds = Math.Max(0, (long)(DateTimeOffset.UtcNow - startedAt).TotalSeconds)
-}, StudioJson.Options));
+    var buffer = buffers.FirstOrDefault();
+    return Results.Json(new
+    {
+        status = "ok",
+        version = HostInfo.Version,
+        acquisition = acquisitionOn,
+        database = store.Database.Provider,
+        schemaVersion = store.Database.CurrentSchemaVersion,
+        uptimeSeconds = Math.Max(0, (long)(DateTimeOffset.UtcNow - startedAt).TotalSeconds),
+        mqttConnected = buffer?.Connected ?? false,
+        mqttSpoolDepth = buffer?.Depth ?? 0,
+        mqttSpoolDropped = buffer?.Dropped ?? 0
+    }, StudioJson.Options);
+});
 app.MapStudioApi();
 
 if (webRoot is not null)

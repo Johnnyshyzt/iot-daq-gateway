@@ -99,6 +99,14 @@ export function DevicesPage() {
 
   useEffect(() => {
     void reload().catch((error: unknown) => setMessage(describeError(error)))
+    const timer = window.setInterval(() => {
+      void studioApi<RuntimeStatus>('/api/v1/runtime/status')
+        .then(setRuntime)
+        .catch(() => {
+          // 运行态暂时不可用时保留上一次的连接状态
+        })
+    }, 3000)
+    return () => window.clearInterval(timer)
   }, [])
 
   function fail(error: unknown) {
@@ -370,6 +378,15 @@ export function DevicesPage() {
                         <Button
                           size='sm'
                           variant='outline'
+                          onClick={() =>
+                            void navigate({ to: '/monitor/$deviceId', params: { deviceId: device.metadata.id } })
+                          }
+                        >
+                          详情
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
                           onClick={() => void navigate({ to: '/live', search: { device: device.metadata.id } })}
                         >
                           实时
@@ -610,16 +627,35 @@ function DeviceStatus({ device, runtime }: { device: DeviceDocument; runtime: Ru
   const text = health?.message || (device.spec.enabled ? '草稿已启用' : '草稿已禁用')
   const missing = text.includes('SDK 未安装') || text.includes('未找到 Fwlib64')
   const failed = health?.status === 'offline' || health?.status === 'degraded' || missing
+  const phase = linkLabel(health?.linkPhase)
+  const retry = health?.linkPhase === 'backoff' && health.nextRetry ? `下次 ${health.nextRetry.slice(11, 19)} UTC` : ''
   return (
-    <div className='max-w-56'>
+    <div className='max-w-64'>
       <Badge variant={device.spec.enabled && !failed ? 'default' : 'secondary'}>
         {health ? healthLabel(health.status) : device.spec.enabled ? '启用' : '禁用'}
       </Badge>
+      {phase ? (
+        <Badge variant='outline' className='ms-1'>
+          {phase}
+          {health?.attempt ? ` · 第 ${health.attempt} 次` : ''}
+        </Badge>
+      ) : null}
       <div className={missing || failed ? 'mt-1 text-xs text-destructive' : 'mt-1 text-xs text-muted-foreground'}>
         {text}
       </div>
+      {retry ? <div className='text-xs text-muted-foreground'>{retry}</div> : null}
+      {health?.lastError && health.linkPhase === 'backoff' ? (
+        <div className='text-xs text-destructive'>{health.lastError}</div>
+      ) : null}
     </div>
   )
+}
+
+function linkLabel(phase?: string) {
+  if (phase === 'connected') return '已连接'
+  if (phase === 'connecting') return '连接中'
+  if (phase === 'backoff') return '退避重连'
+  return ''
 }
 
 function healthLabel(status: string) {

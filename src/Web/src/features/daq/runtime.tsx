@@ -70,9 +70,12 @@ export function RuntimePage() {
       }
     >
       {error ? <p className='mb-3 text-sm text-destructive'>{error}</p> : null}
-      <div className='mb-4'>
+      <div className='mb-4 flex flex-wrap gap-2'>
         <Badge variant={live ? 'default' : 'secondary'}>
           {live ? `live · ${(status?.activeRevision || '').slice(0, 12)}` : 'mock'}
+        </Badge>
+        <Badge variant='outline'>
+          MQTT {status?.mqttConnected ? '已连接' : '未连接'} · 缓冲 {status?.mqttSpoolDepth ?? 0} · 丢弃 {status?.mqttSpoolDropped ?? 0}
         </Badge>
       </div>
       <div className='grid gap-4 xl:grid-cols-2'>
@@ -99,7 +102,18 @@ export function RuntimePage() {
                       <div className='text-xs text-muted-foreground'>{device.id}</div>
                     </TableCell>
                     <TableCell>{device.adapter}</TableCell>
-                    <TableCell>{statusLabel(device.status)}</TableCell>
+                    <TableCell>
+                      <div>{statusLabel(device.status)}</div>
+                      <div className='text-xs text-muted-foreground'>
+                        {device.linkPhase === 'connected'
+                          ? '已连接'
+                          : device.linkPhase === 'connecting'
+                            ? '连接中'
+                            : device.linkPhase === 'backoff'
+                              ? `退避${device.attempt ? ` · 第 ${device.attempt} 次` : ''}`
+                              : ''}
+                      </div>
+                    </TableCell>
                     <TableCell className='font-mono text-xs break-all'>{device.statusTopic || '—'}</TableCell>
                     <TableCell className='text-xs'>{device.message}</TableCell>
                   </TableRow>

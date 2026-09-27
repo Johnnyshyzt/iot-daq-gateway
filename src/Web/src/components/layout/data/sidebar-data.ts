@@ -1,7 +1,9 @@
 import {
   Activity,
   Bell,
+  BellRing,
   BookOpen,
+  Inbox,
   Gauge,
   LayoutDashboard,
   LineChart,
@@ -31,6 +33,8 @@ export const sidebarData: SidebarData = {
         { title: '总览', url: '/', icon: LayoutDashboard },
         { title: '历史曲线', url: '/history', icon: LineChart },
         { title: '报警', url: '/alarms', icon: Bell },
+        { title: '通知', url: '/notify', icon: BellRing },
+        { title: '通知记录', url: '/notify/history', icon: Inbox },
         { title: '稼动率', url: '/utilization', icon: PieChart },
         { title: '设备', url: '/devices', icon: Cpu },
         { title: '点位模板', url: '/points', icon: Activity },

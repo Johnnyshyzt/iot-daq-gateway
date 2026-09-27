@@ -1,5 +1,21 @@
 # 变更记录
 
+## 0.6.0
+
+现场可靠性，以及报警通知和稼动报表。
+
+- 南向断线按指数退避加重试抖动，上限可配。每台设备有 `connected` / `connecting` / `backoff`，带下次重试时间和最近错误。运行态 API、设备列表和单机详情都能看到。
+- MQTT 在 Broker 不可达时把报文写到数据目录 `mqtt-spool/`，按条数、体积和年龄丢弃最旧的并计数。重连后按顺序重放。深度和丢弃数出现在「北向 MQTT」和 `GET /healthz`。
+- 采集看门狗发现某台设备的采集停住超过上限后，取消并重建该设备的适配器。Windows 服务注册仍设置失败重启（5 秒 / 10 秒 / 30 秒），并尝试 `sc failureflag`。systemd 单元是 `Restart=on-failure`，`StartLimitIntervalSec=0`。
+- `tools/soak` 用模拟器采样加 SQLite 写入做可重复浸泡。一次实测写在 [docs/soak-report.md](docs/soak-report.md)。
+- Studio「通知」可配企业微信群机器人、钉钉机器人（可选加签）、飞书 / Lark（可选签名）、SMTP 和通用 Webhook。密钥不明文返回。每条通道可发测试。
+- 规则按设备、车间或产线、级别、报警代码过滤，支持发生 / 恢复、未确认升级、安静时段、去重和每小时上限。「通知记录」显示投递状态，失败可重试。日报和班次稼动摘要可定时发到所选通道，页面可预览。
+- 上述配置变更写入审计。数据库结构版本为 4。已有的 1、2、3 在启动时补通知表。
+
+说明见 [docs/reliability.md](docs/reliability.md) 与 [docs/notifications.md](docs/notifications.md)。
+
+没有做的事：不为厂商 SDK 品牌发明调用；不把 Linux 当成 FOCAS 生产路径；不在页面里备份 PostgreSQL。安静时段内的发生和恢复直接跳过，结束后不补发。进程停机期间若有多个班次结束，启动后只补最近一个班次报表。`mqtt-spool/` 不在 SQLite 页面备份里；通知密钥在数据库里，备份文件要妥善保管。忽略取消令牌的阻塞式原生采集仍会拖住后面的设备，直到那次调用返回。浸泡测的是 200 台模拟器、每台 8 个点的采样和 SQLite 写入，不是 200 路真实协议，也没有连 MQTT Broker。没有现场机床验收。
+
 ## 0.5.0
 
 上手引导、审计、SQLite 备份，以及把 Studio 从模板外壳收成产品界面。
